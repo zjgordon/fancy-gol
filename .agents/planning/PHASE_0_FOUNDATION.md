@@ -597,12 +597,14 @@ Emit a `CompiledRule` with the strategy selected automatically:
 
 ### Workstream H — Renderer
 
-#### - [ ] P0-H-1 · Renderer interface & dirty-rect utility
+#### - [x] P0-H-1 · Renderer interface & dirty-rect utility
 **Depends on:** P0-B-1 · **Files:** `src/render/types.ts`, `src/render/dirty.ts`
-**Implementation notes** `dirty.ts` accumulates changed chunk keys into world rects and merges overlapping/adjacent rects, with a heuristic that gives up and returns `null` (full repaint) once the union exceeds ~60% of the viewport — merging 4,000 rects costs more than repainting.
+**Implementation notes**
+- `types.ts` is exactly ADR-005's `Viewport`/`RenderFrame`/`RenderStats`/`Renderer` contract, importing `GridView`/`Rect`/`StateId` from `shared/types` — `render/` may not import `engine/` (ADR-009), which is why `worker/handler.ts` (not this module) is what already turns a `ChangeSet`'s `dirtyChunks` into world `Rect`s (`frame.dirty`, P0-G-2). `CompiledTheme`/`CellPalette` are a deliberately minimal slice of ADR-008's full `ThemeModule` — just enough for a renderer to paint cells without a hardcoded grey; Phase 3's `themes/types.ts` extends this, doesn't replace it. Renamed the render-side `Viewport` in nothing but name from `shared/protocol.ts`'s wire-level `Viewport` (`{rect, scale}`, used to cull off-screen chunks before transfer) — same word, two different layers, documented as such to avoid confusion.
+- `dirty.ts` is pure geometry: coordinate compression down to a boolean grid, a row-run merge, then a vertical merge of matching runs across consecutive rows — merges overlapping *and* edge-adjacent rects into an exact, disjoint covering set. `mergeDirtyRects` adds the give-up heuristic (a hard 4,096-rect cap, plus summed-area vs. `giveUpFraction` × viewport area, default 0.6) *before* running the O(rects²)-ish merge, never after — the point is to avoid doing the expensive work on a pathological input, not to bail out partway through it. `DirtyAccumulator` wraps it statefully (`add` across ticks, `take` merges and clears) — needed because `WorkerClient`'s own frame coalescing (P0-G-3) can skip several ticks' `frame` events, so a render loop needs the *union* of everything skipped, not just the latest frame's own dirty list.
 **Acceptance criteria**
-- [ ] Merge correctness property test: the merged rect list covers exactly the same cell set as the input, for 10k random inputs.
-- [ ] The full-repaint fallback triggers at the documented threshold, verified by test.
+- [x] Merge correctness property test: the merged rect list covers exactly the same cell set as the input, for 10k random inputs — verified by rasterising both sides onto a grid and comparing exactly (manual comparison, not `toEqual`, in the hot loop — 10,000 deep-equal calls otherwise dominated the test's runtime, ~9s down to under 1s).
+- [x] The full-repaint fallback triggers at the documented ~60% threshold, verified by test (59% merges, 61% returns `null`; also tested independently of area via the 4,096-rect cap, and that `giveUpFraction` is itself configurable).
 
 #### - [ ] P0-H-2 · Canvas2D renderer
 **Depends on:** P0-H-1, P0-C-2 · **Files:** `src/render/canvas2d.ts`

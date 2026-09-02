@@ -182,5 +182,19 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   buffer reuse) is deferred to Phase 5's `SharedArrayBuffer` upgrade: neither acceptance
   criterion requires it, and doing it properly means changing `handler.ts`'s allocator, not
   just adding a message. (P0-G-3)
+- `src/render/types.ts` and `src/render/dirty.ts` — the renderer contract (ADR-005:
+  `Viewport`/`RenderFrame`/`RenderStats`/`Renderer`) and a dirty-rect merge utility. `types.ts`
+  imports `GridView`/`Rect`/`StateId` from `shared/types`, never `engine/` (`render/` may not,
+  per ADR-009) — `worker/handler.ts` is what already turns a `ChangeSet` into world `Rect`s.
+  `CompiledTheme`/`CellPalette` are a deliberately minimal slice of ADR-008's full `ThemeModule`,
+  just enough to paint cells without a hardcoded grey; Phase 3 extends it. `dirty.ts` merges
+  overlapping and edge-adjacent rects into an exact, disjoint covering set (coordinate
+  compression, a row-run merge, then a vertical merge of matching runs) — proven by rasterising
+  10,000 random inputs onto a grid and comparing exactly against the un-merged input. Gives up
+  and signals a full repaint (`null`) once the union would exceed ~60% of the viewport or there
+  are simply too many rects (a 4,096 hard cap), checked *before* the O(rects²)-ish merge runs,
+  not partway through it. `DirtyAccumulator` batches across ticks, since `WorkerClient`'s own
+  frame coalescing (P0-G-3) can skip several ticks' `frame` events — a render loop needs the
+  union of everything skipped, not just the latest frame's own dirty list. (P0-H-1)
 
 [Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/main...HEAD
