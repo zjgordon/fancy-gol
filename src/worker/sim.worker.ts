@@ -7,6 +7,7 @@
  * real global scope need a browser worker context to run.
  */
 import { createHandler, REAL_SCHEDULER } from './handler';
+import type { Clock } from '@engine/clock';
 import type { WorkerCaps } from '@shared/protocol';
 
 /** The slice of `DedicatedWorkerGlobalScope` this file needs. A real worker's `self` satisfies this structurally. */
@@ -23,12 +24,25 @@ export function detectCapabilities(): WorkerCaps {
   };
 }
 
+/**
+ * The real `performance.now()`-backed clock `engine/clock.ts`'s own doc promises lives outside
+ * `src/engine/**` — found missing (every `TickStats.stepMicros` silently read `0`, `handler.ts`'s
+ * documented default when no clock is injected) while driving P0-I-1's client shell in a real
+ * browser; nothing in Phase 0's tests exercises `HandlerOptions.clock` end-to-end, so the gap had
+ * gone unnoticed. `performance.now()` is milliseconds (sub-ms fractional); `Clock.now()` is
+ * documented as microseconds, hence the `* 1000`.
+ */
+export const REAL_CLOCK: Clock = {
+  now: () => performance.now() * 1000,
+};
+
 /** Wires a worker scope to a fresh handler. Exported so it can be exercised with a fake scope, no `Worker` required. */
 export function bootstrap(scope: DedicatedWorkerScope, capabilities: WorkerCaps = detectCapabilities()) {
   const handler = createHandler({
     post: (event, transfer) => scope.postMessage(event, transfer ? [...transfer] : undefined),
     scheduler: REAL_SCHEDULER,
     capabilities,
+    clock: REAL_CLOCK,
   });
   scope.onmessage = (event) => handler.handle(event.data);
   return handler;

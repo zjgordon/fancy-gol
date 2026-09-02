@@ -638,13 +638,20 @@ Emit a `CompiledRule` with the strategy selected automatically:
 
 ### Workstream I — Shell, server, container, CI
 
-#### - [ ] P0-I-1 · Minimal client shell
+#### - [x] P0-I-1 · Minimal client shell — @claude, started 2026-09-02, finished 2026-09-02
 **Depends on:** P0-G-3, P0-H-2 · **Files:** `src/client/index.html`, `src/client/main.ts`
-**Implementation notes** Full-viewport canvas, a rAF loop that draws only when a new frame has arrived, and a small readout of tick / population / fps / step-ms / render-ms. Boots with a Gosper glider gun so the very first thing anyone sees is the thing moving. Two buttons only: play/pause and reset.
+**Implementation notes**
+- Full-viewport canvas plus a small HUD overlay (tick / population / fps / step-ms / render-ms readout, play/pause and reset buttons). Boots a 256×192 toroidal Conway world, paints a Gosper glider gun via `paint` (`loadPattern`'s RLE codec doesn't exist until Phase 2 — same constraint the P0-H-3 test worked around), and immediately sends `run` so the first thing on screen is the gun firing.
+- No custom animation loop was written: `WorkerClient.onFrame` (P0-G-3) already coalesces delivery onto `requestAnimationFrame` internally, so subscribing to it *is* "a rAF loop that draws only when a new frame has arrived." While paused, the worker emits no `frame` events, so `WorkerClient` never calls `frameScheduler.request()` at all — idle CPU from the render path is exactly zero by construction, not merely small.
+- `WorkerClient` targets a structural `WorkerLike`, not a real `Worker` (so it stays testable without a browser); a real `Worker`'s `onmessage`/`onerror` setters are typed against the DOM's richer `MessageEvent`, not directly assignable to `WorkerLike`'s narrower shape. `toWorkerLike()` adapts by forwarding through independent properties instead.
+- This task has no automated test of its own (`npm run e2e`/Playwright doesn't exist until Phase 1) — its three criteria were verified by driving the actual dev server (`npx vite`) with a real Chromium browser (Playwright MCP tooling) rather than approximated or left unproven, per "never present an approximation as exact."
+- Doing that real-browser pass caught two genuine bugs no headless test had exercised:
+  1. `TickStats.stepMicros` was silently always `0` — `worker/handler.ts`'s `HandlerOptions.clock` (P0-B-3's injected-clock contract) was never actually supplied by `sim.worker.ts`, the file whose own job is exactly that kind of environment wiring (mirroring `REAL_SCHEDULER`/`detectCapabilities()`). Added `REAL_CLOCK` (`performance.now()`, converted ms → µs) to `sim.worker.ts` and wired it into `bootstrap()`'s `createHandler()` call; covered by new tests in `tests/unit/worker/sim.worker.spec.ts` (a mocked `performance.now()` proving the ms→µs conversion, and proving `bootstrap()` actually passes it through rather than falling back to the zero-stub).
+  2. Clicking Reset (paused or not) left the previous frame's gliders visibly painted on screen: `clear`'s `postFullFrame` reports `dirty: []` (an empty world has nothing to *describe* as changed), not `dirty: null` ("repaint everything") — so `Canvas2DRenderer.draw()` correctly issued zero draw calls and never erased the stale pixels. This is the concrete, renderer-facing half of `FrameGridMirror`'s already-documented known limitation (P0-H-3). Fixed locally in the reset handler: after `mirror.reset()`, force one `renderer.draw({ dirty: null, ... })` before repainting the gun. `src/worker/frame-view.ts`'s doc comment now describes this manifestation.
 **Acceptance criteria**
-- [ ] Cold load to first painted generation < 1500 ms locally.
-- [ ] Idle (paused) CPU usage is effectively zero — the rAF loop must not spin when nothing changed.
-- [ ] No console errors or warnings.
+- [x] Cold load to first painted generation < 1500 ms locally — measured via `window.__fancyGolFirstFrameMs` (set on the first `draw()` call, relative to a `performance.now()` mark taken at module top), read back through Playwright against the Vite dev server: ~38 ms.
+- [x] Idle (paused) CPU usage is effectively zero — the rAF loop must not spin when nothing changed — true by construction (see implementation notes); confirmed empirically by pausing and observing the tick readout stay frozen (no further `frame` events, hence no further rAF requests) across a multi-second wait.
+- [x] No console errors or warnings — confirmed via Playwright's console listener across boot, play, pause, and reset (including the empty-world edge case above once fixed); a stray `favicon.ico` 404 found during the first pass was closed with `<link rel="icon" href="data:,">`.
 
 #### - [ ] P0-I-2 · Express server skeleton
 **Depends on:** P0-A-1 · **Files:** `src/server/app.ts`, `src/server/index.ts`

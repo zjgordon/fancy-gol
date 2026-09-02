@@ -74,4 +74,22 @@ describe('FrameGridMirror', () => {
     view.forEachChunkInRect({ x: 0, y: 0, width: 32, height: 32 }, (c) => visited.push([c.cx, c.cy]));
     expect(visited).toEqual([[0, 0]]);
   });
+
+  it('reset() discards every mirrored chunk, leaving the view back to its empty starting state', () => {
+    const mirror = new FrameGridMirror();
+    mirror.applyChunks(onePageChunks(0, 0, [[1, 1, 1]]));
+    mirror.applyChunks(onePageChunks(5, 5, [[161, 161, 1]]));
+
+    mirror.reset();
+
+    const view = mirror.view();
+    expect(view.get(1, 1)).toBe(DEAD);
+    expect(view.getChunk(0, 0)).toBeUndefined();
+    expect(view.bounds()).toEqual({ x: 0, y: 0, width: 0, height: 0 });
+
+    // A frame applied after reset() starts from a clean slate, not merged with the discarded state.
+    mirror.applyChunks(onePageChunks(2, 2, [[65, 65, 4]]));
+    expect(view.get(65, 65)).toBe(4);
+    expect(view.getChunk(0, 0)).toBeUndefined();
+  });
 });

@@ -17,10 +17,21 @@
  * whole world, drop anything not listed" (`postFullFrame`, sent after `clear`/`seedRandom`/
  * `seek`/`restore`) versus "this is only what changed" (`postFrame`). A chunk that died out
  * entirely in one of those operations is genuinely absent from the new frame, but stays stale
- * in this mirror until something else overwrites it. Not exercised by anything in Phase 0 —
- * nothing here calls those commands — but whoever wires up P0-I-1's "reset" button will need to
- * resolve it, most simply by discarding and rebuilding the mirror whenever the client sends one
- * of those commands.
+ * in this mirror until something else overwrites it. `reset()` is the escape hatch: a caller
+ * that already knows it is about to trigger one of those full-frame commands (P0-I-1's client
+ * shell calls it around its own `clear` command, for its reset button) can discard the mirror's
+ * contents first, so the next frame's chunks are all that remain. This only helps a caller who
+ * knows to use it — the wire protocol still can't distinguish the two frame kinds on its own,
+ * so any other caller sending `seedRandom`/`seek`/`restore` without also calling `reset()` still
+ * hits the same staleness. Not exercised by any Phase 0 caller other than P0-I-1's `clear` path.
+ *
+ * The same gap has a second, renderer-facing half: `postFullFrame` reports `dirty: []` (not
+ * `null`) when the world becomes fully empty — an empty world has nothing to *describe* as
+ * changed — so `Renderer.draw()` sees an empty dirty list and issues zero draw calls, leaving
+ * whatever was on screen before untouched. Found exactly this way: clicking P0-I-1's reset
+ * button cleared the mirror correctly but left the old gliders visibly painted on the canvas.
+ * `FrameGridMirror` can't fix this itself (it has no renderer to redraw); the client shell works
+ * around it locally by forcing one `draw()` with `dirty: null` right after its own `reset()`.
  */
 import { packChunk, unpackChunkX, unpackChunkY, worldToChunk } from '@engine/grid/coords';
 import {
@@ -79,6 +90,11 @@ export class FrameGridMirror {
   /** A `GridView` over the mirror's current contents — the same object every call; it reflects the mirror live, so there's nothing to reallocate. */
   view(): GridView {
     return this.gridView;
+  }
+
+  /** Discards every chunk the mirror currently holds — see the class doc's "known limitation" for when a caller needs this. */
+  reset(): void {
+    this.pages.clear();
   }
 
   private chunkView(key: number, data: Uint8Array): ChunkView {

@@ -236,6 +236,16 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   locality (a lone blinker's draw calls stay inside its one chunk, not the full viewport), and
   zero allocations attributable to `Canvas2DRenderer.draw()` itself once isolated from the test
   harness's own logging overhead. (P0-H-3)
+- `src/client/index.html`/`src/client/main.ts` — the first real, in-browser client: a
+  full-viewport canvas, a HUD readout (tick/population/fps/step-ms/render-ms), and play/pause and
+  reset buttons, wired to a real `Worker` running a 256×192 toroidal Conway world seeded with a
+  Gosper glider gun, running the moment the page loads. No custom render loop: subscribing to
+  `WorkerClient.onFrame` *is* "a rAF loop that draws only when a new frame has arrived," since
+  frame coalescing already defers to `requestAnimationFrame` internally — while paused, the worker
+  emits no `frame` events, so the client never even requests one, making idle CPU exactly zero by
+  construction. Verified in a real Chromium instance (Playwright) against the Vite dev server —
+  Phase 1 hasn't wired up `npm run e2e` yet — since this task's acceptance criteria are about real
+  browser behaviour a headless test can't stand in for. (P0-I-1)
 
 ### Fixed
 
@@ -250,5 +260,18 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `Canvas2DRenderer.init()` (`src/render/canvas2d.ts`) threw synchronously on a `null`
   `getContext('2d')` result instead of rejecting its returned `Promise`, breaking its documented
   async contract. (P0-H-3)
+- `TickStats.stepMicros` was silently always `0`: `worker/handler.ts`'s injected-clock contract
+  (P0-B-3) was never actually supplied by `sim.worker.ts`, whose own job is exactly this kind of
+  environment wiring (the same pattern as its `REAL_SCHEDULER`/`detectCapabilities()`). Found by
+  running the client shell in a real browser and watching the "step" readout stay pinned at
+  `0.00 ms`. Added `REAL_CLOCK` (`performance.now()`, converted ms → µs) and wired it into
+  `bootstrap()`. (P0-I-1)
+- Clicking the client shell's Reset button correctly cleared the simulation and the client's
+  chunk mirror, but left the previous frame's gliders visibly painted on the canvas: `clear`'s
+  `postFullFrame` reports `dirty: []`, not `dirty: null`, for a now-fully-empty world (there's
+  nothing to *describe* as changed), so the renderer correctly issued zero draw calls and never
+  erased the stale pixels — the renderer-facing half of `FrameGridMirror`'s already-documented
+  known limitation (P0-H-3). Fixed locally: the reset handler now forces one full `draw()` right
+  after resetting the mirror, before repainting the gun. (P0-I-1)
 
 [Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/main...HEAD

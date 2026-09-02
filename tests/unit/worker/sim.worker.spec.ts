@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { CONWAY } from '@engine/rules/builtin';
 import type { Event } from '@shared/protocol';
-import { bootstrap, detectCapabilities, type DedicatedWorkerScope } from '@worker/sim.worker';
+import { REAL_CLOCK, bootstrap, detectCapabilities, type DedicatedWorkerScope } from '@worker/sim.worker';
 
 describe('detectCapabilities', () => {
   it('reflects this (Node) environment: SharedArrayBuffer yes, OffscreenCanvas no', () => {
@@ -47,5 +47,27 @@ describe('bootstrap', () => {
     bootstrap(scope);
     scope.onmessage?.({ data: { id: 1, cmd: 'init', ruleset: CONWAY, width: 16, height: 16, seed: 1 } });
     expect(posted).toEqual([{ id: 1, type: 'ready', capabilities: detectCapabilities() }]);
+  });
+
+  it('wires REAL_CLOCK into the handler: a step reports the real elapsed time, not handler.ts\'s zero-stub default', () => {
+    const times = [0, 5.5]; // ms: Simulation.step() reads the clock once before and once after
+    const spy = vi.spyOn(performance, 'now').mockImplementation(() => times.shift() ?? 0);
+    const { scope, posted } = createFakeScope();
+    bootstrap(scope, { sharedArrayBuffer: false, offscreenCanvas: false });
+    scope.onmessage?.({ data: { id: 1, cmd: 'init', ruleset: CONWAY, width: 16, height: 16, seed: 1 } });
+    posted.length = 0; // drop the 'ready' event
+    scope.onmessage?.({ data: { id: 2, cmd: 'step', n: 1 } });
+
+    const frame = (posted as Event[]).find((e): e is Extract<Event, { type: 'frame' }> => e.type === 'frame');
+    expect(frame?.stats.stepMicros).toBe(5500); // 5.5ms * 1000, per REAL_CLOCK's documented ms->us conversion
+    spy.mockRestore();
+  });
+});
+
+describe('REAL_CLOCK', () => {
+  it('reports performance.now() converted from milliseconds to microseconds', () => {
+    const spy = vi.spyOn(performance, 'now').mockReturnValue(12.5);
+    expect(REAL_CLOCK.now()).toBe(12500);
+    spy.mockRestore();
   });
 });
