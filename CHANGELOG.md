@@ -42,5 +42,22 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   per ruleset rather than per cell. `src/engine/rules/errors.ts` introduces the structured
   `RuleValidationError` a phase early, since custom-offset validation needs it and P0-D-2 will
   reuse it unchanged. (P0-C-3)
+- `src/engine/rules/schema.ts` and `docs/ruleset-schema.md` — the `RuleSetDocument` shape
+  (a `RuleSet` plus a schema `version`) and a complete, human-readable field-by-field
+  reference with a copy-pasteable worked example for every `transition` kind: Conway, Seeds,
+  and Brian's Brain (`totalistic`), a Generations demo, WireWorld (`stateTable`, generated —
+  262,144 entries is not something a human hand-writes), Highlands/Liquid (`weighted`, the
+  inception document's own terrain example), and Langton's Ant (`turmite`). (P0-D-1)
+- `src/engine/rules/validate.ts` — a hand-written (no `ajv`) `RuleSetDocument` validator: every
+  check collected into one structured `RuleValidationError`, never stopping at the first
+  failure, with a real JSON-pointer `path` and a `hint` on every issue. 43 negative fixtures in
+  `tests/fixtures/rules/invalid/`. Fixed a real false positive in
+  `scripts/check-boundaries.mjs`'s global scanner along the way: validator prose like `'a rule
+  document must be...'` was tripping the `document` ban, because the scanner only stripped
+  comments, not string/template literals, before matching. (P0-D-2)
+- `src/engine/rules/parse.ts` — `parseRuleNotation`/`formatRuleNotation`: one entry point that
+  sniffs B/S, legacy S/B, and Generations (both `B../S../G<n>` and Golly-order) notation, plus
+  a trailing V/H neighbourhood suffix, and rejects Hensel/non-totalistic notation by name
+  rather than mis-parsing it. 27 table-driven cases, each canonicalising idempotently. (P0-D-3)
 
 [Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/main...HEAD

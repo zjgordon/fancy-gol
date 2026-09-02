@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "id": "highlands-liquid",
+  "name": "Highlands / Liquid",
+  "description": "A weighted terrain rule: every cell's next state is decided by the weighted sum of its neighbours (highlands count for more than liquid), independent of the cell's own current state. From random noise this settles into recognisable land/water banding — the 'Rule-God Status' weighted-terrain example from the inception document.",
+  "states": [
+    { "id": 0, "name": "void", "kind": "dead", "countsAsAlive": false },
+    { "id": 1, "name": "liquid", "kind": "live", "countsAsAlive": true },
+    { "id": 2, "name": "highland", "kind": "live", "countsAsAlive": true }
+  ],
+  "neighborhood": { "kind": "moore", "radius": 1 },
+  "transition": {
+    "kind": "weighted",
+    "weights": [0, 1, 3],
+    "thresholds": [
+      { "min": 0, "max": 4, "toState": 0 },
+      { "min": 5, "max": 10, "toState": 1 },
+      { "min": 11, "max": 24, "toState": 2 }
+    ]
+  },
+  "boundary": "toroidal"
+}

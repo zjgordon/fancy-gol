@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "id": "brians-brain",
+  "name": "Brian's Brain",
+  "description": "3-state: a dead cell with exactly 2 live neighbours fires; a firing cell always dies to refractory; a refractory cell always returns to dead. No cell ever survives.",
+  "author": "Brian Silverman, 1990s",
+  "states": [
+    { "id": 0, "name": "dead", "kind": "dead", "countsAsAlive": false },
+    { "id": 1, "name": "firing", "kind": "live", "countsAsAlive": true },
+    { "id": 2, "name": "refractory", "kind": "decay", "countsAsAlive": false }
+  ],
+  "neighborhood": { "kind": "moore", "radius": 1 },
+  "transition": { "kind": "totalistic", "born": [2], "survive": [], "decayStates": 1 },
+  "boundary": "toroidal"
+}

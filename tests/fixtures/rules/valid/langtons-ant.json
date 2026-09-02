@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "id": "langtons-ant",
+  "name": "Langton's Ant",
+  "description": "A single agent (turmite) walks the grid: on a white square, turn right, flip it black, step forward; on a black square, turn left, flip it white, step forward. Simple local rules, famously complex emergent behaviour (a 'highway' after ~10,000 steps).",
+  "author": "Chris Langton, 1986",
+  "states": [
+    { "id": 0, "name": "white", "kind": "dead", "countsAsAlive": false },
+    { "id": 1, "name": "black", "kind": "live", "countsAsAlive": true }
+  ],
+  "neighborhood": { "kind": "moore", "radius": 1 },
+  "transition": {
+    "kind": "turmite",
+    "states": [
+      { "state": 0, "onCellState": 0, "writeState": 1, "turn": "right", "nextState": 0 },
+      { "state": 0, "onCellState": 1, "writeState": 0, "turn": "left", "nextState": 0 }
+    ]
+  },
+  "boundary": "infinite"
+}

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "id": "generations-demo",
+  "name": "Generations Demo",
+  "description": "An illustrative 3-state Generations rule: Conway-like birth/survival, but a cell that dies ages through one 'fading' state before returning to dead, instead of dying instantly.",
+  "states": [
+    { "id": 0, "name": "dead", "kind": "dead", "countsAsAlive": false },
+    { "id": 1, "name": "alive", "kind": "live", "countsAsAlive": true },
+    { "id": 2, "name": "fading", "kind": "decay", "countsAsAlive": false }
+  ],
+  "neighborhood": { "kind": "moore", "radius": 1 },
+  "transition": { "kind": "generations", "born": [3], "survive": [2, 3], "states": 3 },
+  "boundary": "toroidal"
+}

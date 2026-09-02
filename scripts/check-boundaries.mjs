@@ -88,19 +88,62 @@ export function isImportAllowed(fromLayer, targetRelPath) {
   return allowed.some((entry) => matches(entry, targetRelPath));
 }
 
-/** Blank out comment bodies (preserving line breaks and column count) so prose mentioning a
- *  forbidden word (e.g. a TSDoc comment explaining *why* `performance` is banned) doesn't
- *  trip the scanner. Imperfect for comment-like text inside string literals — acceptable for
- *  an ~100-line hand-written tool. */
-function stripComments(source) {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
-    .replace(/\/\/[^\n]*/g, (m) => ' '.repeat(m.length));
+/**
+ * Blank out comments and string/template-literal bodies (preserving line breaks and column
+ * count) so prose mentioning a forbidden word — a TSDoc comment explaining *why*
+ * `performance` is banned, or an error message like "a rule document must be…" — doesn't
+ * trip the scanner. A single-pass character scan, not a real tokenizer: template-literal
+ * `${...}` interpolations are blanked along with their surrounding text, so a global used
+ * only inside one would be missed. Acceptable for an ~100-line hand-written tool; real code
+ * doesn't hide its DOM access inside a template placeholder.
+ */
+function stripNonCode(source) {
+  let out = '';
+  let i = 0;
+  const n = source.length;
+  while (i < n) {
+    const c = source[i];
+    const next = source[i + 1];
+    if (c === '/' && next === '/') {
+      while (i < n && source[i] !== '\n') {
+        out += ' ';
+        i += 1;
+      }
+    } else if (c === '/' && next === '*') {
+      out += '  ';
+      i += 2;
+      while (i < n && !(source[i] === '*' && source[i + 1] === '/')) {
+        out += source[i] === '\n' ? '\n' : ' ';
+        i += 1;
+      }
+      out += '  ';
+      i += 2;
+    } else if (c === '"' || c === "'" || c === '`') {
+      const quote = c;
+      out += ' ';
+      i += 1;
+      while (i < n && source[i] !== quote) {
+        if (source[i] === '\\') {
+          out += '  ';
+          i += 2;
+          continue;
+        }
+        out += source[i] === '\n' ? '\n' : ' ';
+        i += 1;
+      }
+      out += ' ';
+      i += 1;
+    } else {
+      out += c;
+      i += 1;
+    }
+  }
+  return out;
 }
 
 export function scanForbiddenGlobals(source) {
   const hits = [];
-  const lines = stripComments(source).split('\n');
+  const lines = stripNonCode(source).split('\n');
   for (const global of FORBIDDEN_ENGINE_GLOBALS) {
     const re = new RegExp(`(?<![.\\w$])${global}(?![\\w$])`, 'g');
     lines.forEach((line, i) => {

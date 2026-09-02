@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "id": "conway",
+  "name": "Conway's Game of Life",
+  "description": "The original: a cell is born with exactly 3 live neighbours and survives with 2 or 3.",
+  "author": "John Conway, 1970",
+  "states": "not-an-array",
+  "neighborhood": {
+    "kind": "moore",
+    "radius": 1
+  },
+  "transition": {
+    "kind": "totalistic",
+    "born": [
+      3
+    ],
+    "survive": [
+      2,
+      3
+    ]
+  },
+  "boundary": "toroidal"
+}

@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "id": "conway",
+  "name": "Conway's Game of Life",
+  "description": "The original: a cell is born with exactly 3 live neighbours and survives with 2 or 3.",
+  "author": "John Conway, 1970",
+  "states": [
+    {
+      "id": 0,
+      "name": "dead",
+      "kind": "dead",
+      "countsAsAlive": false
+    },
+    {
+      "id": 1,
+      "name": "alive",
+      "kind": "live",
+      "countsAsAlive": true
+    }
+  ],
+  "neighborhood": {
+    "kind": "moore",
+    "radius": 1
+  },
+  "transition": {
+    "kind": "weighted",
+    "weights": [
+      0
+    ],
+    "thresholds": [
+      {
+        "min": 0,
+        "max": 8,
+        "toState": 1
+      }
+    ]
+  },
+  "boundary": "toroidal"
+}

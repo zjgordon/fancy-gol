@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "id": "seeds",
+  "name": "Seeds",
+  "description": "Explosive: every live cell dies each generation; a dead cell with exactly 2 live neighbours is born.",
+  "author": "Brian Silverman / Mirek Wojtowicz",
+  "states": [
+    { "id": 0, "name": "dead", "kind": "dead", "countsAsAlive": false },
+    { "id": 1, "name": "alive", "kind": "live", "countsAsAlive": true }
+  ],
+  "neighborhood": { "kind": "moore", "radius": 1 },
+  "transition": { "kind": "totalistic", "born": [2], "survive": [] },
+  "boundary": "toroidal"
+}
