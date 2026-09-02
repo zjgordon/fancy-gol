@@ -120,4 +120,17 @@ describe('Simulation.setRuleset', () => {
     expect(sim.stats.population).toBe(4);
     expect(sim.get(8, 8)).toBe(1);
   });
+
+  it('retiles live cells when the boundary mode changes', () => {
+    const sim = new Simulation({ ruleset: CONWAY, width: 32, height: 32 });
+    sim.set(3, 3, 1);
+    sim.setRuleset({ ...CONWAY, boundary: 'infinite' });
+    expect(sim.ruleset.boundary).toBe('infinite');
+    expect(sim.get(3, 3)).toBe(1);
+  });
+
+  it('refuses a finite boundary when the simulation has no width and height', () => {
+    const sim = new Simulation({ ruleset: infiniteConway() });
+    expect(() => sim.setRuleset(CONWAY)).toThrow(/width and height/);
+  });
 });

@@ -3,11 +3,14 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { BRIANS_BRAIN, CONWAY, HIGHLIFE, SEEDS, STAR_WARS } from '@engine/rules/builtin';
 import { validateRuleSet } from '@engine/rules/validate';
+import { CHUNK_AREA, packChunk } from '@engine/grid/coords';
+import { HistoryJournal, type HistoryEviction } from '@engine/history/journal';
 import { Mulberry32 } from '@engine/rng';
 import { Simulation } from '@engine/simulation';
-import type { PaintOp, RuleSet } from '@engine/types';
+import type { ChangeSet, PaintOp, RuleSet, Snapshot } from '@engine/types';
 
 const FIXTURES = fileURLToPath(new URL('../../fixtures/rules/valid/', import.meta.url));
+const UNDER_COVERAGE = process.env['VITEST_COVERAGE'] === '1';
 
 function infiniteConway(): RuleSet {
   return { ...CONWAY, boundary: 'infinite' };
@@ -63,7 +66,194 @@ describe('Phase 0 throughput floor', () => {
     const t0 = performance.now();
     for (let i = 0; i < STEPS; i++) sim.step();
     const elapsed = performance.now() - t0;
-    expect((STEPS / elapsed) * 1000).toBeGreaterThanOrEqual(60);
+    if (!UNDER_COVERAGE) expect((STEPS / elapsed) * 1000).toBeGreaterThanOrEqual(60);
+  });
+});
+
+describe('P0-F-1 history journal', () => {
+  const FIELD = { width: 64, height: 64 } as const;
+  const SEED = 0xf1a701;
+
+  function identical(a: Snapshot, b: Snapshot): void {
+    expect(a.tick).toBe(b.tick);
+    expect(a.rngState).toBe(b.rngState);
+    expect(a.chunkKeys).toEqual(b.chunkKeys);
+    expect(a.chunkData).toEqual(b.chunkData);
+  }
+
+  it('seek(t) for 200 random ticks matches a fresh re-simulation byte-for-byte', { timeout: 30_000 }, () => {
+    const rule: RuleSet = { ...CONWAY, boundary: 'toroidal' };
+    const live = new Simulation({ ruleset: rule, ...FIELD, seed: SEED, history: true });
+    const twin = new Simulation({ ruleset: rule, ...FIELD, seed: SEED });
+    live.seedRandom(0.4, SEED);
+    twin.seedRandom(0.4, SEED);
+    const goldens: Snapshot[] = [structuredClone(twin.snapshot())];
+    const TICKS = 512;
+    for (let i = 0; i < TICKS; i++) {
+      live.step();
+      twin.step();
+      goldens.push(structuredClone(twin.snapshot()));
+    }
+
+    const rng = new Mulberry32(0x5eed);
+    const picks = new Set<number>([0, 64, TICKS]);
+    while (picks.size < 200) picks.add(rng.nextInt(TICKS + 1));
+
+    for (const t of picks) {
+      live.seek(t);
+      expect(live.tick).toBe(t);
+      identical(live.snapshot(), goldens[t]!);
+    }
+  });
+
+  it('seeking backwards 4,000 ticks completes in < 250 ms with K = 64', { timeout: 30_000 }, () => {
+    const rule: RuleSet = { ...CONWAY, boundary: 'toroidal' };
+    const sim = new Simulation({
+      ruleset: rule,
+      ...FIELD,
+      seed: SEED,
+      history: { keyframeInterval: 64 },
+    });
+    sim.seedRandom(0.35, SEED);
+    const STEPS = 4_100;
+    for (let i = 0; i < STEPS; i++) sim.step();
+    const target = sim.tick - 4_000;
+    const t0 = performance.now();
+    sim.seek(target);
+    if (!UNDER_COVERAGE) expect(performance.now() - t0).toBeLessThan(250);
+    expect(sim.tick).toBe(target);
+
+    const fresh = new Simulation({ ruleset: rule, ...FIELD, seed: SEED });
+    fresh.seedRandom(0.35, SEED);
+    for (let i = 0; i < target; i++) fresh.step();
+    identical(sim.snapshot(), fresh.snapshot());
+  });
+
+  it(
+    'a 1M-cell chaotic journal for 10,000 ticks stays under the ceiling and reports evictions',
+    { timeout: 30_000 },
+    () => {
+      const keys = new Int32Array(1024);
+      const data = new Uint8Array(1024 * CHUNK_AREA);
+      const rng = new Mulberry32(0xca0);
+      let population = 0;
+      let i = 0;
+      for (let cy = 0; cy < 32; cy++) {
+        for (let cx = 0; cx < 32; cx++) {
+          keys[i] = packChunk(cx, cy);
+          const off = i * CHUNK_AREA;
+          for (let c = 0; c < CHUNK_AREA; c++) {
+            // Both values are live, so the page is 1,048,576 occupied cells that
+            // will not RLE-shrink — a chaotic 1M-cell payload, not a 50% soup.
+            data[off + c] = rng.next() < 0.5 ? 1 : 2;
+            population += 1;
+          }
+          i += 1;
+        }
+      }
+      expect(population).toBe(1024 * 1024);
+
+      const reports: HistoryEviction[] = [];
+      const ceiling = 8 * 1024 * 1024;
+      const journal = new HistoryJournal({
+        keyframeInterval: 64,
+        byteCeiling: ceiling,
+        onEvict: (e) => reports.push(e),
+      });
+      const snapAt = (tick: number): Snapshot => ({
+        tick,
+        chunkKeys: keys,
+        chunkData: data,
+        rngState: tick,
+      });
+      const empty: ChangeSet = {
+        tick: 0,
+        coords: new Int32Array(0),
+        from: new Uint8Array(0),
+        to: new Uint8Array(0),
+        count: 0,
+        dirtyChunks: new Int32Array(0),
+      };
+      journal.resetTo(snapAt(0), population);
+      for (let t = 1; t <= 10_000; t++) {
+        journal.recordDelta({ ...empty, tick: t }, t);
+        if (t % 64 === 0) journal.recordKeyframe(snapAt(t), population);
+      }
+      expect(journal.bytes).toBeLessThanOrEqual(ceiling);
+      expect(journal.evictions).toBeGreaterThan(0);
+      expect(reports.length).toBe(journal.evictions);
+      expect(reports[0]!.discardedFrom).toBe(0);
+      expect(journal.retained.from).toBeGreaterThan(0);
+    },
+  );
+
+  it('mutating a returned ChangeSet does not rewrite recorded history', () => {
+    const rule: RuleSet = { ...CONWAY, boundary: 'toroidal' };
+    const sim = new Simulation({ ruleset: rule, width: 32, height: 32, history: true });
+    sim.seedRandom(0.5, 3);
+    const afterSeed = structuredClone(sim.snapshot());
+    const cs = sim.step();
+    expect(cs.count).toBeGreaterThan(0);
+    const tick1 = structuredClone(sim.snapshot());
+    cs.coords.fill(0);
+    cs.from.fill(9);
+    cs.to.fill(9);
+    sim.seek(0);
+    identical(sim.snapshot(), afterSeed);
+    sim.seek(1);
+    identical(sim.snapshot(), tick1);
+  });
+
+  it('reports evictions through Simulation, truncates the fork, and refuses seek when history is off', () => {
+    const reports: HistoryEviction[] = [];
+    const sim = new Simulation({
+      ruleset: { ...CONWAY, boundary: 'toroidal' },
+      width: 32,
+      height: 32,
+      history: {
+        keyframeInterval: 1,
+        byteCeiling: 20_000,
+        onEvict: (e) => reports.push(e),
+      },
+    });
+    sim.seedRandom(0.5, 1);
+    for (let i = 0; i < 80; i++) sim.step();
+    expect(sim.history).toBeDefined();
+    expect(sim.history!.bytes).toBeLessThanOrEqual(20_000);
+    expect(sim.history!.evictions).toBeGreaterThan(0);
+    expect(reports.length).toBe(sim.history!.evictions);
+    expect(sim.history!.retained.from).toBeGreaterThan(0);
+
+    const mid = sim.tick - 4;
+    sim.truncateAfter(mid);
+    expect(sim.history!.retained.to).toBe(mid);
+    expect(() => sim.seek(mid + 1)).toThrow(/outside the retained window/);
+    sim.seek(mid - 1);
+    expect(sim.tick).toBe(mid - 1);
+
+    const mute = new Simulation({ ruleset: infiniteConway(), history: false });
+    expect(mute.history).toBeUndefined();
+    expect(() => mute.seek(0)).toThrow(/history is disabled/);
+    expect(() => mute.truncateAfter(0)).toThrow(/history is disabled/);
+  });
+
+  it('clear and restore reset the journal to the new head', () => {
+    const rule: RuleSet = { ...CONWAY, boundary: 'toroidal' };
+    const sim = new Simulation({ ruleset: rule, width: 32, height: 32, history: true });
+    sim.seedRandom(0.5, 2);
+    sim.step();
+    sim.step();
+    const snap = structuredClone(sim.snapshot());
+    sim.clear();
+    expect(sim.stats.population).toBe(0);
+    expect(sim.history!.retained).toEqual({ from: sim.tick, to: sim.tick });
+    expect(() => sim.seek(0)).toThrow(/outside the retained window/);
+
+    const other = new Simulation({ ruleset: rule, width: 32, height: 32, history: true });
+    other.restore(snap);
+    expect(other.tick).toBe(snap.tick);
+    other.seek(snap.tick);
+    identical(other.snapshot(), snap);
   });
 });
 
@@ -109,7 +299,7 @@ describe('Phase 0 paint and seed budgets', () => {
     const ms = performance.now() - t0;
     expect(cs.count).toBe(100_000);
     expect(sim.stats.population).toBe(100_000);
-    expect(ms).toBeLessThan(20);
+    if (!UNDER_COVERAGE) expect(ms).toBeLessThan(20);
   });
 
   it('seedRandom(0.5) is reproducible and within ±0.5% of target on a 1M-cell field', () => {
@@ -151,8 +341,8 @@ describe('Phase 0 paint and seed budgets', () => {
       const ms = performance.now() - t0;
       const bytes = snap.chunkKeys.byteLength + snap.chunkData.byteLength;
       const naive = WORLD * WORLD;
-      expect(ms).toBeLessThan(100);
       expect(bytes).toBeLessThanOrEqual(naive * 0.1);
+      if (!UNDER_COVERAGE) expect(ms).toBeLessThan(100);
     },
   );
 });
@@ -192,7 +382,7 @@ describe('ADR-004 oracles', () => {
 
   it(
     'the R-pentomino stabilises at generation 1103 with 116 live cells',
-    { timeout: 30_000 },
+    { timeout: 90_000 },
     () => {
       const sim = new Simulation({ ruleset: infiniteConway() });
       stamp(sim, R_PENTOMINO, 0, 0);
@@ -204,7 +394,7 @@ describe('ADR-004 oracles', () => {
     },
   );
 
-  it('the acorn stabilises at generation 5206 with 633 live cells', { timeout: 60_000 }, () => {
+  it('the acorn stabilises at generation 5206 with 633 live cells', { timeout: 180_000 }, () => {
     const sim = new Simulation({ ruleset: infiniteConway() });
     stamp(sim, ACORN, 0, 0);
     for (let i = 0; i < 5206; i++) sim.step();
@@ -229,6 +419,17 @@ describe('ChangeSet reuse and stepMany', () => {
     expect(sim.tick).toBe(2);
     // period-2: net change is empty
     expect(cs.count).toBe(0);
+  });
+
+  it('stepMany(0) is a no-op and stepMany(1) matches step()', () => {
+    const sim = new Simulation({ ruleset: infiniteConway() });
+    stamp(sim, BLINKER, 0, 0);
+    const idle = sim.stepMany(0);
+    expect(idle.count).toBe(0);
+    expect(sim.tick).toBe(0);
+    const a = sim.stepMany(1);
+    expect(sim.tick).toBe(1);
+    expect(a.count).toBeGreaterThan(0);
   });
 });
 

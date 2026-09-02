@@ -2,6 +2,8 @@ import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 const alias = (path: string) => fileURLToPath(new URL(path, import.meta.url));
+const UNDER_COVERAGE = process.argv.includes('--coverage');
+if (UNDER_COVERAGE) process.env['VITEST_COVERAGE'] = '1';
 
 export default defineConfig({
   resolve: {
@@ -22,6 +24,9 @@ export default defineConfig({
         test: {
           name: 'node',
           environment: 'node',
+          // Sequential for `vitest run` so the 512² soup floor isn't racing other
+          // files. Coverage skips those wall-clock asserts and can stay parallel.
+          fileParallelism: UNDER_COVERAGE,
           include: ['tests/**/*.spec.ts', 'src/**/*.spec.ts'],
           exclude: [
             'tests/unit/ui/**',

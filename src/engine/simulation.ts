@@ -25,6 +25,7 @@ import {
   unpackChunkY,
   worldToChunk,
 } from './grid/coords';
+import { HistoryJournal, type HistoryJournalOptions } from './history/journal';
 import { Mulberry32 } from './rng';
 import {
   DEAD,
@@ -48,8 +49,11 @@ export interface SimulationOptions {
   readonly height?: number;
   /** PRNG seed; default `0x9e3779b9`. */
   readonly seed?: number;
-  /** History lands in P0-F-1; pass `false` to be explicit. */
-  readonly history?: false;
+  /**
+   * History journal (P0-F-1). Default off so the hot loop is unburdened; pass
+   * `true` or options to record keyframes/deltas. Perf tests leave this unset.
+   */
+  readonly history?: false | true | HistoryJournalOptions;
   /** Injected clock for `TickStats.stepMicros`. Defaults to a zero-delta stub. */
   readonly clock?: Clock;
 }
@@ -90,6 +94,7 @@ export class Simulation {
   private readonly rng: Mulberry32;
   private readonly width: number;
   private readonly height: number;
+  private readonly journal: HistoryJournal | null;
 
   private _tick = 0;
   private readonly statsState: TickStats = {
@@ -136,6 +141,13 @@ export class Simulation {
     this.clock = opts.clock ?? ZERO_CLOCK;
     this.rng = new Mulberry32(opts.seed ?? DEFAULT_SEED);
     this.neighbourScratch = new Uint8Array(this.compiled.neighbourCount);
+    this.journal =
+      opts.history === true
+        ? new HistoryJournal()
+        : opts.history
+          ? new HistoryJournal(opts.history)
+          : null;
+    this.journal?.resetTo(this.snapshot(), 0);
   }
 
   get ruleset(): RuleSet {
@@ -247,6 +259,7 @@ export class Simulation {
     this.statsState.deaths = 0;
     this.statsState.transitions = 0;
     this.refreshStats(this.statsState.stepMicros);
+    this.captureHistoryHead();
   }
 
   /**
@@ -288,6 +301,7 @@ export class Simulation {
     this.changeCount = 0;
     this.dirtyCount = 0;
     this.refreshStats(this.statsState.stepMicros);
+    this.captureHistoryHead();
   }
 
   /**
@@ -321,6 +335,7 @@ export class Simulation {
     this.compiled = compileRule(rs);
     this.neighbourScratch = new Uint8Array(this.compiled.neighbourCount);
     this.refreshStats(this.statsState.stepMicros);
+    this.captureHistoryHead();
   }
 
   /**
@@ -360,7 +375,9 @@ export class Simulation {
 
     this._tick += 1;
     this.refreshStats(this.clock.now() - t0);
-    return this.changeSetView();
+    const cs = this.changeSetView();
+    this.recordHistory(cs);
+    return cs;
   }
 
   /** Run `n` generations and return a coalesced ChangeSet from the first tick's before to the last tick's after. */
@@ -404,6 +421,57 @@ export class Simulation {
   }
 
   restore(s: Snapshot): void {
+    this.applySnapshot(s);
+    this.captureHistoryHead();
+  }
+
+  /**
+   * Jump to a retained tick. Throws if history is disabled or `t` is outside
+   * the journal window. Reverse-stepping is `seek(tick - 1)`.
+   */
+  seek(t: number): void {
+    if (!this.journal) {
+      throw new Error('history is disabled; construct with history: true');
+    }
+    this.applySnapshot(this.journal.materialize(t));
+  }
+
+  /** Phase 4 timeline fork: drop recorded ticks after `t`. */
+  truncateAfter(t: number): void {
+    if (!this.journal) {
+      throw new Error('history is disabled; construct with history: true');
+    }
+    this.journal.truncateAfter(t);
+  }
+
+  get history():
+    | {
+        readonly retained: { from: number; to: number };
+        readonly bytes: number;
+        readonly evictions: number;
+      }
+    | undefined {
+    if (!this.journal) return undefined;
+    return {
+      retained: this.journal.retained,
+      bytes: this.journal.bytes,
+      evictions: this.journal.evictions,
+    };
+  }
+
+  private captureHistoryHead(): void {
+    this.journal?.resetTo(this.snapshot(), this.statsState.population);
+  }
+
+  private recordHistory(cs: ChangeSet): void {
+    if (!this.journal) return;
+    this.journal.recordDelta(cs, this.rng.state);
+    if (this._tick % this.journal.keyframeInterval === 0) {
+      this.journal.recordKeyframe(this.snapshot(), this.statsState.population);
+    }
+  }
+
+  private applySnapshot(s: Snapshot): void {
     const n = s.chunkKeys.length;
     if (s.chunkData.length !== n * CHUNK_AREA) {
       throw new RangeError(

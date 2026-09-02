@@ -94,5 +94,14 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   snapshot → restore → 100 steps matches a twin that never left. A 1M-live 1024×1024 island
   in a 4096×4096 world serialises in < 100 ms and is ≥ 90% smaller than the dense world.
   (P0-E-4)
+- Hybrid history journal (ADR-007): keyframe every K ticks (default 64) plus a copied
+  per-tick delta, chunk-RLE keyframes that stay raw when soup would expand, a hard byte
+  ceiling (default 256 MB), and oldest-keyframe-first eviction that emits an event.
+  `Simulation.seek(t)` replays from the nearest keyframe; 200 random seeks match a twin
+  that never left. Seeking back 4,000 ticks with K = 64 is < 250 ms. A 1M-cell chaotic
+  payload run for 10,000 ticks stays under a configured ceiling and reports evictions.
+  `truncateAfter` drops discarded deltas (`bytes` falls). History is off unless opted in.
+  Node unit tests run sequentially so the 512² soup floor isn't racing other files.
+  (P0-F-1)
 
 [Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/main...HEAD

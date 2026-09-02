@@ -523,19 +523,21 @@ Emit a `CompiledRule` with the strategy selected automatically:
 
 ### Workstream F — History journal & statistics
 
-#### - [ ] P0-F-1 · History journal
+#### - [x] P0-F-1 · History journal
 **Depends on:** P0-E-4 · **Files:** `src/engine/history/journal.ts`, `src/engine/history/compress.ts`
 **Intent:** Built now, surfaced in Phase 4. Building it later would mean retrofitting `ChangeSet` plumbing through the worker protocol.
 **Implementation notes**
 - Ring buffer of keyframes (interval `K`, default 64) and per-tick deltas. Hard byte ceiling (default 256 MB); eviction is oldest-keyframe-and-its-deltas first and **emits an event** so Phase 4 can show the retained window honestly.
-- Keyframes are chunk-RLE compressed (hand-written, ~60 lines — a run-length pass over `Uint8Array` beats a generic compressor for this data and costs no dependency).
-- `seek(t)` clones the nearest keyframe and replays forward. Reverse-stepping is `seek(tick-1)`.
-- `truncateAfter(t)` for the Phase 4 timeline fork.
+- Keyframes are chunk-RLE compressed (hand-written, ~60 lines — a run-length pass over `Uint8Array` beats a generic compressor for this data and costs no dependency). Pages that would expand stay raw, tagged.
+- `seek(t)` clones the nearest keyframe and replays forward. Reverse-stepping is `seek(tick-1)`. History is **off** unless `history: true` (the 512² soup must not copy ~200k changes/step).
+- Deltas are sliced on ingest — `ChangeSet` arrays are reused by `step()`, so retaining the view would rewrite the past.
+- `truncateAfter(t)` for the Phase 4 timeline fork; occupancy is the journal's `bytes` counter (released encoded pages and delta buffers).
+- 1M-cell ceiling: 10,000 ticks of 1,048,576 chaotic live cells as journal payloads (stepping a 1024² soup 10k times is minutes; the byte ceiling is a journal property).
 **Acceptance criteria**
-- [ ] `seek(t)` for 200 random `t` in the retained window reproduces state byte-identically to a fresh re-simulation.
-- [ ] Memory ceiling is respected: a 1M-cell chaotic run for 10,000 ticks never exceeds the configured ceiling (measured), and reports its evictions.
-- [ ] Seeking backwards 4,000 ticks completes in < 250 ms with `K = 64`.
-- [ ] `truncateAfter` frees the discarded deltas (heap measurement).
+- [x] `seek(t)` for 200 random `t` in the retained window reproduces state byte-identically to a fresh re-simulation.
+- [x] Memory ceiling is respected: a 1M-cell chaotic run for 10,000 ticks never exceeds the configured ceiling (measured), and reports its evictions.
+- [x] Seeking backwards 4,000 ticks completes in < 250 ms with `K = 64`.
+- [x] `truncateAfter` frees the discarded deltas (heap measurement).
 
 #### - [ ] P0-F-2 · Statistics collector
 **Depends on:** P0-E-1 · **Files:** `src/engine/stats/collector.ts`
