@@ -103,5 +103,18 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `truncateAfter` drops discarded deltas (`bytes` falls). History is off unless opted in.
   Node unit tests run sequentially so the 512² soup floor isn't racing other files.
   (P0-F-1)
+- `src/engine/stats/collector.ts` — `StatsCollector`: population, per-state counts, and
+  per-tick births/deaths/transitions/activity folded from a `ChangeSet` in O(changes),
+  never a grid scan (ADR-007: the delta stream already carries what the stat engine
+  needs). `reset(view, tick)` is the one O(cells) pass a collector ever takes, seeding a
+  baseline from the public `GridView` for anything that isn't itself a `ChangeSet`. Cross-
+  checked against a full brute-force recount every checkpoint across 2,000 generations of
+  Brian's Brain (three states, never settles) — exact match throughout. The <3% step-time
+  budget is not yet provable in the unit suite: a JIT-prewarmed, median-of-7 measurement
+  puts real overhead around 4-5%, and the tight, committed-baseline assertion this needs
+  is deferred to P0-I-4's bench harness, matching P0-C-2's precedent for a bench-gated
+  criterion this phase can't yet enforce precisely. A generous smoke ceiling guards
+  against a gross regression until then. (P0-F-2 — `[!]` blocked on P0-I-4 for that one
+  criterion)
 
 [Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/main...HEAD

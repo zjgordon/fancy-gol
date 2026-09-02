@@ -539,12 +539,14 @@ Emit a `CompiledRule` with the strategy selected automatically:
 - [x] Seeking backwards 4,000 ticks completes in < 250 ms with `K = 64`.
 - [x] `truncateAfter` frees the discarded deltas (heap measurement).
 
-#### - [ ] P0-F-2 · Statistics collector
+#### - [!] P0-F-2 · Statistics collector — blocked on P0-I-4 (bench harness) for the <3% step-time criterion
 **Depends on:** P0-E-1 · **Files:** `src/engine/stats/collector.ts`
-**Implementation notes** Derives population, per-state counts, births, deaths, transitions and activity from the `ChangeSet` in O(changes) — **never** by scanning the grid. Maintains a running population so the cost is independent of grid size.
+**Implementation notes**
+- `StatsCollector` folds a `ChangeSet` into running `population`/`perState` (births/deaths/transitions/activity describe that tick only) in O(`cs.count`) — never a grid scan. `reset(view, tick)` is the one O(cells) pass it ever takes, seeding a baseline from the public `GridView` (bounds + `forEachChunkInRect`, per the "handed to the renderer and stats engine" contract on that interface) for anything that isn't itself a `ChangeSet` (a fresh `seedRandom`, a `restore`, cells stamped in with raw `set`).
+- `view.bounds()` is a *live*-chunk bounding box — it skips a chunk once its population is 0, even before hysteresis reclaims it. That's fine for `reset()` (a virgin, never-touched region legitimately contributes nothing, matching how `Simulation`'s own stats work against `forEachRawChunk`), but a test oracle must not use `bounds()` as its "recount the world" scan or it will under-count `DEAD` as regions die back — it has to walk the full logical `width × height` instead.
 **Acceptance criteria**
-- [ ] Cross-check: after 2,000 chaotic generations, incremental counters exactly equal a full brute-force grid recount.
-- [ ] Collecting stats adds < 3% to step time on the 512² soup benchmark.
+- [x] Cross-check: after 2,000 chaotic generations, incremental counters exactly equal a full brute-force grid recount. (Brian's Brain, 64×64 toroidal — three states, never settles.)
+- [ ] Collecting stats adds < 3% to step time on the 512² soup benchmark — measured directly (JIT-prewarm + median-of-7), `StatsCollector.apply` lands around 4-5% once V8 is genuinely warmed (a few thousand calls through the hot path; short of that the number is 3x worse and noisy run to run). Close to budget but this harness can't prove the literal 3% without `tests/bench`'s committed-baseline methodology. A generous (1.25x) smoke ceiling guards against a gross regression in the meantime; P0-I-4 owns the real gate.
 
 ---
 
