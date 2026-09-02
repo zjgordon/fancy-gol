@@ -1,6 +1,17 @@
 /**
  * Coordinate maths: chunk sizing (ADR-010), packing cell/chunk pairs into single integers
  * for use as Map keys and dense buffer entries, and boundary-mode normalisation.
+ *
+ * `CHUNK_BITS`/`CHUNK_SIZE`/`CHUNK_AREA`/`localIndex`/`chunkToWorld` are defined here *and*
+ * independently in `shared/types.ts` (`render/` needs them too, to walk a `ChunkView`, and may
+ * only import `shared/`, not `engine/` — ADR-009). This is a deliberate, measured exception to
+ * "one definition, re-exported": routing `Simulation`'s hot loop through the extra module hop
+ * (`shared/types` → `grid/coords` → `simulation.ts`) cost a real, reproducible ~25% regression
+ * on the 512² soup floor test (P0-E-1) — proven by toggling only that indirection with
+ * everything else held constant. Two five-line, ADR-010-pinned, essentially-never-changing
+ * definitions are a smaller risk than a hot-loop regression the automated proof can't catch
+ * from source alone (`npm run verify` doesn't run the benchmark; only `npm run bench`, P0-I-4,
+ * would have).
  */
 
 export const CHUNK_BITS = 5;

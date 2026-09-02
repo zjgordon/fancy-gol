@@ -5,7 +5,16 @@
  * to live here rather than in `src/engine/`). `src/engine/types.ts` re-exports this module
  * in full, so every existing `@engine/types` import keeps working unchanged.
  *
- * This module is pure data shapes only — no logic, no imports beyond itself.
+ * Mostly pure data shapes, no imports beyond itself — plus the small amount of chunk-coordinate
+ * maths (`CHUNK_SIZE`, `chunkToWorld`, `localIndex`) that any layer walking a `ChunkView` needs
+ * to interpret its documented packing scheme, `render/` included (ADR-009: `render/` may import
+ * `shared/`, never `engine/`).
+ *
+ * That coordinate maths is *independently defined* here and in `engine/grid/coords.ts`, not
+ * re-exported from one to the other — routing `Simulation`'s hot loop through the extra module
+ * hop cost a real, reproducible ~25% regression on the 512² soup floor test (P0-E-1), proven by
+ * toggling only that indirection with everything else held constant. See `grid/coords.ts`'s own
+ * note; this is a deliberate exception to "one definition," not an oversight.
  */
 
 /** An unsigned cell state id. `0` is always reserved for "dead"/background. */
@@ -146,6 +155,22 @@ export interface ChunkView {
   readonly population: number;
   /** Read a single cell by its local index within the chunk (`(y & 31) << 5 | (x & 31)`). */
   at(localIndex: number): StateId;
+}
+
+/** Chunk sizing (ADR-010) and the pure coordinate maths — {@link chunkToWorld}, {@link localIndex} — that compute `ChunkView`'s own documented local-index scheme. `engine/` re-exports these unchanged from `grid/coords.ts`; `render/` (which may only import `shared/`, ADR-009) imports them directly to walk a `GridView` without any engine import. Boundary-aware maths (wrapping, world-limit clamping, the packed chunk-key scheme) stays engine-internal — a renderer only ever sees a `GridView`'s already-resolved chunks, never a raw simulation coordinate that might need it. */
+export const CHUNK_BITS = 5;
+export const CHUNK_SIZE = 32; // 2 ** CHUNK_BITS
+export const CHUNK_AREA = CHUNK_SIZE * CHUNK_SIZE; // 1024
+const CHUNK_MASK = CHUNK_SIZE - 1; // 31
+
+/** The world coordinate of a chunk's top-left cell. */
+export function chunkToWorld(cx: number, cy: number): readonly [x: number, y: number] {
+  return [cx * CHUNK_SIZE, cy * CHUNK_SIZE];
+}
+
+/** A cell's index within its chunk's flat `Uint8Array(1024)` — the scheme `ChunkView.at()` documents. */
+export function localIndex(x: number, y: number): number {
+  return ((y & CHUNK_MASK) << CHUNK_BITS) | (x & CHUNK_MASK);
 }
 
 /**
