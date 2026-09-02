@@ -116,5 +116,24 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   criterion this phase can't yet enforce precisely. A generous smoke ceiling guards
   against a gross regression until then. (P0-F-2 — `[!]` blocked on P0-I-4 for that one
   criterion)
+- `src/shared/protocol.ts` — the main-thread ↔ worker wire protocol (ADR-006): the
+  `Command`/`Event` unions, `PROTOCOL_VERSION`, and hand-written `parseCommand`/
+  `parseEvent` runtime guards that narrow `unknown` to a typed message or a structured
+  `ProtocolIssue`, never throwing. Every command carries a correlation `id`; `ready`/`ok`/
+  `error` echo it back, `frame`/`stats` don't (a pushed stream, not a reply). Both guards'
+  switches are exhaustive over their kind unions (`assertNever`/`assertNeverEvent`) — a
+  new `Command` or `Event` variant without a case is a compile error, proven both by the
+  guards themselves and by a mirrored switch in the test suite. Guards are deliberately
+  shallow: a `ruleset` field is checked to be an object with the right keys, not a valid
+  `RuleSet` — that's `rules/validate.ts`, an `engine/`-layer module `shared/` may not
+  import (ADR-009); the worker handler (P0-G-2) runs that deeper check once a `Command`
+  is already structurally accepted. (P0-G-1)
+- **Refactor:** relocated the engine's type vocabulary from `src/engine/types.ts` to
+  `src/shared/types.ts` — ADR-009 lets `engine/` import `shared/types`, but not the
+  reverse, and the protocol above needs `RuleSet`/`PaintOp`/`Rect`/`ChangeSet`/`TickStats`
+  (the last folded in from `simulation.ts`). `src/engine/types.ts` is now a re-export
+  barrel, so every existing `@engine/types` import keeps working unchanged; no behaviour
+  change. Also added `StatSample`, pinned to Phase 2 §2.2's exact shape now so the wire
+  type never has to change under P2-C-1/C-2, only get populated.
 
 [Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/main...HEAD

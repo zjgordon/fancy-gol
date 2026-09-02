@@ -59,10 +59,24 @@ export interface TurmiteRow {
 
 /** How a rule decides a cell's next state, keyed by the shape of the rule. */
 export type TransitionSpec =
-  | { readonly kind: 'totalistic'; readonly born: readonly number[]; readonly survive: readonly number[]; readonly decayStates?: number }
-  | { readonly kind: 'generations'; readonly born: readonly number[]; readonly survive: readonly number[]; readonly states: number }
+  | {
+      readonly kind: 'totalistic';
+      readonly born: readonly number[];
+      readonly survive: readonly number[];
+      readonly decayStates?: number;
+    }
+  | {
+      readonly kind: 'generations';
+      readonly born: readonly number[];
+      readonly survive: readonly number[];
+      readonly states: number;
+    }
   | { readonly kind: 'stateTable'; readonly table: Uint8Array; readonly radix: number }
-  | { readonly kind: 'weighted'; readonly weights: readonly number[]; readonly thresholds: readonly TransitionRow[] }
+  | {
+      readonly kind: 'weighted';
+      readonly weights: readonly number[];
+      readonly thresholds: readonly TransitionRow[];
+    }
   | { readonly kind: 'turmite'; readonly states: readonly TurmiteRow[] };
 
 /**
@@ -182,4 +196,30 @@ export interface TickStats {
   transitions: number;
   activeChunks: number;
   stepMicros: number;
+}
+
+/**
+ * One sample of the stat engine's time series (ADR-006's `stats` event; Phase 2 §2.2 pins
+ * this exact shape). `StatsCollector` (P0-F-2) already produces `tick`/`population`/
+ * `perState`/`births`/`deaths`/`transitions`/`activity`; `density`/`bbox`/`centroid`/
+ * `entropy`/`hash` are P2-C-1/P2-C-2's to compute — declared now so the wire shape never
+ * has to change shape under Phase 2, only get populated.
+ */
+export interface StatSample {
+  tick: number;
+  population: number;
+  perState: Uint32Array;
+  births: number;
+  deaths: number;
+  transitions: number;
+  /** Changed cells this tick. */
+  activity: number;
+  /** Population / bounded area, or / bbox area when infinite. */
+  density: number;
+  bbox: Rect;
+  centroid: { x: number; y: number };
+  /** Shannon entropy over a 16×16 block-occupancy histogram (P2-C-2). */
+  entropy: number;
+  /** Zobrist hash of live state, for cycle detection (P2-C-3). */
+  hash: number;
 }

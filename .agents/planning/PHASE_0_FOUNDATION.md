@@ -552,12 +552,15 @@ Emit a `CompiledRule` with the strategy selected automatically:
 
 ### Workstream G — Worker boundary
 
-#### - [ ] P0-G-1 · Protocol definition
+#### - [x] P0-G-1 · Protocol definition
 **Depends on:** P0-B-1 · **Files:** `src/shared/protocol.ts`
-**Implementation notes** Exactly the `Command`/`Event` unions in ADR-006, plus `PROTOCOL_VERSION` and a hand-written runtime narrowing guard per message kind. Every command carries a correlation `id`; every reply echoes it.
+**Implementation notes**
+- Exactly the `Command`/`Event` unions in ADR-006, plus `PROTOCOL_VERSION` and a hand-written runtime narrowing guard per message kind (`parseCommand`/`parseEvent`, both `unknown -> ParseResult<T>`, never throwing). Every command carries a correlation `id`; `ready`/`ok`/`error` echo it back, `frame`/`stats` don't (they're a pushed stream, not a reply).
+- **Prerequisite refactor, its own commit:** ADR-006's contract needs `RuleSet`/`PaintOp`/`Rect`/`TickStats`/… — but ADR-009's boundary matrix lets `shared` import only from `shared`, and those types lived in `src/engine/types.ts`. Moved the whole module to `src/shared/types.ts` (folding in `TickStats`, also needed by the `frame` event); `src/engine/types.ts` is now a re-export barrel, so every existing `@engine/types` import keeps working unchanged. Also added `StatSample`, pinned to Phase 2 §2.2's exact shape now so the wire type never has to change under P2-C-1/C-2, only get populated.
+- Guards are deliberately shallow (a `ruleset` field is checked to be *an object* with the right keys, not a *valid* `RuleSet` — real semantic validation is `rules/validate.ts`, an `engine/`-layer module `shared/` may not import; the worker handler, P0-G-2, runs that deeper check once a `Command` is already structurally accepted).
 **Acceptance criteria**
-- [ ] Exhaustiveness: a `switch` over `Command['cmd']` fails to compile if a member is added and unhandled (`assertNever`).
-- [ ] Guards reject malformed messages with a structured error rather than throwing raw.
+- [x] Exhaustiveness: a `switch` over `Command['cmd']` fails to compile if a member is added and unhandled (`assertNever`) — proven both by `parseCommand`'s own switch and by a mirrored switch in the test suite.
+- [x] Guards reject malformed messages with a structured error rather than throwing raw — every required field of every `Command`/`Event` kind tested missing and wrongly-typed; `parseCommand`/`parseEvent` never throw on any malformed input.
 
 #### - [ ] P0-G-2 · Transport-agnostic handler
 **Depends on:** P0-G-1, P0-E-3 · **Files:** `src/worker/handler.ts`
