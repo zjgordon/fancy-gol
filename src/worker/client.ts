@@ -87,6 +87,11 @@ export class WorkerClient {
   private readonly frameSubscribers = new Set<(frame: FrameEvent) => void>();
   private latestFrame: FrameEvent | undefined;
   private frameRequestHandle: number | null = null;
+  // Separate from frameRequestHandle so this is correct even if a FrameScheduler's `request()`
+  // calls back synchronously (real requestAnimationFrame never does, but nothing enforces that
+  // on an injected one): this flips true *before* request() is even called, so the callback
+  // resetting it can't be raced by request()'s own return value being assigned afterwards.
+  private frameDeliveryPending = false;
   private lastInit: { ruleset: RuleSet; width: number; height: number; seed: number } | undefined;
   private lastSnapshot: Snapshot | undefined;
   private disposed = false;
@@ -129,8 +134,10 @@ export class WorkerClient {
 
   /** Coalescing: collapse any burst of frames arriving before the scheduler's next opportunity into the single latest one. */
   private scheduleFrameDelivery(): void {
-    if (this.frameRequestHandle !== null) return;
+    if (this.frameDeliveryPending) return;
+    this.frameDeliveryPending = true;
     this.frameRequestHandle = this.frameScheduler.request(() => {
+      this.frameDeliveryPending = false;
       this.frameRequestHandle = null;
       const frame = this.latestFrame;
       this.latestFrame = undefined;
@@ -207,6 +214,7 @@ export class WorkerClient {
       this.frameScheduler.cancel(this.frameRequestHandle);
       this.frameRequestHandle = null;
     }
+    this.frameDeliveryPending = false;
     try {
       this.worker.terminate();
     } catch {

@@ -222,5 +222,33 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   real canvas rasteriser and no bloat forbids adding one — and are deferred to the real bench
   harness (P0-I-4) and Phase 1's E2E suite respectively; recorded as `[!]` blocked rather than
   silently marked done. (P0-H-2)
+- `src/render/recorder.ts` — `CanvasRecorder`, a `CanvasRenderingContext2D`-shaped double that
+  logs every `fillStyle`/`fillRect`/`createImageData`/`putImageData` call while painting into a
+  real `Uint8ClampedArray` backing buffer, so a test can assert on both the call log and actual
+  pixels. `src/worker/frame-view.ts` — `FrameGridMirror`, the adapter `WorkerClient.onFrame`'s
+  per-tick `TransferredChunks` needed but didn't have: a persistent client-side mirror of every
+  chunk page seen so far, merged frame-by-frame and exposed as the full-world `GridView` the
+  renderer expects, reusing a single `ChunkView`/`GridView` object rather than allocating either
+  per call. Together with a Gosper gun driven through the real worker → client → renderer
+  pipeline in Node, this is INCEPTION.md's "headless rendering test to ensure the engine can push
+  state to a canvas buffer without overhead" — `tests/integration/canvas-bridge.spec.ts` — proving
+  a stable, snapshot-tested draw-call log (~4,274 calls over 100 generations), dirty-rect
+  locality (a lone blinker's draw calls stay inside its one chunk, not the full viewport), and
+  zero allocations attributable to `Canvas2DRenderer.draw()` itself once isolated from the test
+  harness's own logging overhead. (P0-H-3)
+
+### Fixed
+
+- `WorkerClient`'s frame-coalescing (`src/worker/client.ts`) assumed a `FrameScheduler.request()`
+  callback always fires asynchronously, as real `requestAnimationFrame` does — but nothing
+  enforced that on an injected scheduler, and a synchronous callback silently dropped nearly every
+  frame after the first by racing its own bookkeeping. Found via P0-H-3's canvas-bridge pipeline
+  test (a 100-generation snapshot had only 32 entries instead of thousands); hardened with a
+  `frameDeliveryPending` flag set before `request()` is even called, so delivery is now correct
+  regardless of scheduler synchronicity. The same latent assumption was fixed in the test
+  helpers of both `tests/integration/worker-client.spec.ts` and the new canvas-bridge suite.
+- `Canvas2DRenderer.init()` (`src/render/canvas2d.ts`) threw synchronously on a `null`
+  `getContext('2d')` result instead of rejecting its returned `Promise`, breaking its documented
+  async contract. (P0-H-3)
 
 [Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/main...HEAD

@@ -77,36 +77,12 @@ function intersectRect(a: Rect, b: Rect): Rect | null {
   return { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
 }
 
+/** A row run, mutable — pooled and overwritten in place (see `Canvas2DRenderer.runPool`), never freshly allocated once the pool has grown to cover a frame's peak run count. */
 interface Run {
-  readonly state: StateId;
-  readonly x0: number;
-  readonly x1: number;
-  readonly y: number;
-}
-
-/** Row-run detection within one chunk, clipped to `clip` (world/cell coordinates). `DEAD` runs are skipped — the background fill already covers them. */
-function collectRuns(chunk: ChunkView, clip: Rect, out: Run[]): void {
-  const [originX, originY] = chunkToWorld(chunk.cx, chunk.cy);
-  const lx0 = Math.max(0, Math.floor(clip.x - originX));
-  const lx1 = Math.min(CHUNK_SIZE, Math.ceil(clip.x + clip.width - originX));
-  const ly0 = Math.max(0, Math.floor(clip.y - originY));
-  const ly1 = Math.min(CHUNK_SIZE, Math.ceil(clip.y + clip.height - originY));
-  if (lx1 <= lx0 || ly1 <= ly0) return;
-
-  for (let ly = ly0; ly < ly1; ly++) {
-    let runStart = lx0;
-    let runState: StateId = chunk.at(localIndex(lx0, ly));
-    for (let lx = lx0 + 1; lx <= lx1; lx++) {
-      const state = lx < lx1 ? chunk.at(localIndex(lx, ly)) : -1; // -1: sentinel, flush at row end
-      if (state !== runState) {
-        if (runState !== DEAD) {
-          out.push({ state: runState, x0: originX + runStart, x1: originX + lx, y: originY + ly });
-        }
-        runStart = lx;
-        runState = state;
-      }
-    }
-  }
+  state: StateId;
+  x0: number;
+  x1: number;
+  y: number;
 }
 
 /** Every cell within `clip` in one chunk, for the `ImageData` tile path — no run-batching needed since each cell is a raw pixel-buffer write, not a canvas call. */
@@ -131,8 +107,29 @@ export class Canvas2DRenderer implements Renderer {
   private ctx: Canvas2DContext | null = null;
   private viewport: Viewport | null = null;
   private theme: CompiledTheme | null = null;
-  private stats: RenderStats = { frameMs: 0, drawCalls: 0, tilesRepainted: 0 };
   private readonly colorCache = new Map<string, readonly [number, number, number, number]>();
+
+  // Reused across every draw() call (P0-H-3: "zero allocations attributable to the render
+  // path") rather than freshly allocated per frame — cleared in place instead.
+  private readonly stats = { frameMs: 0, drawCalls: 0, tilesRepainted: 0 };
+  private readonly touchedChunks = new Set<string>();
+  // A grow-only pool of mutable Run objects, and one reused array per possible StateId
+  // (0..255) holding references into it — grouping runs by state this way, instead of
+  // sorting a flat list, is what keeps drawVector() allocation-free once the pool has grown
+  // to cover a frame's peak run count: V8's Array.prototype.sort allocates working space for
+  // anything but the smallest arrays, and a fresh object per run would defeat the point of
+  // pooling regardless of how they're grouped afterwards.
+  private readonly runPool: Run[] = [];
+  private runPoolCount = 0;
+  private readonly stateBuckets: Run[][] = Array.from({ length: 256 }, () => []);
+  // `GridView.forEachChunkInRect` always needs a plain callback; a fresh arrow function per
+  // drawVector() call would itself be an allocation, so this one is created once (a class field
+  // initialiser, not a per-call closure) and threads its per-call state through `vectorClipRect`.
+  private vectorClipRect: Rect = { x: 0, y: 0, width: 0, height: 0 };
+  private readonly visitChunkForVector = (chunk: ChunkView): void => {
+    this.touchedChunks.add(`${chunk.cx},${chunk.cy}`);
+    this.collectRuns(chunk, this.vectorClipRect);
+  };
 
   /** `Promise<void>` per ADR-005's `Renderer` contract (WebGL2's `init` needs shader compilation; Canvas2D's doesn't — nothing here is genuinely asynchronous). Failure is a rejection, not a synchronous throw, matching that contract. */
   init(canvas: CanvasLike): Promise<void> {
@@ -172,36 +169,87 @@ export class Canvas2DRenderer implements Renderer {
     const theme = this.requireTheme();
     const viewport = this.requireViewport();
     const t0 = performance.now();
+    this.touchedChunks.clear();
     let drawCalls = 0;
-    const touchedChunks = new Set<string>();
 
     const visible = this.visibleWorldRect(viewport);
-    const dirtyWorldRects = frame.dirty ?? [visible];
-
-    for (const rawRect of dirtyWorldRects) {
-      const worldRect = intersectRect(rawRect, visible);
-      if (!worldRect) continue;
-      const pixelRect = this.worldToPixelRect(worldRect, viewport);
-      if (pixelRect.width <= 0 || pixelRect.height <= 0) continue;
-
-      if (viewport.cellSize < IMAGE_DATA_CELL_SIZE_THRESHOLD) {
-        drawCalls += this.drawTile(ctx, theme, frame.cells, worldRect, pixelRect, viewport, touchedChunks);
-      } else {
-        drawCalls += this.drawVector(ctx, theme, frame.cells, worldRect, pixelRect, viewport, touchedChunks);
+    if (frame.dirty === null) {
+      drawCalls += this.drawRegion(ctx, theme, frame.cells, visible, viewport);
+    } else {
+      for (const rawRect of frame.dirty) {
+        const worldRect = intersectRect(rawRect, visible);
+        if (worldRect) drawCalls += this.drawRegion(ctx, theme, frame.cells, worldRect, viewport);
       }
     }
 
-    this.stats = { frameMs: performance.now() - t0, drawCalls, tilesRepainted: touchedChunks.size };
+    this.stats.frameMs = performance.now() - t0;
+    this.stats.drawCalls = drawCalls;
+    this.stats.tilesRepainted = this.touchedChunks.size;
   }
 
   readStats(): RenderStats {
     return this.stats;
   }
 
+  private drawRegion(
+    ctx: Canvas2DContext,
+    theme: CompiledTheme,
+    cells: GridView,
+    worldRect: Rect,
+    viewport: Viewport,
+  ): number {
+    const pixelRect = this.worldToPixelRect(worldRect, viewport);
+    if (pixelRect.width <= 0 || pixelRect.height <= 0) return 0;
+    return viewport.cellSize < IMAGE_DATA_CELL_SIZE_THRESHOLD
+      ? this.drawTile(ctx, theme, cells, worldRect, pixelRect, viewport)
+      : this.drawVector(ctx, theme, cells, worldRect, pixelRect, viewport);
+  }
+
   dispose(): void {
     this.canvas = null;
     this.ctx = null;
     this.colorCache.clear();
+    this.touchedChunks.clear();
+    this.runPoolCount = 0;
+    for (const bucket of this.stateBuckets) bucket.length = 0;
+  }
+
+  /** The next reusable `Run` slot from the pool, growing it (once, permanently) only the first time a frame needs more than it currently holds. */
+  private nextRun(): Run {
+    if (this.runPoolCount >= this.runPool.length) {
+      this.runPool.push({ state: DEAD, x0: 0, x1: 0, y: 0 });
+    }
+    return this.runPool[this.runPoolCount++]!;
+  }
+
+  /** Row-run detection within one chunk, clipped to `clip` (world/cell coordinates), pushed into `this.stateBuckets`. `DEAD` runs are skipped — the background fill already covers them. */
+  private collectRuns(chunk: ChunkView, clip: Rect): void {
+    const [originX, originY] = chunkToWorld(chunk.cx, chunk.cy);
+    const lx0 = Math.max(0, Math.floor(clip.x - originX));
+    const lx1 = Math.min(CHUNK_SIZE, Math.ceil(clip.x + clip.width - originX));
+    const ly0 = Math.max(0, Math.floor(clip.y - originY));
+    const ly1 = Math.min(CHUNK_SIZE, Math.ceil(clip.y + clip.height - originY));
+    if (lx1 <= lx0 || ly1 <= ly0) return;
+
+    for (let ly = ly0; ly < ly1; ly++) {
+      let runStart = lx0;
+      let runState: StateId = chunk.at(localIndex(lx0, ly));
+      for (let lx = lx0 + 1; lx <= lx1; lx++) {
+        const state = lx < lx1 ? chunk.at(localIndex(lx, ly)) : -1; // -1: sentinel, flush at row end
+        if (state !== runState) {
+          if (runState !== DEAD) {
+            const run = this.nextRun();
+            run.state = runState;
+            run.x0 = originX + runStart;
+            run.x1 = originX + lx;
+            run.y = originY + ly;
+            this.stateBuckets[runState]!.push(run);
+          }
+          runStart = lx;
+          runState = state;
+        }
+      }
+    }
   }
 
   private visibleWorldRect(viewport: Viewport): Rect {
@@ -246,7 +294,6 @@ export class Canvas2DRenderer implements Renderer {
     worldRect: Rect,
     pixelRect: Rect,
     viewport: Viewport,
-    touchedChunks: Set<string>,
   ): number {
     let calls = 0;
     ctx.fillStyle = theme.background;
@@ -254,28 +301,22 @@ export class Canvas2DRenderer implements Renderer {
     calls++;
 
     const iterRect = this.integerWorldBounds(worldRect);
-    const runs: Run[] = [];
-    cells.forEachChunkInRect(iterRect, (chunk) => {
-      touchedChunks.add(`${chunk.cx},${chunk.cy}`);
-      collectRuns(chunk, iterRect, runs);
-    });
+    this.runPoolCount = 0;
+    this.vectorClipRect = iterRect;
+    cells.forEachChunkInRect(iterRect, this.visitChunkForVector);
 
-    const byState = new Map<StateId, Run[]>();
-    for (const run of runs) {
-      const list = byState.get(run.state);
-      if (list) list.push(run);
-      else byState.set(run.state, [run]);
-    }
-
-    for (const [state, list] of byState) {
+    for (let state = 0; state < 256; state++) {
+      const bucket = this.stateBuckets[state]!;
+      if (bucket.length === 0) continue;
       ctx.fillStyle = theme.palette(state, 0);
-      for (const run of list) {
+      for (const run of bucket) {
         const px = (run.x0 - viewport.originX) * viewport.cellSize;
         const py = (run.y - viewport.originY) * viewport.cellSize;
         const pw = (run.x1 - run.x0) * viewport.cellSize;
         ctx.fillRect(px, py, pw, viewport.cellSize);
         calls++;
       }
+      bucket.length = 0; // reused next call, not reallocated
     }
     return calls;
   }
@@ -287,7 +328,6 @@ export class Canvas2DRenderer implements Renderer {
     worldRect: Rect,
     pixelRect: Rect,
     viewport: Viewport,
-    touchedChunks: Set<string>,
   ): number {
     const px0 = Math.round(pixelRect.x);
     const py0 = Math.round(pixelRect.y);
@@ -307,7 +347,7 @@ export class Canvas2DRenderer implements Renderer {
     const iterRect = this.integerWorldBounds(worldRect);
     const cellPx = viewport.cellSize;
     cells.forEachChunkInRect(iterRect, (chunk) => {
-      touchedChunks.add(`${chunk.cx},${chunk.cy}`);
+      this.touchedChunks.add(`${chunk.cx},${chunk.cy}`);
       forEachCellInClip(chunk, iterRect, (wx, wy, state) => {
         const color = this.resolveColor(theme.palette(state, 0));
         const cellPx0 = (wx - viewport.originX) * viewport.cellSize - px0;

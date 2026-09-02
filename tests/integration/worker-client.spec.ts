@@ -56,9 +56,18 @@ class FakeFrameScheduler implements FrameScheduler {
 }
 
 /** For tests that produce a frame but don't care about its delivery timing — delivers synchronously so nothing needs a manual tick. */
+/**
+ * Delivers on the next microtask, never synchronously inside `request()` itself — a real
+ * `requestAnimationFrame` never fires before its scheduling call returns, and `WorkerClient`'s
+ * own bookkeeping relies on that: it assigns `request()`'s return value to `frameRequestHandle`
+ * *after* the call returns, so a same-tick callback would reset that field first and then have
+ * the assignment immediately stomp it back to a stale handle, silently dropping every frame
+ * delivery after the first (found via `tests/integration/canvas-bridge.spec.ts`, P0-H-3 — a
+ * 100-generation run's snapshot was suspiciously small, only the very first frame ever landed).
+ */
 const IMMEDIATE_FRAME_SCHEDULER: FrameScheduler = {
   request: (fn) => {
-    fn();
+    queueMicrotask(fn);
     return 0;
   },
   cancel: () => {},
