@@ -13,9 +13,9 @@
     "kind": "weighted",
     "weights": [0, 1, 3],
     "thresholds": [
-      { "min": 0, "max": 4, "toState": 0 },
-      { "min": 5, "max": 10, "toState": 1 },
-      { "min": 11, "max": 24, "toState": 2 }
+      { "min": 0, "max": 6, "toState": 0 },
+      { "min": 7, "max": 14, "toState": 1 },
+      { "min": 15, "max": 24, "toState": 2 }
     ]
   },
   "boundary": "toroidal"

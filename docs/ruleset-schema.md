@@ -284,14 +284,18 @@ Everything except `transition.table` is exactly as compact as the other examples
     "kind": "weighted",
     "weights": [0, 1, 3],
     "thresholds": [
-      { "min": 0, "max": 4, "toState": 0 },
-      { "min": 5, "max": 10, "toState": 1 },
-      { "min": 11, "max": 24, "toState": 2 }
+      { "min": 0, "max": 6, "toState": 0 },
+      { "min": 7, "max": 14, "toState": 1 },
+      { "min": 15, "max": 24, "toState": 2 }
     ]
   },
   "boundary": "toroidal"
 }
 ```
+
+Highland's floor is 15, not 11: a liquid cell on a straight land/water wall sees sum 14
+(3 highland neighbours × 3 + 5 liquid × 1). Flooring highland at 11 would turn that wall
+into more highland every generation; at 15 the wall is stable and random soup bands.
 
 ### Langton's Ant (`turmite`)
 

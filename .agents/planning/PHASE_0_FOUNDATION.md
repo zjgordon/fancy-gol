@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| **Status** | ~ In progress — Workstreams A–C complete; D through the compiler |
+| **Status** | ~ In progress — Workstreams A–D complete |
 | **Ships version** | `0.1.0` |
 | **Prerequisites** | None. This is the first phase. |
 | **Theme of the phase** | **Make it correct.** |
@@ -363,9 +363,7 @@ Legend and ID scheme: see [`README.md`](./README.md) §2.
   literal bodies, not just comments, before scanning (with test coverage added).
 **Acceptance criteria**
 - [x] ≥ 30 negative fixtures in `tests/fixtures/rules/invalid/`, each asserting a specific `path` and a helpful `hint`. (43 fixtures.)
-- [x] All builtin rulesets validate clean. (Builtins don't exist until P0-D-5; the 7 worked
-  examples in `docs/ruleset-schema.md` — one per transition kind — validate clean today via
-  the same validator. Revisit once P0-D-5 lands.)
+- [x] All builtin rulesets validate clean. (14 catalogue entries, asserted in P0-D-5.)
 - [x] A validator error message never contains the word "invalid" alone — it always says what was expected.
 
 #### - [x] P0-D-3 · Rule notation parsers
@@ -404,21 +402,34 @@ Emit a `CompiledRule` with the strategy selected automatically:
   recompiles). `compileRule.cache.clear()` replaces the map — `WeakMap` has no `clear()`.
 **Acceptance criteria**
 - [x] For each builtin ruleset, the chosen strategy matches an asserted expectation (guards against silent perf cliffs).
-  (Builtins land in P0-D-5; pinned today against the 7 worked-example fixtures plus the 13
-  catalogue notations D-5 will ship — Conway/HighLife/Day&Night/Seeds/Replicator/Diamoeba/Maze/2×2/
-  Life without Death → `lut8`, Star Wars → `lutN`, Bloomerang's 24 states → `closure`. Revisit
-  once P0-D-5 lands.)
+  (Pinned in `tests/unit/engine/rules/builtin.spec.ts` against the 14-entry catalogue: 9 Life-like
+  → `lut8`, Brian's Brain and Star Wars → `lutN`, WireWorld → `denseTable`, Bloomerang's 24
+  states and Highlands/Liquid → `closure`.)
 - [x] Equivalence test: for 50,000 random `(state, neighbourCounts)` inputs, the `closure` strategy and the chosen fast strategy produce identical outputs for every builtin.
-  (Same stand-in corpus as above; 50,000 Mulberry32-driven neighbour configurations per rule.)
+  (Catalogue notations plus the 7 worked-example fixtures; 50,000 Mulberry32-driven neighbour
+  configurations per rule.)
 - [x] Compiling Conway 10,000 times takes < 50 ms thanks to the cache.
 
-#### - [ ] P0-D-5 · Built-in ruleset catalogue
+#### - [x] P0-D-5 · Built-in ruleset catalogue
 **Depends on:** P0-D-4 · **Files:** `src/engine/rules/builtin/*.ts`
 **Ship at minimum:** Conway `B3/S23`, HighLife `B36/S23`, Day & Night `B3678/S34678`, Seeds `B2/S`, Replicator `B1357/S1357`, Diamoeba `B35678/S5678`, Maze `B3/S12345`, 2×2 `B36/S125`, Life without Death `B3/S012345678`, Brian's Brain (3-state), WireWorld (4-state), Star Wars (4-state Generations), Bloomerang or another Generations rule, and one **weighted multi-state terrain rule** demonstrating "Highlands/Liquid" from the inception document.
 **Implementation notes** Each carries `name`, `description`, `author`/`year` where known, and a `tags` array (`chaotic`, `stable`, `explosive`, `maze-like`, `multi-state`) that Phase 2's library UI will filter on. Write these once, correctly, with citations.
+- Life-family digits come from `parseRuleNotation`; names/years/tags are catalogue metadata on
+  a `BuiltinRuleSet` wrapper (tags are not on ADR-001's `RuleSet` — they would be a schema
+  change, and Phase 2's library can read them from this wrapper).
+- WireWorld's 262,144-entry table is generated at module load and byte-identical to the
+  schema-doc fixture.
+- Highlands/Liquid thresholds are `0–6 void / 7–14 liquid / 15–24 highland`. An earlier draft
+  used `0–4 / 5–10 / 11–24`, which lets highland eat every land/water wall (liquid-side sum 14
+  was already in the highland band). The floor of 15 makes a straight wall stable, and a
+  documented soup (`Mulberry32(0x51eed)`, 32×32, P 1/4–3/8–3/8) bands within 200 generations.
+  The schema worked example and its fixture were updated to match — a rule that claims to band
+  must actually band.
+- Behavioural oracles run through a test-local toroidal stepper; the production `Simulation`
+  stepper is P0-E-1.
 **Acceptance criteria**
-- [ ] Every builtin validates, compiles, and has at least one behavioural test with a published expected outcome.
-- [ ] The multi-state terrain rule is visually demonstrable: a documented seed produces recognisable land/water banding within 200 generations.
+- [x] Every builtin validates, compiles, and has at least one behavioural test with a published expected outcome.
+- [x] The multi-state terrain rule is visually demonstrable: a documented seed produces recognisable land/water banding within 200 generations.
 
 ---
 

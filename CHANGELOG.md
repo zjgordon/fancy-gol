@@ -65,5 +65,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (WireWorld's 256 KiB table), and a monomorphic `closure` for everything else. Cached on
   ruleset identity (`compileRule.cache.clear()` for tests). 50,000-input equivalence against
   the forced-closure reference for every worked example and every catalogue notation. (P0-D-4)
+- `src/engine/rules/builtin/**` — the 14-entry built-in catalogue: nine Life-like rules, Brian's
+  Brain, WireWorld (table generated, byte-identical to the schema fixture), Star Wars,
+  Bloomerang, and Highlands/Liquid. Each validates, compiles, carries tags for Phase 2's
+  library, and has a published behavioural oracle. Highlands/Liquid thresholds were retuned
+  (`0–6 / 7–14 / 15–24`) so a land/water wall is stable and a documented soup bands within 200
+  generations; the schema worked example matches. (P0-D-5)
 
 [Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/main...HEAD
