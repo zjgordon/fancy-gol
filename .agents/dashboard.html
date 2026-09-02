@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMiAyMiI+PHJlY3Qgd2lkdGg9IjIyIiBoZWlnaHQ9IjIyIiByeD0iNCIgZmlsbD0iIzBkMGExOCIvPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI1IiBoZWlnaHQ9IjUiIHJ4PSIxIiBmaWxsPSIjZjQ3MmI2Ii8+PHJlY3QgeD0iOC41IiB5PSI4LjUiIHdpZHRoPSI1IiBoZWlnaHQ9IjUiIHJ4PSIxIiBmaWxsPSIjYTc4YmZhIi8+PHJlY3QgeD0iMTUiIHk9IjIiIHdpZHRoPSI1IiBoZWlnaHQ9IjUiIHJ4PSIxIiBmaWxsPSIjMjJkM2VlIi8+PHJlY3QgeD0iMiIgeT0iMTUiIHdpZHRoPSI1IiBoZWlnaHQ9IjUiIHJ4PSIxIiBmaWxsPSIjMjJkM2VlIi8+PHJlY3QgeD0iMTUiIHk9IjE1IiB3aWR0aD0iNSIgaGVpZ2h0PSI1IiByeD0iMSIgZmlsbD0iI2Y0NzJiNiIvPjwvc3ZnPg==">
+<title>fancy-gol · Mission Control</title>
+<meta name="description" content="At-a-glance build status for fancy-gol, Phase 0 through Phase 6.">
+<style>
+/* ============================================================================
+   fancy-gol mission control — dependency-free, single file, offline.
+   Palette borrows from the project's own Void-Walker and Synthwave themes.
+   ========================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; }
+
+:root {
+  /* dark is the default look; light is defined further down */
+  --bg:            #08060f;
+  --bg-2:          #0d0a18;
+  --surface:       rgba(255,255,255,.038);
+  --surface-2:     rgba(255,255,255,.062);
+  --surface-3:     rgba(255,255,255,.09);
+  --border:        rgba(255,255,255,.09);
+  --border-strong: rgba(255,255,255,.17);
+  --text:          #ecebf5;
+  --text-2:        #a9a6c4;
+  --text-3:        #6f6c8c;
+
+  --accent:        #22d3ee;
+  --accent-2:      #f472b6;
+  --accent-3:      #a78bfa;
+  --ok:            #4ade80;
+  --wip:           #fbbf24;
+  --blocked:       #fb7185;
+  --cut:           #64748b;
+
+  --grad: linear-gradient(96deg, var(--accent-2) 0%, var(--accent-3) 48%, var(--accent) 100%);
+
+  --r-sm: 8px; --r-md: 12px; --r-lg: 18px; --r-xl: 26px;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px; --sp-7: 48px;
+
+  --dur-fast: 120ms; --dur: 220ms; --dur-slow: 420ms;
+  --ease: cubic-bezier(.22,.61,.36,1);
+
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 40px -12px rgba(0,0,0,.7);
+  --glow: 0 0 0 1px rgba(34,211,238,.25), 0 0 32px -6px rgba(34,211,238,.35);
+}
+
+html[data-theme="light"] {
+  --bg:            #f4f4f8;
+  --bg-2:          #eceaf3;
+  --surface:       rgba(255,255,255,.78);
+  --surface-2:     rgba(255,255,255,.95);
+  --surface-3:     #ffffff;
+  --border:        rgba(20,16,40,.11);
+  --border-strong: rgba(20,16,40,.22);
+  --text:          #16132a;
+  --text-2:        #4c4869;
+  --text-3:        #77738f;
+  --accent:        #0e7490;
+  --accent-2:      #be185d;
+  --accent-3:      #6d28d9;
+  --ok:            #15803d;
+  --wip:           #b45309;
+  --blocked:       #be123c;
+  --cut:           #64748b;
+  --shadow: 0 1px 2px rgba(20,16,40,.06), 0 12px 32px -14px rgba(20,16,40,.3);
+  --glow: 0 0 0 1px rgba(14,116,144,.3), 0 0 28px -8px rgba(14,116,144,.35);
+}
+
+body {
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.55;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ambient Game of Life ---------------------------------------------------- */
+#life {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  z-index: 0; pointer-events: none; opacity: .5;
+}
+.bg-wash {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    radial-gradient(1100px 620px at 12% -6%, rgba(167,139,250,.16), transparent 62%),
+    radial-gradient(900px 560px at 88% 4%, rgba(34,211,238,.13), transparent 60%),
+    radial-gradient(760px 460px at 50% 106%, rgba(244,114,182,.10), transparent 62%),
+    linear-gradient(180deg, transparent 0%, var(--bg-2) 78%);
+}
+html[data-theme="light"] .bg-wash {
+  background:
+    radial-gradient(1100px 620px at 12% -6%, rgba(109,40,217,.09), transparent 62%),
+    radial-gradient(900px 560px at 88% 4%, rgba(14,116,144,.08), transparent 60%),
+    linear-gradient(180deg, transparent 0%, var(--bg-2) 80%);
+}
+html[data-theme="light"] #life { opacity: .32; }
+
+.wrap { position: relative; z-index: 2; max-width: 1440px; margin: 0 auto; padding: var(--sp-6) var(--sp-5) var(--sp-7); }
+
+/* generic -------------------------------------------------------------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  box-shadow: var(--shadow);
+}
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--text-2); }
+.dim { color: var(--text-3); }
+h1,h2,h3,h4 { margin: 0; line-height: 1.2; font-weight: 650; letter-spacing: -.02em; }
+a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color var(--dur-fast) var(--ease); }
+a:hover { border-bottom-color: currentColor; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+/* header ---------------------------------------------------------------- */
+header.masthead { display: flex; flex-wrap: wrap; gap: var(--sp-6); align-items: flex-start; justify-content: space-between; margin-bottom: var(--sp-6); }
+.brand-line { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-2); }
+.sigil { width: 38px; height: 38px; flex: none; border-radius: 10px; background: var(--grad); display: grid; place-items: center; box-shadow: var(--glow); }
+.sigil svg { display: block; }
+h1 { font-size: clamp(28px, 4.2vw, 44px); font-weight: 720; letter-spacing: -.035em;
+     background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.premise { max-width: 62ch; color: var(--text-2); font-size: 15px; margin: var(--sp-3) 0 var(--sp-4); }
+.premise em { color: var(--text); font-style: normal; }
+.chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2);
+  font-size: 12px; color: var(--text-2); white-space: nowrap;
+}
+.chip b { color: var(--text); font-weight: 600; }
+.chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+
+/* big ring -------------------------------------------------------------- */
+.ring-hero { display: flex; align-items: center; gap: var(--sp-5); }
+.ring { position: relative; flex: none; }
+.ring svg { display: block; transform: rotate(-90deg); }
+.ring .track { stroke: var(--border-strong); fill: none; }
+.ring .fill { fill: none; stroke-linecap: round; transition: stroke-dashoffset 1.1s var(--ease); }
+.ring-label { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring-label .pct { font-size: 30px; font-weight: 700; letter-spacing: -.04em; font-family: var(--mono); }
+.ring-label .cap { font-size: 10px; letter-spacing: .13em; text-transform: uppercase; color: var(--text-3); }
+.ring-legend { font-size: 13px; color: var(--text-2); max-width: 22ch; }
+.ring-legend b { display: block; color: var(--text); font-size: 15px; margin-bottom: 2px; }
+
+/* stat strip ------------------------------------------------------------ */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-5); }
+.stat { padding: var(--sp-4); border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--border); }
+.stat .k { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); margin-bottom: 6px; }
+.stat .v { font-size: 25px; font-weight: 680; letter-spacing: -.03em; font-family: var(--mono); }
+.stat .v small { font-size: 14px; color: var(--text-3); font-weight: 500; }
+.stat .sub { font-size: 12px; color: var(--text-2); margin-top: 3px; }
+
+/* next-up banner -------------------------------------------------------- */
+.nextup { position: relative; overflow: hidden; padding: var(--sp-5); border-radius: var(--r-lg); margin-bottom: var(--sp-6);
+  border: 1px solid var(--border-strong); background: var(--surface-2); }
+.nextup::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--grad); }
+.nextup .eyebrow { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin-bottom: var(--sp-2); font-weight: 600; }
+.nextup h3 { font-size: 20px; margin-bottom: var(--sp-2); }
+.nextup .path { font-family: var(--mono); font-size: 12.5px; color: var(--text-2); }
+.nextup .path b { color: var(--text); }
+.nextup .why { margin-top: var(--sp-3); font-size: 13.5px; color: var(--text-2); max-width: 82ch; }
+
+/* pipeline -------------------------------------------------------------- */
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-4); margin: 0 0 var(--sp-4); flex-wrap: wrap; }
+.section-head h2 { font-size: 13px; letter-spacing: .15em; text-transform: uppercase; color: var(--text-3); font-weight: 600; }
+.pipeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-6); }
+.pcard {
+  position: relative; text-align: left; cursor: pointer; padding: var(--sp-4);
+  border-radius: var(--r-md); border: 1px solid var(--border); background: var(--surface);
+  color: inherit; font: inherit; transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.pcard:hover { transform: translateY(-3px); border-color: var(--border-strong); background: var(--surface-2); }
+.pcard[aria-selected="true"] { border-color: transparent; background: var(--surface-2); box-shadow: var(--glow); }
+.pcard .pnum { font-family: var(--mono); font-size: 11px; color: var(--text-3); letter-spacing: .1em; }
+.pcard .pname { font-size: 15.5px; font-weight: 640; margin: 2px 0 var(--sp-1); letter-spacing: -.02em; }
+.pcard .pmotto { font-size: 12px; color: var(--text-2); min-height: 2.4em; }
+.pbar { height: 5px; border-radius: 3px; background: var(--border-strong); overflow: hidden; margin: var(--sp-3) 0 var(--sp-2); }
+.pbar i { display: block; height: 100%; border-radius: 3px; background: var(--grad); width: 0; transition: width 1s var(--ease); }
+.pcard .pfoot { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: var(--text-3); font-family: var(--mono); }
+.vtag { padding: 2px 7px; border-radius: 5px; border: 1px solid var(--border); background: var(--surface-3); font-size: 10.5px; color: var(--text-2); }
+.pcard[data-state="done"] .vtag { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
+.pcard[data-state="wip"]  .vtag { color: var(--wip); border-color: color-mix(in srgb, var(--wip) 45%, transparent); }
+
+/* detail ---------------------------------------------------------------- */
+.detail { padding: var(--sp-5); border-radius: var(--r-lg); margin-bottom: var(--sp-6); }
+.detail-head { display: flex; flex-wrap: wrap; gap: var(--sp-4); justify-content: space-between; align-items: flex-start; padding-bottom: var(--sp-4); border-bottom: 1px solid var(--border); margin-bottom: var(--sp-4); }
+.detail-head h3 { font-size: 22px; letter-spacing: -.025em; }
+.detail-head .motto { color: var(--text-2); font-size: 13.5px; margin-top: 4px; }
+.demo { margin: var(--sp-4) 0 var(--sp-5); padding: var(--sp-4); border-radius: var(--r-md); background: var(--surface); border: 1px dashed var(--border-strong); font-size: 13.5px; color: var(--text-2); }
+.demo b { display: block; color: var(--accent); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 6px; }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; margin-bottom: var(--sp-4); }
+.search { flex: 1 1 220px; min-width: 180px; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--border); }
+.search input { flex: 1; background: none; border: 0; color: var(--text); font: inherit; font-size: 13.5px; outline: none; min-width: 0; }
+.search input::placeholder { color: var(--text-3); }
+.search kbd { flex: none; }
+kbd { font-family: var(--mono); font-size: 10.5px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2); }
+.fbtn { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); font: inherit; font-size: 12px; cursor: pointer; transition: all var(--dur-fast) var(--ease); }
+.fbtn:hover { border-color: var(--border-strong); color: var(--text); }
+.fbtn[aria-pressed="true"] { background: var(--surface-3); color: var(--text); border-color: var(--border-strong); }
+
+.ws { border: 1px solid var(--border); border-radius: var(--r-md); margin-bottom: var(--sp-3); overflow: hidden; background: var(--surface); }
+.ws > summary { cursor: pointer; list-style: none; padding: var(--sp-3) var(--sp-4); display: flex; align-items: center; gap: var(--sp-3); transition: background var(--dur-fast) var(--ease); }
+.ws > summary::-webkit-details-marker { display: none; }
+.ws > summary:hover { background: var(--surface-2); }
+.ws .caret { flex: none; width: 9px; height: 9px; border-right: 1.5px solid var(--text-3); border-bottom: 1.5px solid var(--text-3); transform: rotate(-45deg); transition: transform var(--dur) var(--ease); margin-right: 2px; }
+.ws[open] .caret { transform: rotate(45deg); }
+.ws .wsid { font-family: var(--mono); font-size: 11px; color: var(--text-3); width: 1.4em; }
+.ws .wsname { font-weight: 600; font-size: 14.5px; flex: 1; letter-spacing: -.01em; }
+.ws .wscount { font-family: var(--mono); font-size: 11.5px; color: var(--text-3); }
+.ws .wsbar { flex: none; width: 66px; height: 4px; border-radius: 2px; background: var(--border-strong); overflow: hidden; }
+.ws .wsbar i { display: block; height: 100%; background: var(--grad); width: 0; transition: width .8s var(--ease); }
+
+ul.tasks { list-style: none; margin: 0; padding: 0 0 var(--sp-2); }
+li.task { display: flex; gap: var(--sp-3); align-items: flex-start; padding: 9px var(--sp-4) 9px 40px; border-top: 1px solid var(--border); font-size: 13.5px; }
+li.task:hover { background: var(--surface-2); }
+li.task .box { flex: none; width: 15px; height: 15px; border-radius: 4px; border: 1.5px solid var(--border-strong); margin-top: 3px; display: grid; place-items: center; }
+li.task[data-s="done"] .box { background: var(--ok); border-color: var(--ok); }
+li.task[data-s="done"] .box::after { content: ""; width: 4px; height: 8px; border: solid #04140a; border-width: 0 2px 2px 0; transform: rotate(42deg) translate(-1px,-1px); }
+li.task[data-s="wip"] .box { border-color: var(--wip); background: color-mix(in srgb, var(--wip) 26%, transparent); }
+li.task[data-s="blocked"] .box { border-color: var(--blocked); background: color-mix(in srgb, var(--blocked) 26%, transparent); }
+li.task[data-s="cut"] { opacity: .45; }
+li.task[data-s="cut"] .box { border-color: var(--cut); }
+li.task .tid { flex: none; font-family: var(--mono); font-size: 11.5px; color: var(--text-3); width: 74px; padding-top: 2px; }
+li.task .tt { flex: 1; min-width: 0; }
+li.task[data-s="done"] .tt { color: var(--text-2); }
+li.task .crit { flex: none; font-family: var(--mono); font-size: 11px; color: var(--text-3); padding-top: 2px; }
+.empty { padding: var(--sp-5); text-align: center; color: var(--text-3); font-size: 13.5px; }
+
+/* two-column info ------------------------------------------------------- */
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-6); }
+.panel { padding: var(--sp-5); border-radius: var(--r-lg); }
+.panel h3 { font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); margin-bottom: var(--sp-4); font-weight: 600; }
+.flow { display: flex; flex-direction: column; gap: 0; }
+.flowstep { display: flex; gap: var(--sp-3); }
+.flowstep .rail { flex: none; width: 20px; display: flex; flex-direction: column; align-items: center; }
+.flowstep .node { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--border-strong); background: var(--bg-2); margin-top: 5px; flex: none; }
+.flowstep .line { width: 2px; flex: 1; background: var(--border); min-height: 14px; }
+.flowstep:last-child .line { display: none; }
+.flowstep[data-on="true"] .node { border-color: var(--accent); background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+.flowstep .body { padding-bottom: var(--sp-4); font-size: 13.5px; }
+.flowstep .body b { display: block; font-size: 13.5px; margin-bottom: 2px; }
+.flowstep .body span { color: var(--text-2); font-size: 12.5px; }
+.notice { margin-top: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-radius: var(--r-sm); font-size: 13px;
+  border: 1px solid color-mix(in srgb, var(--wip) 42%, transparent); background: color-mix(in srgb, var(--wip) 11%, transparent); color: var(--text); }
+.notice b { color: var(--wip); }
+
+table.budget { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.budget th { text-align: left; font-weight: 600; color: var(--text-3); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; padding: 0 0 var(--sp-2); }
+table.budget td { padding: 7px 0; border-top: 1px solid var(--border); color: var(--text-2); }
+table.budget td:first-child { color: var(--text); }
+table.budget td.n { text-align: right; font-family: var(--mono); white-space: nowrap; }
+table.budget td.n b { color: var(--accent); font-weight: 600; }
+
+ul.rules { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-3); }
+ul.rules li { display: flex; gap: var(--sp-3); font-size: 13.5px; }
+ul.rules .n { flex: none; font-family: var(--mono); font-size: 11px; color: var(--accent); padding-top: 3px; }
+ul.rules b { display: block; }
+ul.rules span { color: var(--text-2); font-size: 12.5px; }
+
+/* legend + footer ------------------------------------------------------- */
+.legend { display: flex; flex-wrap: wrap; gap: var(--sp-4); font-size: 12px; color: var(--text-2); }
+.legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; border: 1.5px solid var(--border-strong); }
+footer.foot { margin-top: var(--sp-6); padding-top: var(--sp-5); border-top: 1px solid var(--border); font-size: 12.5px; color: var(--text-3); display: flex; flex-wrap: wrap; gap: var(--sp-4); justify-content: space-between; }
+footer.foot code { font-family: var(--mono); color: var(--text-2); background: var(--surface-2); padding: 2px 6px; border-radius: 4px; }
+
+.iconbtn { width: 34px; height: 34px; display: grid; place-items: center; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text-2); cursor: pointer; transition: all var(--dur-fast) var(--ease); }
+.iconbtn:hover { color: var(--text); border-color: var(--border-strong); }
+
+@media (max-width: 640px) {
+  .wrap { padding: var(--sp-5) var(--sp-4) var(--sp-6); }
+  .ring-hero { width: 100%; }
+  li.task { padding-left: var(--sp-4); flex-wrap: wrap; }
+  li.task .tid { width: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  #life { display: none; }
+}
+</style>
+</head>
+<body>
+<canvas id="life" aria-hidden="true"></canvas>
+<div class="bg-wash" aria-hidden="true"></div>
+<div class="wrap">
+
+<header class="masthead">
+  <div>
+    <div class="brand-line">
+      <span class="sigil" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <rect x="2"  y="2"  width="5" height="5" rx="1" fill="#08060f" opacity=".9"/>
+          <rect x="8.5" y="8.5" width="5" height="5" rx="1" fill="#08060f" opacity=".9"/>
+          <rect x="15" y="2"  width="5" height="5" rx="1" fill="#08060f" opacity=".55"/>
+          <rect x="2"  y="15" width="5" height="5" rx="1" fill="#08060f" opacity=".55"/>
+          <rect x="15" y="15" width="5" height="5" rx="1" fill="#08060f" opacity=".9"/>
+        </svg>
+      </span>
+      <h1>fancy-gol</h1>
+    </div>
+    <p class="premise">
+      <em>A cellular automata simulator with absolutely too much time spent on what&rsquo;s essentially a toy.
+      But this toy doesn&rsquo;t care, it wants to be fabulous!</em>
+      &nbsp;&mdash;&nbsp;mission control for the seven-phase build.
+    </p>
+    <div class="chips" id="metaChips"></div>
+  </div>
+
+  <div class="ring-hero">
+    <div class="ring">
+      <svg width="132" height="132" viewBox="0 0 132 132" aria-hidden="true">
+        <defs>
+          <linearGradient id="rg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%"   stop-color="#f472b6"/>
+            <stop offset="50%"  stop-color="#a78bfa"/>
+            <stop offset="100%" stop-color="#22d3ee"/>
+          </linearGradient>
+        </defs>
+        <circle class="track" cx="66" cy="66" r="57" stroke-width="9"/>
+        <circle class="fill"  cx="66" cy="66" r="57" stroke-width="9" stroke="url(#rg)" id="heroRing"
+                stroke-dasharray="358.14" stroke-dashoffset="358.14"/>
+      </svg>
+      <div class="ring-label">
+        <span class="pct" id="heroPct">0%</span>
+        <span class="cap">complete</span>
+      </div>
+    </div>
+    <div class="ring-legend">
+      <b id="heroTitle">Planning complete</b>
+      <span id="heroSub">Phase 0 has not started.</span>
+    </div>
+  </div>
+</header>
+
+<section class="stats" id="stats" aria-label="Summary statistics"></section>
+
+<section class="nextup card" id="nextUp" aria-live="polite"></section>
+
+<div class="section-head">
+  <h2>Phase pipeline</h2>
+  <div class="legend">
+    <span><i style="background:var(--ok);border-color:var(--ok)"></i>done</span>
+    <span><i style="background:color-mix(in srgb,var(--wip) 26%,transparent);border-color:var(--wip)"></i>in&nbsp;progress</span>
+    <span><i></i>not&nbsp;started</span>
+    <span><i style="border-color:var(--blocked);background:color-mix(in srgb,var(--blocked) 26%,transparent)"></i>blocked</span>
+    <span><i style="border-color:var(--cut);opacity:.5"></i>cut</span>
+  </div>
+</div>
+<div class="pipeline" id="pipeline" role="tablist" aria-label="Build phases"></div>
+
+<section class="detail card" id="detail" role="tabpanel" aria-live="polite"></section>
+
+<div class="grid2">
+  <section class="panel card">
+    <h3>Branch &amp; release model</h3>
+    <div class="flow" id="flow"></div>
+    <div class="notice" id="branchNotice"></div>
+  </section>
+
+  <section class="panel card">
+    <h3>Standing rules &mdash; from INCEPTION.md</h3>
+    <ul class="rules">
+      <li><span class="n">01</span><div><b>No Bloat</b><span>If a library can be written in 50 lines of TS, don&rsquo;t import a package for it. Runtime deps are capped at <code>express</code> and <code>ws</code>.</span></div></li>
+      <li><span class="n">02</span><div><b>Pure Logic</b><span>The simulation logic must never know the UI exists. Machine-enforced by <code>scripts/check-boundaries.mjs</code>.</span></div></li>
+      <li><span class="n">03</span><div><b>Stay Fancy</b><span>If a feature is &ldquo;boring&rdquo;, find a way to make it visually interesting.</span></div></li>
+      <li><span class="n">04</span><div><b>Automated Proof</b><span>Every step must pass its Vitest suite before being considered done.</span></div></li>
+      <li><span class="n">05</span><div><b>Agit-Prop</b><span>If an agent produces code that is &ldquo;just okay&rdquo;, demand it be excellent.</span></div></li>
+      <li><span class="n">06</span><div><b>Changelog</b><span>A changelog and semantic versioning from the beginning.</span></div></li>
+      <li><span class="n">07</span><div><b>Conventional commits</b><span>Agents commit in a logical, parsed manner conducive to development.</span></div></li>
+    </ul>
+  </section>
+</div>
+
+<div class="grid2">
+  <section class="panel card">
+    <h3>Performance budgets &mdash; CI-enforced</h3>
+    <table class="budget">
+      <thead><tr><th>Metric</th><th style="text-align:right">Phase&nbsp;0 floor</th><th style="text-align:right">Phase&nbsp;5 target</th></tr></thead>
+      <tbody>
+        <tr><td>Conway steps/sec @ 512&sup2; soup</td><td class="n">60</td><td class="n"><b>400</b></td></tr>
+        <tr><td>Conway steps/sec @ 4096&sup2; @1%</td><td class="n">5</td><td class="n"><b>60</b></td></tr>
+        <tr><td>Largest live grid</td><td class="n">10&#8310; cells</td><td class="n"><b>10&#8311; live</b></td></tr>
+        <tr><td>Frame time, 1080p steady state</td><td class="n">16.6&nbsp;ms</td><td class="n"><b>8&nbsp;ms</b></td></tr>
+        <tr><td>Main-thread block per tick</td><td class="n">4&nbsp;ms</td><td class="n"><b>1&nbsp;ms</b></td></tr>
+        <tr><td>Cold interactive load</td><td class="n">1500&nbsp;ms</td><td class="n"><b>800&nbsp;ms</b></td></tr>
+        <tr><td>Client JS bundle (gzip)</td><td class="n">120&nbsp;kB</td><td class="n"><b>180&nbsp;kB</b></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel card">
+    <h3>Coverage gates &mdash; ratcheted, never lowered</h3>
+    <table class="budget">
+      <thead><tr><th>Path</th><th style="text-align:right">Stmts</th><th style="text-align:right">Branch</th><th style="text-align:right">Funcs</th></tr></thead>
+      <tbody>
+        <tr><td><code>src/engine/**</code></td><td class="n"><b>95%</b></td><td class="n"><b>90%</b></td><td class="n"><b>95%</b></td></tr>
+        <tr><td><code>src/shared/**</code></td><td class="n">95%</td><td class="n">90%</td><td class="n">95%</td></tr>
+        <tr><td><code>src/render/**</code></td><td class="n">85%</td><td class="n">75%</td><td class="n">85%</td></tr>
+        <tr><td><code>src/server/**</code></td><td class="n">85%</td><td class="n">75%</td><td class="n">85%</td></tr>
+        <tr><td><code>src/ui/**</code>, <code>src/themes/**</code></td><td class="n">70%</td><td class="n">60%</td><td class="n">70%</td></tr>
+      </tbody>
+    </table>
+    <p class="dim" style="font-size:12.5px;margin:var(--sp-4) 0 0">
+      Plus: performance benchmarks gated at a 10% regression tolerance, and Playwright E2E with
+      per-theme visual-regression baselines from Phase&nbsp;3.
+    </p>
+  </section>
+</div>
+
+<footer class="foot">
+  <div>
+    <strong style="color:var(--text-2)">This dashboard is generated.</strong>
+    Tick the task checkbox in the phase document, then run
+    <code>node .agents/scripts/build-dashboard.mjs</code> and commit both.
+    Source of truth: <code>.agents/planning/*.md</code>.
+  </div>
+  <div>
+    <kbd>0</kbd>&ndash;<kbd>6</kbd> phase &nbsp; <kbd>/</kbd> search &nbsp; <kbd>t</kbd> theme &nbsp; <kbd>e</kbd> expand all
+  </div>
+</footer>
+</div>
+
+<script>
+/* <<<STATE:BEGIN>>> GENERATED BLOCK — do not hand-edit.
+   Regenerate with:  node .agents/scripts/build-dashboard.mjs
+   Source of truth:  .agents/planning/PHASE_*.md task checkboxes                     */
+const PROJECT_STATE = {"generated":"2026-09-02","repo":{"branch":"main","version":"0.0.0","target":"1.0.0"},"phases":[{"n":0,"name":"Foundation","version":"0.1.0","motto":"Make it correct.","demo":"docker compose up → open localhost:8080 → a Gosper glider gun runs at 60 fps in a bare canvas with a live FPS/tick/population readout, and npm run verify is green with ≥95% engine coverage.","doc":"PHASE_0_FOUNDATION.md","ws":[{"id":"A","name":"Toolchain and repository skeleton","tasks":[{"id":"P0-A-1","t":"Package scaffold and scripts","s":"todo","c":2,"cd":0},{"id":"P0-A-2","t":"Strict TypeScript configuration","s":"todo","c":2,"cd":0},{"id":"P0-A-3","t":"Vite + Vitest configuration","s":"todo","c":2,"cd":0},{"id":"P0-A-4","t":"Lint and format","s":"todo","c":1,"cd":0},{"id":"P0-A-5","t":"Layer boundary checker","s":"todo","c":2,"cd":0},{"id":"P0-A-6","t":"Conventional-commit hook, changelog, versioning","s":"todo","c":2,"cd":0}]},{"id":"B","name":"Core types, RNG, coordinates","tasks":[{"id":"P0-B-1","t":"Engine type vocabulary","s":"todo","c":2,"cd":0},{"id":"P0-B-2","t":"Seedable PRNG","s":"todo","c":3,"cd":0},{"id":"P0-B-3","t":"Injectable clock","s":"todo","c":2,"cd":0},{"id":"P0-B-4","t":"Coordinate system and boundary normalisation","s":"todo","c":3,"cd":0}]},{"id":"C","name":"The chunked sparse grid","tasks":[{"id":"P0-C-1","t":"Chunk","s":"todo","c":3,"cd":0},{"id":"P0-C-2","t":"ChunkedGrid","s":"todo","c":3,"cd":0},{"id":"P0-C-3","t":"Neighbourhood offset tables","s":"todo","c":3,"cd":0}]},{"id":"D","name":"The ruleset data layer","tasks":[{"id":"P0-D-1","t":"RuleSet JSON schema","s":"todo","c":1,"cd":0},{"id":"P0-D-2","t":"Hand-written validator","s":"todo","c":3,"cd":0},{"id":"P0-D-3","t":"Rule notation parsers","s":"todo","c":3,"cd":0},{"id":"P0-D-4","t":"Rule compiler","s":"todo","c":3,"cd":0},{"id":"P0-D-5","t":"Built-in ruleset catalogue","s":"todo","c":2,"cd":0}]},{"id":"E","name":"The Simulation","tasks":[{"id":"P0-E-1","t":"Step function, standard path","s":"todo","c":4,"cd":0},{"id":"P0-E-2","t":"Boundary modes","s":"todo","c":3,"cd":0},{"id":"P0-E-3","t":"Paint, clear, seed, ruleset switching","s":"todo","c":3,"cd":0},{"id":"P0-E-4","t":"Snapshot and restore","s":"todo","c":2,"cd":0}]},{"id":"F","name":"History journal and statistics","tasks":[{"id":"P0-F-1","t":"History journal","s":"todo","c":4,"cd":0},{"id":"P0-F-2","t":"Statistics collector","s":"todo","c":2,"cd":0}]},{"id":"G","name":"Worker boundary","tasks":[{"id":"P0-G-1","t":"Protocol definition","s":"todo","c":2,"cd":0},{"id":"P0-G-2","t":"Transport-agnostic handler","s":"todo","c":3,"cd":0},{"id":"P0-G-3","t":"Worker entry and main-thread client","s":"todo","c":3,"cd":0}]},{"id":"H","name":"Renderer","tasks":[{"id":"P0-H-1","t":"Renderer interface and dirty-rect utility","s":"todo","c":2,"cd":0},{"id":"P0-H-2","t":"Canvas2D renderer","s":"todo","c":3,"cd":0},{"id":"P0-H-3","t":"Headless draw-call recorder — the \"Canvas Bridge\" from the inception doc","s":"todo","c":3,"cd":0}]},{"id":"I","name":"Shell, server, container, CI","tasks":[{"id":"P0-I-1","t":"Minimal client shell","s":"todo","c":3,"cd":0},{"id":"P0-I-2","t":"Express server skeleton","s":"todo","c":3,"cd":0},{"id":"P0-I-3","t":"Docker","s":"todo","c":3,"cd":0},{"id":"P0-I-4","t":"Benchmark harness and baseline","s":"todo","c":2,"cd":0},{"id":"P0-I-5","t":"CI pipeline","s":"todo","c":3,"cd":0},{"id":"P0-I-6","t":"Foundational documentation","s":"todo","c":2,"cd":0}]}]},{"n":1,"name":"Interaction and Visuals","version":"0.2.0","motto":"Make it usable.","demo":"Open the app, draw a glider with the mouse, scroll to zoom out to a 4096² world, drag to pan, press Space to run it, [ / ] to change speed, pick HighLife from the ruleset menu — all at 60 fps, all with a keyboard equivalent, and reload the page to find your work still there.","doc":"PHASE_1_INTERACTION.md","ws":[{"id":"A","name":"Camera and viewport","tasks":[{"id":"P1-A-1","t":"Camera transform","s":"todo","c":3,"cd":0},{"id":"P1-A-2","t":"Pan, zoom, and inertia","s":"todo","c":3,"cd":0},{"id":"P1-A-3","t":"Grid lines and the \"you are here\" overlay","s":"todo","c":3,"cd":0}]},{"id":"B","name":"Input pipeline and tools","tasks":[{"id":"P1-B-1","t":"Input router","s":"todo","c":3,"cd":0},{"id":"P1-B-2","t":"Tool framework","s":"todo","c":2,"cd":0},{"id":"P1-B-3","t":"Brush and eraser","s":"todo","c":4,"cd":0},{"id":"P1-B-4","t":"Shape tools: line, rectangle, ellipse, fill","s":"todo","c":3,"cd":0},{"id":"P1-B-5","t":"Selection and clipboard","s":"todo","c":3,"cd":0},{"id":"P1-B-6","t":"Stamp tool","s":"todo","c":2,"cd":0}]},{"id":"C","name":"Commands, keybindings, undo","tasks":[{"id":"P1-C-1","t":"Command registry and bus","s":"todo","c":2,"cd":0},{"id":"P1-C-2","t":"Keybinding system","s":"todo","c":3,"cd":0},{"id":"P1-C-3","t":"Edit undo/redo stack","s":"todo","c":3,"cd":0}]},{"id":"D","name":"HUD and core UI","tasks":[{"id":"P1-D-1","t":"Layout shell and the \"wow on first paint\"","s":"todo","c":4,"cd":0},{"id":"P1-D-2","t":"Transport controls","s":"todo","c":3,"cd":0},{"id":"P1-D-3","t":"Status bar and readouts","s":"todo","c":3,"cd":0},{"id":"P1-D-4","t":"Ruleset picker","s":"todo","c":3,"cd":0},{"id":"P1-D-5","t":"Toasts, dialogs, tooltips","s":"todo","c":2,"cd":0}]},{"id":"E","name":"Default theme and token system","tasks":[{"id":"P1-E-1","t":"Token contract and lint enforcement","s":"todo","c":3,"cd":0},{"id":"P1-E-2","t":"Theme registry and activation","s":"todo","c":2,"cd":0},{"id":"P1-E-3","t":"The Default theme","s":"todo","c":3,"cd":0}]},{"id":"F","name":"Persistence and sharing","tasks":[{"id":"P1-F-1","t":"Session model and autosave","s":"todo","c":3,"cd":0},{"id":"P1-F-2","t":"Shareable URLs","s":"todo","c":3,"cd":0}]},{"id":"G","name":"Server API v1","tasks":[{"id":"P1-G-1","t":"Ruleset routes","s":"todo","c":3,"cd":0},{"id":"P1-G-2","t":"Pattern routes (skeleton)","s":"todo","c":2,"cd":0},{"id":"P1-G-3","t":"/live broadcast","s":"todo","c":4,"cd":0}]},{"id":"H","name":"Testing and gates","tasks":[{"id":"P1-H-1","t":"Playwright harness","s":"todo","c":2,"cd":0},{"id":"P1-H-2","t":"Visual regression baseline","s":"todo","c":2,"cd":0},{"id":"P1-H-3","t":"Interaction performance budgets","s":"todo","c":4,"cd":0}]}]},{"n":2,"name":"The Library and The Stat Engine","version":"0.3.0","motto":"Make it powerful.","demo":"Search the library for \"Gosper\", drag the gun onto the grid, open the statistics panel and watch population climb linearly while the birth/death rates oscillate at period 30 — then open the Ruleset Studio, change B3/S23 to B36/S23, hit apply, and watch the same seed behave completely differently, with the divergence visible on the chart.","doc":"PHASE_2_LIBRARY_AND_STATS.md","ws":[{"id":"A","name":"Pattern codecs","tasks":[{"id":"P2-A-1","t":"RLE decoder (full spec, multi-state)","s":"todo","c":4,"cd":0},{"id":"P2-A-2","t":"RLE encoder","s":"todo","c":3,"cd":0},{"id":"P2-A-3","t":"Plaintext and Life 1.06 codecs","s":"todo","c":3,"cd":0},{"id":"P2-A-4","t":"Pattern normalisation and identity","s":"todo","c":2,"cd":0}]},{"id":"B","name":"The Library","tasks":[{"id":"P2-B-1","t":"Catalogue schema and content","s":"todo","c":3,"cd":0},{"id":"P2-B-2","t":"Thumbnail generation","s":"todo","c":3,"cd":0},{"id":"P2-B-3","t":"Library panel UI","s":"todo","c":5,"cd":0},{"id":"P2-B-4","t":"Server pattern routes (complete)","s":"todo","c":3,"cd":0}]},{"id":"C","name":"The Stat Engine","tasks":[{"id":"P2-C-1","t":"Incremental metrics","s":"todo","c":3,"cd":0},{"id":"P2-C-2","t":"Entropy and spatial measures","s":"todo","c":3,"cd":0},{"id":"P2-C-3","t":"Zobrist hashing and cycle detection","s":"todo","c":4,"cd":0},{"id":"P2-C-4","t":"Growth classification","s":"todo","c":2,"cd":0},{"id":"P2-C-5","t":"Tiered series storage","s":"todo","c":3,"cd":0}]},{"id":"D","name":"Charts and the statistics panel","tasks":[{"id":"P2-D-1","t":"Charting core","s":"todo","c":4,"cd":0},{"id":"P2-D-2","t":"Series renderers","s":"todo","c":3,"cd":0},{"id":"P2-D-3","t":"Statistics panel","s":"todo","c":4,"cd":0},{"id":"P2-D-4","t":"Data export","s":"todo","c":3,"cd":0}]},{"id":"E","name":"The Ruleset Studio","tasks":[{"id":"P2-E-1","t":"Studio shell and JSON editor","s":"todo","c":4,"cd":0},{"id":"P2-E-2","t":"Form-based rule builder","s":"todo","c":3,"cd":0},{"id":"P2-E-3","t":"Rule test bench","s":"todo","c":3,"cd":0},{"id":"P2-E-4","t":"Save, share, import","s":"todo","c":3,"cd":0}]}]},{"n":3,"name":"The Theme Engine","version":"0.4.0","motto":"Make it fabulous.","demo":"Cycle through all six themes with Mod+Shift+T while a Gosper gun runs. Each one changes the palette, the cell rendering, the background, the post-processing, the motion of every panel, and the sound — with no dropped frames, no reload, and a graceful degrade on a low-end machine.","doc":"PHASE_3_THEME_ENGINE.md","ws":[{"id":"A","name":"Pipeline and framework","tasks":[{"id":"P3-A-1","t":"Layered compositor","s":"todo","c":3,"cd":0},{"id":"P3-A-2","t":"Age buffer","s":"todo","c":3,"cd":0},{"id":"P3-A-3","t":"Effect pass framework and registry","s":"todo","c":3,"cd":0},{"id":"P3-A-4","t":"Degrade governor","s":"todo","c":4,"cd":0},{"id":"P3-A-5","t":"Effect library","s":"todo","c":3,"cd":0},{"id":"P3-A-6","t":"Motion system","s":"todo","c":3,"cd":0}]},{"id":"B","name":"Audio","tasks":[{"id":"P3-B-1","t":"Audio context, mixer, policy","s":"todo","c":4,"cd":0},{"id":"P3-B-2","t":"Voice primitives and scheduler","s":"todo","c":3,"cd":0},{"id":"P3-B-3","t":"Event mapping and rate aggregation","s":"todo","c":4,"cd":0}]},{"id":"C","name":"The six themes","tasks":[{"id":"P3-C-1","t":"Default (upgrade)","s":"todo","c":2,"cd":0},{"id":"P3-C-2","t":"Chiba-City","s":"todo","c":3,"cd":0},{"id":"P3-C-3","t":"Flatline","s":"todo","c":4,"cd":0},{"id":"P3-C-4","t":"Sids-Place","s":"todo","c":4,"cd":0},{"id":"P3-C-5","t":"Void-Walker","s":"todo","c":4,"cd":0},{"id":"P3-C-6","t":"Synthwave","s":"todo","c":3,"cd":0}]},{"id":"D","name":"Integration and gates","tasks":[{"id":"P3-D-1","t":"Theme switching UX","s":"todo","c":4,"cd":0},{"id":"P3-D-2","t":"Per-theme visual regression","s":"todo","c":3,"cd":0},{"id":"P3-D-3","t":"Theme accessibility audit","s":"todo","c":3,"cd":0},{"id":"P3-D-4","t":"Performance certification across themes","s":"todo","c":4,"cd":0}]}]},{"n":4,"name":"Power UX","version":"0.5.0","motto":"Make it a pro tool.","demo":"Hit Mod+K, type \"lab\", press Enter. The screen splits: Conway on the left, HighLife on the right, same seed. Run 400 generations. Scrub the shared timeline back to generation 150 and watch both rewind in lockstep, with the divergence chart showing exactly where they parted company. Then rebind every key you have touched and export the profile.","doc":"PHASE_4_POWER_UX.md","ws":[{"id":"A","name":"Command Palette","tasks":[{"id":"P4-A-1","t":"Fuzzy scorer","s":"todo","c":3,"cd":0},{"id":"P4-A-2","t":"Palette overlay","s":"todo","c":4,"cd":0},{"id":"P4-A-3","t":"Palette modes","s":"todo","c":3,"cd":0}]},{"id":"B","name":"Hot-Key Mastery","tasks":[{"id":"P4-B-1","t":"Binding editor","s":"todo","c":3,"cd":0},{"id":"P4-B-2","t":"Conflict detection and profiles","s":"todo","c":3,"cd":0},{"id":"P4-B-3","t":"Cheat sheet","s":"todo","c":3,"cd":0}]},{"id":"C","name":"The Time-Traveler","tasks":[{"id":"P4-C-1","t":"Timeline data bridge","s":"todo","c":3,"cd":0},{"id":"P4-C-2","t":"Timeline UI","s":"todo","c":4,"cd":0},{"id":"P4-C-3","t":"Timeline forking","s":"todo","c":3,"cd":0},{"id":"P4-C-4","t":"Undo vs. time travel clarity","s":"todo","c":3,"cd":0}]},{"id":"D","name":"The Laboratory","tasks":[{"id":"P4-D-1","t":"Multi-simulation host","s":"todo","c":3,"cd":0},{"id":"P4-D-2","t":"Lab layout and link controls","s":"todo","c":4,"cd":0},{"id":"P4-D-3","t":"Diff overlay","s":"todo","c":3,"cd":0},{"id":"P4-D-4","t":"Divergence metrics","s":"todo","c":3,"cd":0}]},{"id":"E","name":"Sessions, onboarding, settings","tasks":[{"id":"P4-E-1","t":"Named sessions and browser","s":"todo","c":3,"cd":0},{"id":"P4-E-2","t":"First-run tour and attract mode","s":"todo","c":4,"cd":0},{"id":"P4-E-3","t":"Settings panel","s":"todo","c":3,"cd":0}]}]},{"n":5,"name":"Scale and Performance","version":"0.6.0","motto":"Make it enormous.","demo":"Load a 10-million-live-cell breeder into a 1,000,000 × 1,000,000 world. Zoom out until the whole civilisation is a shimmering density field, zoom back into a single glider, and run the whole thing at 60 fps in Void-Walker with bloom on. Then run the same thing on a five-year-old laptop and watch it degrade gracefully instead of dying.","doc":"PHASE_5_SCALE_AND_PERF.md","ws":[{"id":"A","name":"WebGL2 renderer","tasks":[{"id":"P5-A-1","t":"GL context, capability probe, fallback","s":"todo","c":3,"cd":0},{"id":"P5-A-2","t":"Cell rendering","s":"todo","c":4,"cd":0},{"id":"P5-A-3","t":"Theme shader ports","s":"todo","c":3,"cd":0},{"id":"P5-A-4","t":"Density LOD","s":"todo","c":4,"cd":0}]},{"id":"B","name":"Engine kernels","tasks":[{"id":"P5-B-1","t":"Bitboard kernel","s":"todo","c":4,"cd":0},{"id":"P5-B-2","t":"Chunk skipping and activity tracking","s":"todo","c":3,"cd":0},{"id":"P5-B-3","t":"Memory discipline at scale","s":"todo","c":3,"cd":0}]},{"id":"C","name":"Threading","tasks":[{"id":"P5-C-1","t":"OffscreenCanvas rendering","s":"todo","c":3,"cd":0},{"id":"P5-C-2","t":"SharedArrayBuffer path","s":"todo","c":4,"cd":0}]},{"id":"D","name":"HashLife (optional; may be cut in full)","tasks":[{"id":"P5-D-1","t":"Quadtree canonicalisation","s":"todo","c":2,"cd":0},{"id":"P5-D-2","t":"Superspeed stepping","s":"todo","c":3,"cd":0},{"id":"P5-D-3","t":"UI integration and honest limits","s":"todo","c":3,"cd":0}]},{"id":"E","name":"Verification at scale","tasks":[{"id":"P5-E-1","t":"The stress corpus","s":"todo","c":3,"cd":0},{"id":"P5-E-2","t":"Low-end hardware certification","s":"todo","c":3,"cd":0},{"id":"P5-E-3","t":"Cross-renderer equivalence suite","s":"todo","c":2,"cd":0}]}]},{"n":6,"name":"The Launch","version":"1.0.0","motto":"Make it real.","demo":"Send the link to someone who has never heard of Conway's Game of Life. They open it on their phone, play with it for ten minutes, understand what they are looking at, and send it to somebody else.","doc":"PHASE_6_LAUNCH.md","ws":[{"id":"A","name":"Production hardening","tasks":[{"id":"P6-A-1","t":"Server security","s":"todo","c":4,"cd":0},{"id":"P6-A-2","t":"Client resilience","s":"todo","c":4,"cd":0},{"id":"P6-A-3","t":"Docker and deployment","s":"todo","c":4,"cd":0}]},{"id":"B","name":"Mobile and touch","tasks":[{"id":"P6-B-1","t":"Responsive layout","s":"todo","c":4,"cd":0},{"id":"P6-B-2","t":"Touch interaction","s":"todo","c":4,"cd":0}]},{"id":"C","name":"Accessibility certification","tasks":[{"id":"P6-C-1","t":"WCAG 2.2 AA audit","s":"todo","c":3,"cd":0},{"id":"P6-C-2","t":"Screen-reader experience","s":"todo","c":3,"cd":0}]},{"id":"D","name":"Compatibility","tasks":[{"id":"P6-D-1","t":"Browser and platform matrix","s":"todo","c":3,"cd":0},{"id":"P6-D-2","t":"Progressive enhancement audit","s":"todo","c":3,"cd":0}]},{"id":"E","name":"Documentation","tasks":[{"id":"P6-E-1","t":"README","s":"todo","c":3,"cd":0},{"id":"P6-E-2","t":"User guide","s":"todo","c":3,"cd":0},{"id":"P6-E-3","t":"Ruleset authoring guide","s":"todo","c":3,"cd":0},{"id":"P6-E-4","t":"Architecture and contribution docs","s":"todo","c":3,"cd":0}]},{"id":"F","name":"Demo assets","tasks":[{"id":"P6-F-1","t":"Capture pipeline","s":"todo","c":3,"cd":0},{"id":"P6-F-2","t":"Screenshot set","s":"todo","c":4,"cd":0}]},{"id":"G","name":"Release engineering","tasks":[{"id":"P6-G-1","t":"Version and changelog automation","s":"todo","c":3,"cd":0},{"id":"P6-G-2","t":"Container publishing","s":"todo","c":3,"cd":0},{"id":"P6-G-3","t":"Release candidate QA","s":"todo","c":3,"cd":0},{"id":"P6-G-4","t":"Cut 1.0.0","s":"todo","c":4,"cd":0}]}]}]};
+/* <<<STATE:END>>> */
+
+/* ========================================================================== */
+/* derive                                                                     */
+/* ========================================================================== */
+const S = PROJECT_STATE;
+const ALL = S.phases;
+
+function tally(tasks) {
+  const t = { total: 0, done: 0, wip: 0, blocked: 0, cut: 0, crit: 0, critDone: 0 };
+  for (const k of tasks) {
+    t.total++;
+    if (k.s === 'done') t.done++;
+    else if (k.s === 'wip') t.wip++;
+    else if (k.s === 'blocked') t.blocked++;
+    else if (k.s === 'cut') t.cut++;
+    t.crit += k.c || 0;
+    t.critDone += k.cd || 0;
+  }
+  t.countable = t.total - t.cut;
+  t.pct = t.countable ? t.done / t.countable : 0;
+  return t;
+}
+function phaseTasks(p) { return p.ws.flatMap(w => w.tasks); }
+function phaseState(p) {
+  const t = tally(phaseTasks(p));
+  if (t.countable > 0 && t.done === t.countable) return 'done';
+  if (t.done || t.wip || t.blocked) return 'wip';
+  return 'todo';
+}
+const TOTALS = tally(ALL.flatMap(phaseTasks));
+const shipped = ALL.filter(p => phaseState(p) === 'done').length;
+
+function nextTask() {
+  for (const p of ALL) for (const w of p.ws) for (const k of w.tasks) {
+    if (k.s === 'wip') return { p, w, k, live: true };
+  }
+  for (const p of ALL) for (const w of p.ws) for (const k of w.tasks) {
+    if (k.s === 'todo') return { p, w, k, live: false };
+  }
+  return null;
+}
+
+/* ========================================================================== */
+/* render                                                                     */
+/* ========================================================================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const pctStr = n => (n * 100).toFixed(n > 0 && n < 0.01 ? 1 : 0) + '%';
+
+function renderMeta() {
+  const activePhase = ALL.find(p => phaseState(p) !== 'done');
+  const chips = [
+    ['dot', 'Phase', activePhase ? activePhase.n + ' &middot; ' + esc(activePhase.name) : 'shipped'],
+    ['', 'Version', esc(S.repo.version) + ' &rarr; ' + esc(S.repo.target)],
+    ['', 'Branch', esc(S.repo.branch)],
+    ['', 'Tasks', TOTALS.done + '/' + TOTALS.countable],
+    ['', 'Generated', esc(S.generated)]
+  ];
+  $('#metaChips').innerHTML = chips.map(([d, k, v]) =>
+    `<span class="chip">${d ? '<i class="dot"></i>' : ''}${k}&nbsp;<b>${v}</b></span>`).join('');
+
+  const C = 2 * Math.PI * 57;
+  const ring = $('#heroRing');
+  ring.setAttribute('stroke-dasharray', C.toFixed(2));
+  requestAnimationFrame(() => ring.setAttribute('stroke-dashoffset', (C * (1 - TOTALS.pct)).toFixed(2)));
+  $('#heroPct').textContent = pctStr(TOTALS.pct);
+
+  if (shipped === ALL.length) {
+    $('#heroTitle').textContent = 'Shipped';
+    $('#heroSub').textContent = 'All seven phases complete. It is, verifiably, fabulous.';
+  } else if (TOTALS.done === 0) {
+    $('#heroTitle').textContent = 'Planning complete';
+    $('#heroSub').innerHTML = ALL.length + ' phases, ' + TOTALS.countable + ' tasks and ' +
+      TOTALS.crit + ' acceptance criteria are specified. Implementation has not started.';
+  } else {
+    $('#heroTitle').textContent = shipped + ' of ' + ALL.length + ' phases shipped';
+    $('#heroSub').textContent = TOTALS.done + ' tasks done, ' + (TOTALS.countable - TOTALS.done) + ' remaining.';
+  }
+}
+
+function renderStats() {
+  const tiles = [
+    { k: 'Tasks complete', v: TOTALS.done, sub: 'of ' + TOTALS.countable + ' countable' + (TOTALS.cut ? ' · ' + TOTALS.cut + ' cut' : '') },
+    { k: 'Acceptance criteria', v: TOTALS.critDone, sub: 'of ' + TOTALS.crit + ' specified' },
+    { k: 'Phases shipped', v: shipped + '<small>/' + ALL.length + '</small>', sub: 'main holds tested output only' },
+    { k: 'In flight', v: TOTALS.wip + (TOTALS.blocked ? '<small> +' + TOTALS.blocked + ' blocked</small>' : ''), sub: TOTALS.wip ? 'tasks under way' : 'nothing started yet' },
+    { k: 'Version', v: esc(S.repo.version), sub: 'target ' + esc(S.repo.target) }
+  ];
+  $('#stats').innerHTML = tiles.map(t =>
+    `<div class="stat"><div class="k">${t.k}</div><div class="v">${t.v}</div><div class="sub">${t.sub}</div></div>`).join('');
+}
+
+function renderNext() {
+  const n = nextTask();
+  const el = $('#nextUp');
+  if (!n) {
+    el.innerHTML = `<div class="eyebrow">Complete</div><h3>Every task is done.</h3>
+      <p class="why">Cut <code>v1.0.0</code>, publish the image, and write the retrospective.</p>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="eyebrow">${n.live ? 'In flight' : 'Next up'}</div>
+    <h3>${esc(n.k.id)} &middot; ${esc(n.k.t)}</h3>
+    <div class="path">
+      Phase <b>${n.p.n}</b> &mdash; ${esc(n.p.name)}
+      &nbsp;/&nbsp; Workstream <b>${esc(n.w.id)}</b> &mdash; ${esc(n.w.name)}
+      &nbsp;/&nbsp; <b>${n.k.c}</b> acceptance criteria
+    </div>
+    <p class="why">Open <a href="planning/${esc(n.p.doc)}">.agents/planning/${esc(n.p.doc)}</a> and work the task in place.
+    A task is done only when its tests exist and pass, <code>npm run verify</code> is green, the coverage and
+    performance gates hold, its checkbox is ticked, and this dashboard has been regenerated.</p>`;
+}
+
+function ringBar(pct) { return `<div class="pbar"><i data-w="${(pct * 100).toFixed(1)}%"></i></div>`; }
+
+let selected = 0;
+function renderPipeline() {
+  $('#pipeline').innerHTML = ALL.map((p, i) => {
+    const t = tally(phaseTasks(p));
+    const st = phaseState(p);
+    return `<button class="pcard" role="tab" data-i="${i}" data-state="${st}"
+              aria-selected="${i === selected}" aria-controls="detail">
+      <div class="pnum">PHASE ${p.n}</div>
+      <div class="pname">${esc(p.name)}</div>
+      <div class="pmotto">${esc(p.motto || '')}</div>
+      ${ringBar(t.pct)}
+      <div class="pfoot"><span>${t.done}/${t.countable} tasks</span><span class="vtag">${esc(p.version)}</span></div>
+    </button>`;
+  }).join('');
+  $('#pipeline').querySelectorAll('.pcard').forEach(b =>
+    b.addEventListener('click', () => { selected = +b.dataset.i; renderPipeline(); renderDetail(); }));
+  animateBars();
+}
+
+let query = '', statusFilter = 'all', expandAll = false;
+function renderDetail() {
+  const p = ALL[selected];
+  const t = tally(phaseTasks(p));
+  const q = query.trim().toLowerCase();
+
+  const wsHtml = p.ws.map(w => {
+    const shown = w.tasks.filter(k =>
+      (statusFilter === 'all' || k.s === statusFilter) &&
+      (!q || (k.id + ' ' + k.t).toLowerCase().includes(q)));
+    if (!shown.length) return '';
+    const wt = tally(w.tasks);
+    const open = expandAll || q || statusFilter !== 'all' || phaseState(p) !== 'done';
+    return `<details class="ws"${open ? ' open' : ''}>
+      <summary><span class="caret"></span><span class="wsid">${esc(w.id)}</span>
+        <span class="wsname">${esc(w.name)}</span>
+        <span class="wsbar"><i data-w="${(wt.pct * 100).toFixed(1)}%"></i></span>
+        <span class="wscount">${wt.done}/${wt.countable}</span></summary>
+      <ul class="tasks">${shown.map(k => `
+        <li class="task" data-s="${k.s}">
+          <span class="box" aria-hidden="true"></span>
+          <span class="tid">${esc(k.id)}</span>
+          <span class="tt">${esc(k.t)}</span>
+          <span class="crit">${k.cd}/${k.c}</span>
+        </li>`).join('')}</ul>
+    </details>`;
+  }).join('');
+
+  $('#detail').innerHTML = `
+    <div class="detail-head">
+      <div>
+        <h3>Phase ${p.n} &mdash; ${esc(p.name)}</h3>
+        <div class="motto">${esc(p.motto || '')} &nbsp;&middot;&nbsp; ships <span class="mono">${esc(p.version)}</span>
+          &nbsp;&middot;&nbsp; <a href="planning/${esc(p.doc)}">${esc(p.doc)}</a></div>
+      </div>
+      <div style="text-align:right">
+        <div class="mono" style="font-size:22px;font-weight:660">${pctStr(t.pct)}</div>
+        <div class="dim" style="font-size:12px">${t.done}/${t.countable} tasks &middot; ${t.critDone}/${t.crit} criteria</div>
+      </div>
+    </div>
+    ${p.demo ? `<div class="demo"><b>The demo that proves it</b>${esc(p.demo)}</div>` : ''}
+    <div class="toolbar">
+      <label class="search">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <circle cx="6" cy="6" r="4.4" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M9.4 9.4L12.5 12.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <input type="search" id="q" placeholder="Filter tasks in this phase&hellip;" value="${esc(query)}"
+               aria-label="Filter tasks">
+        <kbd>/</kbd>
+      </label>
+      ${['all', 'todo', 'wip', 'done', 'blocked', 'cut'].map(f =>
+        `<button class="fbtn" data-f="${f}" aria-pressed="${statusFilter === f}">${f}</button>`).join('')}
+    </div>
+    ${wsHtml || '<div class="empty">No tasks match that filter.</div>'}`;
+
+  const qi = $('#q');
+  qi.addEventListener('input', e => { query = e.target.value; const pos = e.target.selectionStart; renderDetail(); const n = $('#q'); n.focus(); n.setSelectionRange(pos, pos); });
+  $('#detail').querySelectorAll('.fbtn').forEach(b =>
+    b.addEventListener('click', () => { statusFilter = b.dataset.f; renderDetail(); }));
+  animateBars();
+}
+
+function animateBars() {
+  requestAnimationFrame(() => document.querySelectorAll('[data-w]').forEach(i => { i.style.width = i.dataset.w; }));
+}
+
+function renderFlow() {
+  const steps = [
+    { on: true,  b: 'main &mdash; planning landed', s: 'Inception, ADRs, seven phase plans and this dashboard.' },
+    { on: false, b: 'branch <span class="mono">phase/0-foundation</span>', s: 'Not yet created. The next agent creates it before writing any code.' },
+    { on: false, b: 'work the phase on its branch', s: 'Tick checkboxes, regenerate this dashboard, commit per task.' },
+    { on: false, b: 'all phase gates green', s: 'verify + coverage + benchmarks + E2E, all passing in CI.' },
+    { on: false, b: 'merge to main, tag', s: 'main only ever holds tested, stable phase output.' },
+    { on: false, b: 'repeat for phases 1&ndash;6', s: 'One branch per phase, one tag per phase.' }
+  ];
+  $('#flow').innerHTML = steps.map(st => `
+    <div class="flowstep" data-on="${st.on}">
+      <div class="rail"><span class="node"></span><span class="line"></span></div>
+      <div class="body"><b>${st.b}</b><span>${st.s}</span></div>
+    </div>`).join('');
+  $('#branchNotice').innerHTML =
+    '<b>Phase 0 branch not yet created.</b> Do not commit implementation code to <code>main</code>. ' +
+    'Create <code>phase/0-foundation</code> first, and merge back only when every Phase&nbsp;0 gate is green.';
+}
+
+/* ========================================================================== */
+/* ambient Conway — because a dashboard for a life simulator should be alive   */
+/* ========================================================================== */
+function ambientLife() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const cv = document.getElementById('life'), ctx = cv.getContext('2d', { alpha: true });
+  let cols, rows, a, b, cell = 15, dpr = 1, acc = 0, last = 0, raf = 0;
+
+  function resize() {
+    dpr = Math.min(devicePixelRatio || 1, 2);
+    cv.width = Math.ceil(innerWidth * dpr); cv.height = Math.ceil(innerHeight * dpr);
+    cols = Math.ceil(innerWidth / cell) + 2; rows = Math.ceil(innerHeight / cell) + 2;
+    a = new Uint8Array(cols * rows); b = new Uint8Array(cols * rows);
+    for (let i = 0; i < a.length; i++) a[i] = Math.random() < 0.14 ? 1 : 0;
+  }
+  function step() {
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+      let n = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        n += a[((y + dy + rows) % rows) * cols + ((x + dx + cols) % cols)];
+      }
+      const i = y * cols + x;
+      b[i] = a[i] ? (n === 2 || n === 3 ? 1 : 0) : (n === 3 ? 1 : 0);
+    }
+    const t = a; a = b; b = t;
+    // a pinch of noise keeps the field from settling into stillness
+    for (let k = 0; k < 3; k++) a[(Math.random() * a.length) | 0] = 1;
+  }
+  function draw() {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    const light = document.documentElement.dataset.theme === 'light';
+    ctx.fillStyle = light ? 'rgba(109,40,217,.14)' : 'rgba(167,139,250,.16)';
+    const s = cell * dpr, pad = 1.6 * dpr;
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+      if (a[y * cols + x]) ctx.fillRect(x * s - s, y * s - s, s - pad, s - pad);
+    }
+  }
+  function loop(ts) {
+    raf = requestAnimationFrame(loop);
+    if (!last) last = ts;
+    acc += ts - last; last = ts;
+    if (acc > 190) { acc = 0; step(); draw(); }
+  }
+  addEventListener('resize', () => { resize(); draw(); }, { passive: true });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { cancelAnimationFrame(raf); raf = 0; }
+    else if (!raf) { last = 0; raf = requestAnimationFrame(loop); }
+  });
+  resize(); draw(); raf = requestAnimationFrame(loop);
+  window.__lifeRedraw = draw;
+}
+
+/* ========================================================================== */
+/* theme + keys                                                               */
+/* ========================================================================== */
+function initTheme() {
+  let t = null;
+  try { t = localStorage.getItem('gol-dash-theme'); } catch (e) { /* storage may be blocked */ }
+  if (!t) t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  document.documentElement.dataset.theme = t;
+}
+function toggleTheme() {
+  const t = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem('gol-dash-theme', t); } catch (e) { /* ignore */ }
+  if (window.__lifeRedraw) window.__lifeRedraw();
+}
+addEventListener('keydown', e => {
+  const typing = /^(INPUT|TEXTAREA)$/.test(e.target.tagName);
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === '/' && !typing) { e.preventDefault(); const q = $('#q'); if (q) q.focus(); return; }
+  if (e.key === 'Escape' && typing) { e.target.blur(); return; }
+  if (typing) return;
+  if (/^[0-6]$/.test(e.key)) { selected = +e.key; renderPipeline(); renderDetail(); }
+  else if (e.key === 't') toggleTheme();
+  else if (e.key === 'e') { expandAll = !expandAll; renderDetail(); }
+});
+
+/* ========================================================================== */
+initTheme();
+if (ALL.length) {
+  const firstUnfinished = ALL.findIndex(p => phaseState(p) !== 'done');
+  selected = firstUnfinished === -1 ? 0 : firstUnfinished;
+  renderMeta(); renderStats(); renderNext(); renderPipeline(); renderDetail(); renderFlow();
+} else {
+  document.querySelector('.wrap').insertAdjacentHTML('afterbegin',
+    '<div class="card" style="padding:24px;margin-bottom:24px">' +
+    '<b>No state generated yet.</b> Run <code>node .agents/scripts/build-dashboard.mjs</code>.</div>');
+}
+ambientLife();
+</script>
+</body>
+</html>
