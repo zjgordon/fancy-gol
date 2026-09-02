@@ -562,13 +562,19 @@ Emit a `CompiledRule` with the strategy selected automatically:
 - [x] Exhaustiveness: a `switch` over `Command['cmd']` fails to compile if a member is added and unhandled (`assertNever`) — proven both by `parseCommand`'s own switch and by a mirrored switch in the test suite.
 - [x] Guards reject malformed messages with a structured error rather than throwing raw — every required field of every `Command`/`Event` kind tested missing and wrongly-typed; `parseCommand`/`parseEvent` never throw on any malformed input.
 
-#### - [ ] P0-G-2 · Transport-agnostic handler
+#### - [x] P0-G-2 · Transport-agnostic handler
 **Depends on:** P0-G-1, P0-E-3 · **Files:** `src/worker/handler.ts`
 **Intent:** The handler takes a `postMessage`-shaped function, not a `self`. That single choice is what makes the whole engine testable headlessly and reusable in Phase 5's OffscreenCanvas move.
+**Implementation notes**
+- `createHandler({ post, scheduler, capabilities, clock? })` returns `{ handle(raw) }`. `post` is the only way it emits; `scheduler` (`setInterval`/`clearInterval`-shaped) is the only way `run` schedules anything — nothing here touches a worker global, `self`, or a real timer directly. `REAL_SCHEDULER` (a thin wrapper over the real timers) is exported for `sim.worker.ts` (P0-G-3) to pass in; this module never uses it itself.
+- Every mutating command (`paint`/`clear`/`seedRandom`/`step`/`run`'s ticks/`seek`) posts a correlated `{id,type:'ok'}` reply *and* a separate, id-less `frame` event, matching ADR-006 (`frame` carries no `id` — it is a pushed broadcast, not a reply). `step`/`paint` build the frame incrementally from the returned `ChangeSet`'s `dirtyChunks`; `clear`/`seedRandom`/`seek` don't return one, so those post a full-world frame via `snapshot()` instead — the whole world honestly marked dirty, not an invented partial dirty-rect list.
+- `init` deep-validates via `rules/validate.ts` (an `engine/`-layer import `shared/` can't make, which is exactly why P0-G-1 needed the type-vocabulary move) and replies `ready` with the *injected* `capabilities` — detecting the real environment is `sim.worker.ts`'s job, not this module's.
+- `loadPattern` (RLE, Phase 2/P2-A-1) and cross-palette `setRuleset` (no `migrate` on the wire) aren't supported yet; both reject with a structured error rather than a silent no-op or an approximation. `seek` without `history: true` (not itself a wire option — `init` has no history flag) rejects the same way; Phase 4 owns extending the protocol to opt into it.
+- Every thrown error — `RuleValidationError`, `RangeError`, a misbehaving `Scheduler` throwing a non-Error — is caught once in `handle()` and turned into `{id,type:'error',message,code}`; nothing here can throw past that boundary, including after `dispose` (`E_DISPOSED`) or a stale timer callback racing a just-cleared interval (checked, not crashed).
 **Acceptance criteria**
-- [ ] The full Phase 0 command set is exercised in `tests/integration/worker-protocol.spec.ts` through an in-memory port pair, with no `Worker` and no jsdom.
-- [ ] An unknown command returns a structured `error` event and does not kill the handler.
-- [ ] Free-run mode (`run` at target TPS) is driven by an injected scheduler so tests can advance virtual time.
+- [x] The full Phase 0 command set is exercised in `tests/integration/worker-protocol.spec.ts` through an in-memory port pair, with no `Worker` and no jsdom.
+- [x] An unknown command returns a structured `error` event and does not kill the handler.
+- [x] Free-run mode (`run` at target TPS) is driven by an injected scheduler so tests can advance virtual time.
 
 #### - [ ] P0-G-3 · Worker entry & main-thread client
 **Depends on:** P0-G-2 · **Files:** `src/worker/sim.worker.ts`, `src/worker/client.ts`

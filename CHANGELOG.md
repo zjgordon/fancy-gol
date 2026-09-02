@@ -135,5 +135,23 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   barrel, so every existing `@engine/types` import keeps working unchanged; no behaviour
   change. Also added `StatSample`, pinned to Phase 2 §2.2's exact shape now so the wire
   type never has to change under P2-C-1/C-2, only get populated.
+- `src/worker/handler.ts` — the transport-agnostic worker handler: `createHandler({ post,
+  scheduler, capabilities, clock? })` returns `{ handle(raw) }`. Nothing here touches a
+  worker global, `self`, or a real timer — `post` is the only way it emits, and `run`'s
+  free-run scheduling goes through an injected `Scheduler` (`REAL_SCHEDULER`, a thin
+  `setInterval`/`clearInterval` wrapper, is exported for `sim.worker.ts` to opt into; this
+  module never uses it itself), which is what lets a test drive it with an in-memory port
+  and virtual time — no `Worker`, no jsdom, no real waiting. Every mutating command posts a
+  correlated `{id,type:'ok'}` reply plus a separate, id-less `frame` broadcast (`step`/
+  `paint` build it incrementally from the returned `ChangeSet`; `clear`/`seedRandom`/`seek`
+  don't return one, so those post an honest full-world frame via `snapshot()` instead of an
+  invented partial dirty-rect list). `init` deep-validates the ruleset via `rules/validate.ts`
+  (an `engine/`-layer import `shared/` can't make — exactly why P0-G-1 needed the type move).
+  `loadPattern` (Phase 2's RLE codec) and a cross-palette `setRuleset` (no `migrate` on the
+  wire) reject with a structured error rather than pretending to work; so does `seek` without
+  `history` enabled (not itself a wire option yet — Phase 4's to add). Every thrown error,
+  including a misbehaving `Scheduler` throwing a non-Error, becomes `{id,type:'error'}`
+  rather than an uncaught exception, including after `dispose` or a stale timer callback
+  racing a just-cleared interval. (P0-G-2)
 
 [Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/main...HEAD
