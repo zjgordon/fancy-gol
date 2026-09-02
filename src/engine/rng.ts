@@ -11,7 +11,7 @@ export class Mulberry32 {
 
   /** The internal state, for snapshotting. Restore with `new Mulberry32(state)`. */
   get state(): number {
-    return this.a;
+    return this.a >>> 0;
   }
 
   /** Next value in `[0, 1)`. */

@@ -87,5 +87,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   target density. Switching Conway → Brian's Brain without a `StateMigration` throws a
   message that names both palettes; Conway → HighLife (same dead/alive palette) does not.
   (P0-E-3)
+- `Simulation.snapshot` / `restore` is a transferable, canonical capture: sorted chunk keys,
+  concatenated 1024-byte pages, tick, and unsigned RNG state. Round-trips through
+  `structuredClone` and a real `postMessage` transfer (sender buffers detach). Restore loads
+  pages in bulk (`Chunk.load`) rather than per-cell `set`. Property: for five rulesets,
+  snapshot → restore → 100 steps matches a twin that never left. A 1M-live 1024×1024 island
+  in a 4096×4096 world serialises in < 100 ms and is ≥ 90% smaller than the dense world.
+  (P0-E-4)
 
 [Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/main...HEAD

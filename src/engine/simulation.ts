@@ -11,6 +11,7 @@ import { compileRule, type CompiledRule } from './rules/compile';
 import { RuleValidationError } from './rules/errors';
 import { ChunkedGrid } from './grid/chunked-grid';
 import {
+  CHUNK_AREA,
   CHUNK_SIZE,
   WORLD_LIMIT,
   chunkFitsWorld,
@@ -392,27 +393,31 @@ export class Simulation {
     this.grid.forEachRawChunk((key, chunk) => {
       if (chunk.population > 0) keys.push(key);
     });
+    keys.sort((a, b) => a - b);
     const chunkKeys = Int32Array.from(keys);
-    const chunkData = new Uint8Array(keys.length * 1024);
-    keys.forEach((key, i) => {
-      const chunk = this.grid.rawChunk(key);
-      if (chunk) chunkData.set(chunk.data, i * 1024);
-    });
+    const chunkData = new Uint8Array(keys.length * CHUNK_AREA);
+    for (let i = 0; i < keys.length; i++) {
+      const chunk = this.grid.rawChunk(keys[i]!);
+      if (chunk) chunkData.set(chunk.data, i * CHUNK_AREA);
+    }
     return { tick: this._tick, chunkKeys, chunkData, rngState: this.rng.state };
   }
 
   restore(s: Snapshot): void {
+    const n = s.chunkKeys.length;
+    if (s.chunkData.length !== n * CHUNK_AREA) {
+      throw new RangeError(
+        `snapshot chunkData length ${s.chunkData.length} does not match ${n} chunks of ${CHUNK_AREA}`,
+      );
+    }
     this.grid.clear();
     this._tick = s.tick;
     this.rng.reset(s.rngState);
-    for (let i = 0; i < s.chunkKeys.length; i++) {
+    for (let i = 0; i < n; i++) {
       const key = s.chunkKeys[i]!;
-      const slice = s.chunkData.subarray(i * 1024, (i + 1) * 1024);
-      const [ox, oy] = chunkToWorld(unpackChunkX(key), unpackChunkY(key));
-      for (let c = 0; c < 1024; c++) {
-        const state = slice[c]!;
-        if (state !== DEAD) this.grid.set(ox + (c & 31), oy + (c >> 5), state);
-      }
+      const chunk = this.grid.ensureChunk(key);
+      chunk.load(s.chunkData.subarray(i * CHUNK_AREA, (i + 1) * CHUNK_AREA));
+      this.grid.finishWrite(key, true);
     }
     this.refreshStats(0);
   }

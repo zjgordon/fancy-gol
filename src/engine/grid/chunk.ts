@@ -91,6 +91,26 @@ export class Chunk {
     if (this.scanCol(LAST)) this.borderMask |= BORDER_E;
   }
 
+  /**
+   * Replace the whole page from a snapshot slice. Rebuilds population, per-state
+   * counts and the border mask in one pass — restore must not walk cells through `set`.
+   */
+  load(bytes: Uint8Array): void {
+    if (bytes.length !== CHUNK_AREA) {
+      throw new RangeError(`Chunk.load expected ${CHUNK_AREA} bytes, got ${bytes.length}`);
+    }
+    this.data.set(bytes);
+    this.perState.fill(0);
+    this.population = 0;
+    for (let i = 0; i < CHUNK_AREA; i++) {
+      const s = this.data[i]!;
+      this.perState[s] = (this.perState[s] ?? 0) + 1;
+      if (s !== DEAD) this.population += 1;
+    }
+    this.dirty = true;
+    this.rebuildBorderMask();
+  }
+
   /** Read one cell without going through the grid. */
   at(localIndex: number): StateId {
     return this.data[localIndex] as StateId;

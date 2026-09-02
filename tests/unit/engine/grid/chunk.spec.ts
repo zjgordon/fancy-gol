@@ -132,4 +132,21 @@ describe('Chunk', () => {
     expect(chunk.at(42)).toBe(7);
     expect(chunk.at(43)).toBe(DEAD);
   });
+
+  it('load() copies a page and rebuilds counters to match a brute-force recount', () => {
+    const src = Chunk.acquire();
+    src.set(0, 1);
+    src.set(31, 2);
+    src.set(CHUNK_AREA - 1, 1);
+    const dst = Chunk.acquire();
+    dst.load(src.data);
+    expect(dst.population).toBe(src.population);
+    expect(dst.borderMask).toBe(src.borderMask);
+    expect(dst.data).toEqual(src.data);
+    expect(dst.perState[1]).toBe(2);
+    expect(dst.perState[2]).toBe(1);
+    expect(() => dst.load(new Uint8Array(8))).toThrow(/1024/);
+    Chunk.release(src);
+    Chunk.release(dst);
+  });
 });

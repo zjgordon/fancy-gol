@@ -503,12 +503,21 @@ Emit a `CompiledRule` with the strategy selected automatically:
 - [x] Switching Conway → Brian's Brain without a migration throws a message naming both palettes.
 - [x] `seedRandom(0.5, seed)` is reproducible and yields density within ±0.5% of target on a 1M-cell field.
 
-#### - [ ] P0-E-4 · Snapshot & restore
+#### - [x] P0-E-4 · Snapshot & restore
 **Depends on:** P0-E-1
 **Implementation notes** Snapshot is a transferable structure: a chunk-key `Int32Array`, a concatenated chunk-data `Uint8Array`, the tick, and the RNG state. It must round-trip through `structuredClone` and through a real `postMessage`.
+- Keys are sorted so the byte layout is canonical (Map insertion order is not a format).
+- Restore `Chunk.load`s each 1024-byte slice and `finishWrite`s, so the next step's work-list is
+  populated without walking cells through `grid.set`. A length mismatch throws.
+- `Mulberry32.state` is canonical unsigned (`>>> 0`); restore already did `reset(>>> 0)`, so a
+  snapshot taken mid-stream compared equal to one taken after restore only once the getter
+  stopped returning a signed int32.
+- 1M-live serialize: a 1024×1024 island in a 4096×4096 world (clustered, so empty pages stay
+  unallocated). Naive dense is 16 MiB; the snapshot is ~1 MiB of live pages (≥ 90% smaller).
+  Random soup at the same population would fill almost every chunk and would not prove sparsity.
 **Acceptance criteria**
-- [ ] Property test: snapshot → restore → step 100 produces state identical to step 100 without the round-trip, for 5 rulesets.
-- [ ] Snapshot of a 1M-live-cell grid serialises in < 100 ms and is smaller than the naive dense size by ≥ 90%.
+- [x] Property test: snapshot → restore → step 100 produces state identical to step 100 without the round-trip, for 5 rulesets.
+- [x] Snapshot of a 1M-live-cell grid serialises in < 100 ms and is smaller than the naive dense size by ≥ 90%.
 
 ---
 

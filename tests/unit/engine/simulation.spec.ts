@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { CONWAY } from '@engine/rules/builtin';
+import { BRIANS_BRAIN, CONWAY, HIGHLIFE, SEEDS, STAR_WARS } from '@engine/rules/builtin';
 import { validateRuleSet } from '@engine/rules/validate';
 import { Mulberry32 } from '@engine/rng';
 import { Simulation } from '@engine/simulation';
@@ -67,6 +67,33 @@ describe('Phase 0 throughput floor', () => {
   });
 });
 
+describe('P0-E-4 snapshot property (five rulesets)', () => {
+  it.each([
+    ['Conway', CONWAY],
+    ['HighLife', HIGHLIFE],
+    ["Brian's Brain", BRIANS_BRAIN],
+    ['Seeds', SEEDS],
+    ['Star Wars', STAR_WARS],
+  ] as const)('%s: snapshot → restore → step 100 matches a twin that never left', (_name, rs) => {
+    const rule: RuleSet = { ...rs, boundary: 'toroidal' };
+    const origin = new Simulation({ ruleset: rule, width: 64, height: 64, seed: 0x51eed });
+    origin.seedRandom(0.3, 0x51eed);
+    for (let i = 0; i < 8; i++) origin.step();
+
+    const twin = new Simulation({ ruleset: rule, width: 64, height: 64, seed: 0 });
+    twin.restore(structuredClone(origin.snapshot()));
+    for (let i = 0; i < 100; i++) {
+      origin.step();
+      twin.step();
+    }
+    expect(twin.tick).toBe(origin.tick);
+    expect(twin.stats.population).toBe(origin.stats.population);
+    expect(twin.snapshot().chunkKeys).toEqual(origin.snapshot().chunkKeys);
+    expect(twin.snapshot().chunkData).toEqual(origin.snapshot().chunkData);
+    expect(twin.snapshot().rngState).toBe(origin.snapshot().rngState);
+  });
+});
+
 describe('Phase 0 paint and seed budgets', () => {
   it('paints 100,000 cells in one call in under 20 ms with exactly 100,000 changes', () => {
     const sim = new Simulation({ ruleset: infiniteConway() });
@@ -99,6 +126,35 @@ describe('Phase 0 paint and seed budgets', () => {
     expect(density).toBeGreaterThanOrEqual(0.5 - 0.005);
     expect(density).toBeLessThanOrEqual(0.5 + 0.005);
   });
+
+  it(
+    'snapshot of a 1M-live-cell island serialises in < 100 ms and is ≥ 90% smaller than the dense world',
+    { timeout: 20_000 },
+    () => {
+      const WORLD = 4096;
+      const SIDE = 1024; // 1,048,576 live cells, clustered so empty pages stay unallocated
+      const sim = new Simulation({
+        ruleset: CONWAY,
+        width: WORLD,
+        height: WORLD,
+      });
+      const row: PaintOp[] = [];
+      for (let x = 0; x < SIDE; x++) row.push({ x, y: 0, state: 1 });
+      for (let y = 0; y < SIDE; y++) {
+        for (let x = 0; x < SIDE; x++) row[x] = { x, y, state: 1 };
+        sim.paint(row);
+      }
+      expect(sim.stats.population).toBe(SIDE * SIDE);
+
+      const t0 = performance.now();
+      const snap = sim.snapshot();
+      const ms = performance.now() - t0;
+      const bytes = snap.chunkKeys.byteLength + snap.chunkData.byteLength;
+      const naive = WORLD * WORLD;
+      expect(ms).toBeLessThan(100);
+      expect(bytes).toBeLessThanOrEqual(naive * 0.1);
+    },
+  );
 });
 
 describe('ADR-004 oracles', () => {
