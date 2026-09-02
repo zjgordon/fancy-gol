@@ -30,5 +30,17 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `src/engine/grid/coords.ts` — chunk sizing, cell/chunk coordinate packing, and boundary-mode
   (`bounded`/`toroidal`/`infinite`) normalisation, with the `WORLD_LIMIT` (±1,048,576 cells)
   documented and enforced rather than silently exceeded. (P0-B-4)
+- `src/engine/grid/chunk.ts` — a pooled, recyclable 32×32 `Chunk` maintaining its own
+  population, per-state counts, and an 8-region border-occupancy mask incrementally, never by
+  rescanning. (P0-C-1)
+- `src/engine/grid/chunked-grid.ts` — the sparse `Map<number, Chunk>` grid: lazy chunk
+  allocation, hysteresis-delayed empty-chunk reclamation, an `activeChunks` work-list, and a
+  read-only `GridView` façade for the renderer and stats engine. (P0-C-2 — the 1M-live-cell
+  memory budget is deferred to the `tests/bench` harness, P0-I-4, which doesn't exist yet.)
+- `src/engine/neighborhood/**` — `Int8Array` offset tables for Moore, von Neumann, hex
+  (row-parity-aware, verified symmetric), and validated custom neighbourhoods, compiled once
+  per ruleset rather than per cell. `src/engine/rules/errors.ts` introduces the structured
+  `RuleValidationError` a phase early, since custom-offset validation needs it and P0-D-2 will
+  reuse it unchanged. (P0-C-3)
 
 [Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/main...HEAD

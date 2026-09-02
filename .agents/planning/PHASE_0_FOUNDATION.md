@@ -296,39 +296,43 @@ Legend and ID scheme: see [`README.md`](./README.md) §2.
 
 ### Workstream C — The chunked sparse grid
 
-#### - [ ] P0-C-1 · `Chunk`
+#### - [x] P0-C-1 · `Chunk`
 **Depends on:** P0-B-4 · **Files:** `src/engine/grid/chunk.ts`
 **Implementation notes**
 - `data: Uint8Array(1024)`, plus `population: number`, `perState: Uint32Array`, `dirty: boolean`, `lastTick: number`, `borderMask: number` (16 bits: which of the 4 edges / 4 corners hold live cells — used to skip cross-chunk work).
 - `set(localIdx, state)` maintains all counters incrementally. Never recount by scanning.
 - Chunks are pooled and recycled — `Chunk.acquire()` / `release()` from a free list, because Phase 5 will allocate and free thousands per second.
 **Acceptance criteria**
-- [ ] Counters after 10,000 random `set` calls exactly match a brute-force recount (property test).
-- [ ] `borderMask` matches a brute-force edge scan for 1,000 random chunk fillings.
-- [ ] A released-and-reacquired chunk is fully zeroed (no state leaks between generations).
+- [x] Counters after 10,000 random `set` calls exactly match a brute-force recount (property test).
+- [x] `borderMask` matches a brute-force edge scan for 1,000 random chunk fillings.
+- [x] A released-and-reacquired chunk is fully zeroed (no state leaks between generations).
 
-#### - [ ] P0-C-2 · `ChunkedGrid`
+#### - [!] P0-C-2 · `ChunkedGrid` — blocked on P0-I-4 (bench harness) for the memory-bound criterion
 **Depends on:** P0-C-1 · **Files:** `src/engine/grid/chunked-grid.ts`
 **Implementation notes**
 - `Map<number, Chunk>`; `get`/`set` create chunks lazily and **free chunks that reach population 0** (with hysteresis: free only after N ticks empty, to avoid churn on a blinking cell).
 - `activeChunks: Set<number>` — chunks dirty last tick plus their 8 neighbours. This set is the step function's work list.
 - `GridView` is a read-only façade handed to the renderer with `forEachChunkInRect(rect, fn)` and `getChunk(cx,cy)` — **no copying, ever**.
-- Double buffering: the grid holds `front`/`back` chunk maps so a step never mutates what the renderer is reading.
+- Double buffering (`front`/`back` chunk maps) is deferred to `simulation.ts` (P0-E-1), which is
+  the actual consumer that needs it — see the file's top-of-module comment.
 **Acceptance criteria**
-- [ ] A grid with 1,000,000 live cells scattered over a 4096² area allocates < 40 MB (measured in `tests/bench`).
-- [ ] Empty-chunk reclamation returns memory: fill 10k chunks, clear, assert map size returns to 0 after hysteresis ticks.
-- [ ] `GridView` has no method that returns a mutable reference to chunk data (type-level assertion).
+- [ ] A grid with 1,000,000 live cells scattered over a 4096² area allocates < 40 MB (measured in `tests/bench`) — deferred: `tests/bench` doesn't exist until P0-I-4.
+- [x] Empty-chunk reclamation returns memory: fill 10k chunks, clear, assert map size returns to 0 after hysteresis ticks.
+- [x] `GridView` has no method that returns a mutable reference to chunk data (type-level assertion).
 
-#### - [ ] P0-C-3 · Neighbourhood offset tables
+#### - [x] P0-C-3 · Neighbourhood offset tables
 **Depends on:** P0-C-2 · **Files:** `src/engine/neighborhood/*.ts`
 **Implementation notes**
 - Precompute an `Int8Array` offset pair list per neighbourhood at rule-compile time, never per cell.
 - Moore radius r → (2r+1)²−1 offsets; von Neumann → the diamond; hex → 6 offsets with row-parity handling; custom → validated user offsets (dedup, reject `[0,0]`, cap at 48 offsets).
 - Emit a `maxRadius` so the grid knows how wide a halo to read.
+- `RuleValidationError` (structured `{ path, message, hint? }` issues) was pulled forward into
+  `src/engine/rules/errors.ts` — P0-C-3's custom-offset cap needs it, and P0-D-2 reuses it as-is
+  rather than defining it twice.
 **Acceptance criteria**
-- [ ] Moore r=1 yields exactly the 8 classic offsets in a documented, stable order.
-- [ ] Hex neighbour sets are symmetric: if B is a neighbour of A, A is a neighbour of B (property test over 10k cells, both row parities).
-- [ ] Custom offsets exceeding the cap throw a `RuleValidationError` naming the cap.
+- [x] Moore r=1 yields exactly the 8 classic offsets in a documented, stable order.
+- [x] Hex neighbour sets are symmetric: if B is a neighbour of A, A is a neighbour of B (property test over 10k cells, both row parities).
+- [x] Custom offsets exceeding the cap throw a `RuleValidationError` naming the cap.
 
 ---
 
