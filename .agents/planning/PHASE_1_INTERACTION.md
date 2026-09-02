@@ -1,0 +1,454 @@
+# Phase 1 — Interaction & Visuals
+
+> *"Delightful UX: smooth animations, keyboard shortcuts, snappy interactions."*
+> *"Controls where a child could pick up the basics, but a serious researcher would also have everything at their fingertips."*
+
+| | |
+|---|---|
+| **Status** | ☐ Not started |
+| **Ships version** | `0.2.0` |
+| **Prerequisites** | Phase 0 complete and tagged `v0.1.0`. |
+| **Theme of the phase** | **Make it usable.** |
+| **The demo that proves it** | Open the app, draw a glider with the mouse, scroll to zoom out to a 4096² world, drag to pan, press `Space` to run it, `[` / `]` to change speed, pick HighLife from the ruleset menu — all at 60 fps, all with a keyboard equivalent, and reload the page to find your work still there. |
+
+---
+
+## 1. Objectives
+
+1. **The interaction loop** — click-to-paint, drag-to-draw, shape tools, stamping, selection, pan, zoom. It must feel *instant*: the cell lights up under the cursor before the worker has confirmed anything.
+2. **The camera** — a proper world/screen transform with fractional zoom, inertial pan, zoom-to-cursor, and fit-to-content.
+3. **The core HUD** — transport controls, speed, generation, population, coordinates, ruleset selection. Legible to a child; complete for a researcher.
+4. **The Default theme and the design-token system** — the grey, compatible, high-performance baseline described in the inception document, built on the token architecture that Phase 3's six themes will extend (ADR-008).
+5. **The keybinding registry** — every action registered as a command with a shortcut, from day one. Phase 4's command palette is then a *view* over an existing registry rather than a retrofit.
+6. **Edit undo/redo** — a command stack, distinct from Phase 4's time travel.
+7. **Persistence & sharing** — autosave to `localStorage`, and a URL that restores a full session.
+8. **Server API v1 and the `/live` broadcast** (ADR-002).
+9. **Playwright E2E** established as a standing gate.
+
+### Explicitly *not* in Phase 1
+No pattern catalogue (Phase 2), no statistics graphs (Phase 2), no themes beyond Default (Phase 3), no command palette or timeline UI (Phase 4), no WebGL (Phase 5).
+
+---
+
+## 2. Architecture introduced in this phase
+
+### 2.1 Layered input pipeline
+
+Raw pointer events must never reach a tool directly. The pipeline exists so that Phase 4's command palette, Phase 3's motion system, and touch support all attach at defined seams.
+
+```
+PointerEvent / KeyboardEvent / WheelEvent
+        │
+        ▼
+  InputRouter          normalises pointer/touch/pen, tracks modifiers,
+        │              owns capture, converts to world coords via Camera
+        ▼
+  ToolContext ────────▶ ActiveTool.onDown / onMove / onUp / onCancel
+        │                   │
+        │                   ▼
+        │              PaintOp[]  (pure data — the tool never touches the grid)
+        ▼                   │
+  CommandBus ◀──────────────┘        every mutation is a Command
+        │                            (undoable, replayable, palette-addressable)
+        ├──▶ EditStack               undo / redo
+        ├──▶ OptimisticOverlay       instant local echo, reconciled on worker frame
+        └──▶ WorkerClient.paint()
+```
+
+### 2.2 The command registry — built once, used by four phases
+
+```ts
+export interface AppCommand<A = void> {
+  readonly id: string;                       // 'sim.toggleRun', 'tool.select.brush'
+  readonly title: string;                    // "Play / Pause"
+  readonly category: 'Simulation' | 'Tools' | 'View' | 'Edit' | 'Ruleset' | 'Theme' | 'Help';
+  readonly keywords?: readonly string[];     // fuzzy-search aliases (Phase 4)
+  readonly defaultBinding?: KeyBinding;      // 'Space', 'Mod+Z', 'g g'
+  readonly icon?: string;
+  isEnabled?(ctx: AppContext): boolean;
+  isActive?(ctx: AppContext): boolean;       // for toggles
+  run(ctx: AppContext, arg: A): void | Promise<void>;
+  readonly undoable?: boolean;
+}
+```
+
+**Rule for the whole project from here on: if a user can do it, it is a registered command.** A button's `onclick` is `bus.run('sim.toggleRun')` and nothing else. This single discipline is what makes Phase 4's "Hot-Key Mastery" a two-day task instead of a two-week one.
+
+### 2.3 Camera
+
+```ts
+export interface Camera {
+  originX: number; originY: number;   // world coords at viewport top-left (fractional)
+  cellSize: number;                   // CSS px per cell, fractional, clamped [0.02, 128]
+  screenToWorld(px: number, py: number): { x: number; y: number };
+  worldToScreen(x: number, y: number): { px: number; py: number };
+  zoomAt(px: number, py: number, factor: number): void;   // zoom about cursor
+  panBy(dxPx: number, dyPx: number): void;
+  fitTo(rect: Rect, paddingPx?: number): void;
+  animateTo(target: Partial<Camera>, ms: number, easing: Easing): void;
+}
+```
+
+Zoom is **geometric** (`factor = 1.1` per wheel notch, keyboard steps snap to powers of two) and always anchored at the cursor. Panning has light inertia with a documented friction constant — this is a large part of whether the app feels professional or cheap.
+
+### 2.4 Optimistic painting
+
+The worker round-trip is ~1–16 ms. That is visible. The client keeps an `OptimisticOverlay` — a small `Map<packedCell, StateId>` of locally-applied edits that the renderer composites *over* the authoritative grid view, cleared per cell when a worker frame at or after the edit's tick confirms it. Painting must never wait for a network or thread hop.
+
+### 2.5 Design tokens (the foundation for ADR-008)
+
+```
+src/themes/
+├── types.ts            TokenSet, CellPalette, MotionSignature, ThemeModule
+├── registry.ts         register / activate / list, CSS custom-property application
+├── tokens.css          the token *contract*: every --gol-* variable, documented, with fallbacks
+└── default/
+    ├── tokens.ts       the Default (grey, compatible) values
+    ├── theme.ts        ThemeModule with no render hooks — the honest baseline
+    └── default.css     chrome styling that reads only from tokens
+```
+
+**No component may contain a literal colour, font, radius, shadow, or duration.** Enforced by a lint rule added in P1-E-1. Phase 3 then only has to supply new token values and hooks.
+
+### 2.6 New/changed files
+
+```
+src/
+├── client/
+│   ├── main.ts                 (rewritten) app bootstrap & composition root
+│   ├── store.ts                tiny observable app state (~80 lines, hand-written)
+│   ├── session.ts              autosave, URL hash encode/decode
+│   └── app-context.ts          AppContext handed to every command
+├── ui/
+│   ├── input/                  router.ts, gestures.ts, keymap.ts, bindings.ts
+│   ├── commands/               registry.ts, bus.ts, edit-stack.ts, builtin/*.ts
+│   ├── camera.ts
+│   ├── tools/                  brush, eraser, line, rect, ellipse, fill, stamp, select, pan, pick
+│   ├── overlay/                optimistic.ts, cursor.ts, grid-lines.ts, selection.ts
+│   └── components/             hud.ts, toolbar.ts, speed.ts, ruleset-picker.ts,
+│                               statusbar.ts, toast.ts, dialog.ts, tooltip.ts
+├── themes/                     (as above)
+└── server/routes/              rulesets.ts, patterns.ts, sessions.ts, live.ts
+tests/e2e/                      playwright specs + fixtures
+```
+
+---
+
+## 3. Workstreams & tasks
+
+---
+
+### Workstream A — Camera & viewport
+
+#### - [ ] P1-A-1 · Camera transform
+**Depends on:** Phase 0 · **Files:** `src/ui/camera.ts`
+**Implementation notes** Fractional `cellSize` throughout — snapping to integers makes zoom feel notchy. Clamp to `[0.02, 128]`; below 1 the renderer's tile/LOD paths take over (ADR-005). Track a `dirty` flag so the render loop knows when a full repaint is required.
+**Acceptance criteria**
+- [ ] Property test: `screenToWorld(worldToScreen(p))` round-trips within 1e-9 across 10k random cameras.
+- [ ] `zoomAt` keeps the world point under the cursor fixed to sub-pixel accuracy across 100 successive zooms.
+- [ ] `fitTo` frames a pattern's bounding box with the requested padding, for both wide and tall aspect ratios.
+
+#### - [ ] P1-A-2 · Pan, zoom, and inertia
+**Depends on:** P1-A-1 · **Files:** `src/ui/input/gestures.ts`
+**Implementation notes** Wheel = zoom at cursor; `Shift`+wheel = horizontal pan; trackpad two-finger pan detected via `deltaMode` and lack of `ctrlKey`; pinch-zoom on touch; middle-drag and `Space`-drag to pan. Inertia: velocity from the last 100 ms of movement, exponential friction, cancelled by any new input. Respect `prefers-reduced-motion` by disabling inertia and camera animation.
+**Acceptance criteria**
+- [ ] E2E: pinch-zoom on a touch emulation session zooms about the pinch midpoint.
+- [ ] Inertia comes to rest within 800 ms and never overshoots into an inconsistent camera state.
+- [ ] With reduced motion enabled, pan stops the instant the pointer does.
+
+#### - [ ] P1-A-3 · Grid lines & the "you are here" overlay
+**Depends on:** P1-A-1 · **Files:** `src/ui/overlay/grid-lines.ts`
+**Intent:** Boring feature; make it interesting (inception rule "Stay Fancy").
+**Implementation notes** Grid lines fade in only when `cellSize ≥ 6`, with a stronger decade line every 10 cells and a labelled origin cross. Opacity is a smooth function of zoom, not a hard toggle — a hard toggle is what a boring implementation looks like. A minimap-style world extent indicator appears while panning and fades after 600 ms.
+**Acceptance criteria**
+- [ ] Lines are crisp at any `devicePixelRatio` (half-pixel offset handled).
+- [ ] Grid rendering costs < 1 ms at 1080p.
+- [ ] Fade curve is driven by a motion token, not a literal.
+
+---
+
+### Workstream B — Input pipeline & tools
+
+#### - [ ] P1-B-1 · Input router
+**Depends on:** P1-A-1 · **Files:** `src/ui/input/router.ts`
+**Implementation notes** Pointer Events only (one code path for mouse/pen/touch). Owns pointer capture, coalesced events (`getCoalescedEvents()` — essential for smooth fast drags), modifier state, and world-coordinate conversion. Emits a normalised `ToolEvent`.
+**Acceptance criteria**
+- [ ] A fast drag across 1000 px produces a continuous, gap-free cell path (uses coalesced events — verified by test with synthesised event batches).
+- [ ] Losing pointer capture (alt-tab mid-drag) cleanly cancels the active tool with no partial edit committed.
+- [ ] Pen pressure is exposed for the brush even though nothing consumes it yet.
+
+#### - [ ] P1-B-2 · Tool framework
+**Depends on:** P1-B-1 · **Files:** `src/ui/tools/tool.ts`, `src/ui/tools/registry.ts`
+**Implementation notes** `Tool` interface with `onDown/onMove/onUp/onCancel`, a `preview(): PaintOp[]` used for the live ghost, and `cursor`. Tools produce data only; the `CommandBus` commits it. `Escape` cancels any in-progress tool. Every tool registers as a command with a single-key binding.
+**Acceptance criteria**
+- [ ] Adding a new tool requires touching exactly one new file plus one registry line (proved by a fixture tool in tests).
+- [ ] `Escape` mid-drag leaves the grid byte-identical to before the drag.
+
+#### - [ ] P1-B-3 · Brush & eraser
+**Depends on:** P1-B-2 · **Files:** `src/ui/tools/brush.ts`, `src/ui/tools/eraser.ts`
+**Implementation notes** Size 1–64; shapes square / circle / diamond; **state selection** (multi-state rules paint any state — a colour-swatch row appears automatically from the ruleset's palette); density (spray) with the seeded PRNG; symmetry modes (none, mirror-X, mirror-Y, quad, 4-fold rotational, 8-fold) — symmetry is cheap to implement and enormously fun, which is exactly the inception document's bar. Line interpolation between move samples via Bresenham so fast drags never dot.
+**Acceptance criteria**
+- [ ] Drag at 2000 px/s leaves a solid, unbroken stroke.
+- [ ] 8-fold symmetry produces exactly 8 mirrored ops per source cell, deduplicated at the axes.
+- [ ] Painting state 2 in Brian's Brain is possible from the UI without typing anything.
+- [ ] Painting 5,000 cells in one stroke stays above 60 fps.
+
+#### - [ ] P1-B-4 · Shape tools: line, rectangle, ellipse, fill
+**Depends on:** P1-B-2 · **Files:** `src/ui/tools/{line,rect,ellipse,fill}.ts`
+**Implementation notes** Live ghost preview, `Shift` constrains to 45°/square/circle, `Alt` draws from centre, filled vs outline toggle. Flood fill is a scanline fill with a hard cell cap (default 1,000,000) and a confirmation prompt beyond it — a flood fill on an infinite grid is otherwise a hang.
+**Acceptance criteria**
+- [ ] Bresenham line matches a reference implementation for 10k random endpoint pairs.
+- [ ] Midpoint ellipse is symmetric in all four quadrants.
+- [ ] Flood fill over 1M cells completes in < 500 ms or prompts, and never blocks past the cap.
+
+#### - [ ] P1-B-5 · Selection & clipboard
+**Depends on:** P1-B-2 · **Files:** `src/ui/tools/select.ts`, `src/ui/overlay/selection.ts`
+**Implementation notes** Marquee select; move, copy, cut, paste, delete; rotate 90°, flip H/V on the selection; paste follows the cursor as a ghost until placed. Clipboard is internal *and* writes RLE to the system clipboard so patterns can be pasted into a forum post — a small feature with a disproportionate wow return.
+**Acceptance criteria**
+- [ ] Copy → rotate → paste is exact for asymmetric patterns (property test over random 16×16 blocks).
+- [ ] `Ctrl/Cmd+C` puts valid RLE on the system clipboard; pasting that RLE back reproduces the pattern.
+- [ ] Selection marching-ants animation is driven by a motion token and stops under reduced motion.
+
+#### - [ ] P1-B-6 · Stamp tool
+**Depends on:** P1-B-5 · **Files:** `src/ui/tools/stamp.ts`
+**Implementation notes** Phase 1 ships a small hardcoded stamp set (glider, LWSS, blinker, toad, beacon, pulsar, R-pentomino, acorn, Gosper gun, block) decoded from bundled RLE. Ghost preview with rotate (`R`) and flip (`F`) before placing; `Shift`-click places repeatedly. Phase 2 swaps the hardcoded set for the full catalogue behind the same interface — design for that now.
+**Acceptance criteria**
+- [ ] The stamp source is an array of RLE strings, not code, so Phase 2 substitutes a data source with no tool changes.
+- [ ] A placed Gosper gun immediately produces gliders when run (integration test).
+
+---
+
+### Workstream C — Commands, keybindings, undo
+
+#### - [ ] P1-C-1 · Command registry & bus
+**Depends on:** Phase 0 · **Files:** `src/ui/commands/registry.ts`, `src/ui/commands/bus.ts`, `src/client/app-context.ts`
+**Implementation notes** Registration is duplicate-checked at startup and throws loudly. `bus.run(id, arg)` resolves `isEnabled` first, dispatches, records to the edit stack when `undoable`, and emits telemetry-free events that Phase 4's palette will show as "recent".
+**Acceptance criteria**
+- [ ] A test enumerates every registered command and asserts each has a `title`, a `category`, and either a `defaultBinding` or an explicit `noBinding: true`. **No orphan commands.**
+- [ ] Running a disabled command is a no-op with a debug warning, never a throw.
+
+#### - [ ] P1-C-2 · Keybinding system
+**Depends on:** P1-C-1 · **Files:** `src/ui/input/keymap.ts`, `src/ui/input/bindings.ts`
+**Implementation notes** `Mod` normalises to `Cmd` on macOS / `Ctrl` elsewhere. Supports chords (`g` then `g`) with a 1 s timeout and a visible pending-chord indicator. Bindings never fire while focus is in a text input. Conflicts are detected at registration and reported.
+**Default bindings (Phase 1 set):**
+| Key | Action | | Key | Action |
+|---|---|---|---|---|
+| `Space` | Play / pause | | `B` | Brush |
+| `.` | Single step | | `E` | Eraser |
+| `,` | Step back *(Phase 4)* | | `L` | Line |
+| `[` `]` | Speed − / + | | `U` | Rectangle |
+| `R` | Reset to seed | | `O` | Ellipse |
+| `C` | Clear grid | | `G` | Fill |
+| `N` | Random soup | | `S` | Select |
+| `+` `−` | Zoom in / out | | `M` | Stamp |
+| `0` | Zoom to fit | | `1`–`9` | Brush size |
+| `Mod+Z` / `Mod+Shift+Z` | Undo / redo | | `Shift+/` | Shortcut cheat sheet |
+| `Mod+C/X/V` | Copy / cut / paste | | `?` | Help |
+| `Mod+S` | Save session | | `Mod+K` | Command palette *(Phase 4)* |
+**Acceptance criteria**
+- [ ] Every binding above is exercised by a Playwright spec.
+- [ ] A duplicate binding registration fails the test suite.
+- [ ] Typing `[` in the ruleset-name text field does not change the speed.
+
+#### - [ ] P1-C-3 · Edit undo/redo stack
+**Depends on:** P1-C-1 · **Files:** `src/ui/commands/edit-stack.ts`
+**Implementation notes** Stores inverse `PaintOp[]` per edit (cheap — we already have `from` values in the `ChangeSet`). Depth-capped (default 200) and byte-capped. **Explicitly separate from the Phase 4 time machine**: undo reverses *your edits*, the timeline reverses *the simulation*. The UI must never blur these — Phase 4 adds a one-line explainer in the timeline.
+**Acceptance criteria**
+- [ ] 200 random edits fully undone restores a byte-identical grid.
+- [ ] Undo after a step undoes only the edit, leaving the generation count alone.
+- [ ] Redo is invalidated by a new edit, and the UI reflects that immediately.
+
+---
+
+### Workstream D — HUD & core UI
+
+#### - [ ] P1-D-1 · Layout shell & the "wow on first paint"
+**Depends on:** Phase 0 · **Files:** `src/ui/components/shell.ts`, `src/client/index.html`
+**Intent:** *"When a user first opens the app, they should be struck by the fact that it's a 'toy' that feels like a professional tool."* This task owns that first impression.
+**Implementation notes**
+- Full-bleed canvas; floating translucent chrome (toolbar left, transport bottom-centre, status bar bottom-right, panel dock right). Chrome is dismissible with `Tab` for a pure-canvas view.
+- **Cold start choreography:** the app opens on a curated seed (a Gosper gun feeding a reaction), already running, camera animating from a wide shot to frame, chrome fading in staggered by ~40 ms. It takes ~1.2 s and it is the difference between "a toy" and "a professional tool". Skipped entirely under reduced motion.
+- All chrome uses `backdrop-filter` with a solid fallback, and reads only from tokens.
+**Acceptance criteria**
+- [ ] First meaningful paint < 1000 ms; the intro never delays interactivity (any input cancels it instantly).
+- [ ] `Tab` toggles chrome with a 150 ms transition; canvas is never resized in a way that reflows the camera.
+- [ ] Layout is correct from 320 px to 5120 px wide, and on a 4:5 portrait phone viewport.
+- [ ] Zero literal colours/sizes in the component source (lint rule P1-E-1 enforces).
+
+#### - [ ] P1-D-2 · Transport controls
+**Depends on:** P1-D-1, P1-C-1 · **Files:** `src/ui/components/transport.ts`, `src/ui/components/speed.ts`
+**Implementation notes** Play/pause, single-step, step-back (present but disabled with a "Phase 4" tooltip — never ship a mystery), reset, clear, random soup. Speed control is a **logarithmic** slider from 0.5 to 1000 TPS plus an "unbounded" mode that runs as fast as the worker allows and reports actual achieved TPS. Show target *and* actual TPS — a researcher needs to know when the sim is the bottleneck.
+**Acceptance criteria**
+- [ ] Achieved TPS is within 5% of target for targets up to the machine's capability, verified by test.
+- [ ] Above capability the UI clearly shows "target 1000 / actual 340" rather than silently lying.
+- [ ] Every control has an accessible name and a keyboard equivalent.
+
+#### - [ ] P1-D-3 · Status bar & readouts
+**Depends on:** P1-D-1
+**Implementation notes** Generation, population, per-state counts (auto-generated chips from the ruleset palette), cursor world coordinates, cell state under cursor, zoom %, fps, step ms, render ms, memory estimate. Numbers use tabular figures and are throttled to 10 Hz — a 60 Hz number is unreadable and wastes a frame budget.
+**Acceptance criteria**
+- [ ] No layout shift as digit counts change (fixed-width numerics).
+- [ ] Readout updates cost < 0.3 ms/frame (measured).
+- [ ] Population matches an engine recount exactly at 100 random ticks.
+
+#### - [ ] P1-D-4 · Ruleset picker
+**Depends on:** P1-D-1, P0-D-5 · **Files:** `src/ui/components/ruleset-picker.ts`
+**Implementation notes** Grouped by tag, each entry showing name, notation, state count and a one-line description. Live **animated thumbnail** per ruleset (a tiny 32×32 simulation running in the picker) — this is the "Stay Fancy" answer to what would otherwise be a `<select>`. Switching a ruleset with an incompatible palette prompts for a state mapping (P0-E-3) rather than failing.
+**Acceptance criteria**
+- [ ] Thumbnails run only while the picker is open and cost < 2 ms/frame combined.
+- [ ] Keyboard navigable; type-ahead search works.
+- [ ] Switching Conway → WireWorld surfaces the migration prompt with sensible defaults preselected.
+
+#### - [ ] P1-D-5 · Toasts, dialogs, tooltips
+**Depends on:** P1-D-1
+**Implementation notes** One shared, accessible primitive set: focus trap on dialogs, `Escape` to close, `aria-live="polite"` for toasts, tooltips that show the command's current keybinding. Every long-running or destructive action (clear, flood-fill over cap, ruleset switch) routes through these.
+**Acceptance criteria**
+- [ ] Axe-core reports zero violations on the dialog and toast components.
+- [ ] Tooltips display the *user's current* binding, not the default, once Phase 4 adds remapping.
+
+---
+
+### Workstream E — Default theme & token system
+
+#### - [ ] P1-E-1 · Token contract and lint enforcement
+**Depends on:** Phase 0 · **Files:** `src/themes/types.ts`, `src/themes/tokens.css`, `eslint.config.js`
+**Implementation notes** Enumerate every token the UI will ever need — colour (surface/elevated/border/text/muted/accent/danger/success), type (family, 6 sizes, 3 weights, 2 letter-spacings), space scale, radius scale, shadow scale, motion (4 durations, 5 easings), and the cell palette contract. Add an ESLint rule banning literal hex/rgb/hsl values and raw `ms`/`px` durations in `src/ui/**`.
+**Acceptance criteria**
+- [ ] `tokens.css` documents every variable with a comment stating its purpose and its Default value.
+- [ ] The lint rule catches a deliberately introduced `color: #333` in a component.
+- [ ] Token names contain no theme-specific words (no `--gol-neon-pink`).
+
+#### - [ ] P1-E-2 · Theme registry & activation
+**Depends on:** P1-E-1 · **Files:** `src/themes/registry.ts`
+**Implementation notes** `activate(id)` writes tokens to `:root`, hands the `CellPalette` to the renderer, and (from Phase 3) swaps render hooks and the sound pack. Persist the choice. Honour `prefers-color-scheme` for the Default theme's light/dark variants. Switching must be instant and flicker-free — pre-apply tokens before the next paint.
+**Acceptance criteria**
+- [ ] Switching themes causes no full-page reflow and no flash of unstyled content.
+- [ ] The registry API already accepts optional render hooks and a sound pack (Phase 3 adds no new API surface).
+
+#### - [ ] P1-E-3 · The Default theme
+**Depends on:** P1-E-2 · **Files:** `src/themes/default/*`
+**Intent:** *"simple, grey, basic — the same as you'd expect on every linux distribution ever released. But very compatible and good for large grids."* Being the plain one is not permission to be ugly. This is the theme researchers will spend hours in.
+**Implementation notes** Neutral greys, light and dark variants, system UI font stack, no render hooks, no post-processing, `cost: 'low'`. The cell palette is a perceptually-even ramp (OKLCH-derived, computed at build time into plain sRGB values — no colour library at runtime) so multi-state rules read clearly. Alive cells get a 1-frame "birth" brightness pop that costs nothing and reads as alive.
+**Acceptance criteria**
+- [ ] WCAG AA contrast for all chrome text in both light and dark variants.
+- [ ] 8-state palette is distinguishable under deuteranopia and protanopia simulation (documented check).
+- [ ] Frame time with Default at 1080p / 100k cells ≤ 10 ms — it must be the *fastest* theme.
+
+---
+
+### Workstream F — Persistence & sharing
+
+#### - [ ] P1-F-1 · Session model & autosave
+**Depends on:** P1-D-1 · **Files:** `src/client/session.ts`, `src/shared/session.ts`
+**Implementation notes** `SessionDoc` = `{ version, ruleset (id or inline), grid (RLE), camera, tick, seed, theme, toolState }`. Autosave to `localStorage` debounced at 2 s and on `visibilitychange`. A versioned migration function from day one — the format *will* change in Phase 2 and 4.
+**Acceptance criteria**
+- [ ] Reload restores grid, camera, ruleset, theme and tool exactly.
+- [ ] A v1 document still loads after the Phase 4 format change (migration test committed now, extended later).
+- [ ] Quota-exceeded is handled with a toast and a graceful downgrade (drop grid, keep settings), never a crash.
+
+#### - [ ] P1-F-2 · Shareable URLs
+**Depends on:** P1-F-1
+**Implementation notes** Encode a compact session into the URL fragment: RLE → deflate via the platform `CompressionStream` (zero dependency) → base64url. Fall back to a server-stored session (`POST /api/sessions`) with a short id when the fragment would exceed ~8 kB. Never put user data in the query string where it lands in server logs.
+**Acceptance criteria**
+- [ ] A glider gun session round-trips through a URL under 2 kB.
+- [ ] A 100k-cell pattern automatically switches to server-backed sharing with a copied short link.
+- [ ] Opening a share link never overwrites an existing autosave without asking.
+
+---
+
+### Workstream G — Server API v1
+
+#### - [ ] P1-G-1 · Ruleset routes
+**Depends on:** P0-I-2, P0-D-2 · **Files:** `src/server/routes/rulesets.ts`, `src/server/store/file-store.ts`
+**Implementation notes** Builtins served from the engine; user rulesets stored as JSON files in a mounted `data/` volume with slugified, path-traversal-safe ids. **Server-side validation reuses `validateRuleSet` from the engine** — one validator, one source of truth (this is the only permitted `server → engine` import per ADR-009). Body limit 64 kB.
+**Acceptance criteria**
+- [ ] Supertest coverage of all four routes including a traversal attempt (`../../etc/passwd`) returning 400.
+- [ ] An invalid ruleset POST returns the structured `issues[]` array the Phase 2 editor will render.
+- [ ] Concurrent writes to the same id do not corrupt the file (atomic write via temp + rename).
+
+#### - [ ] P1-G-2 · Pattern routes (skeleton)
+**Depends on:** P1-G-1 · **Files:** `src/server/routes/patterns.ts`
+**Implementation notes** Serve the Phase 1 hardcoded stamp set from `patterns/` on disk with the query interface Phase 2 will fill out. Establish the response shape now so the client never changes.
+**Acceptance criteria**
+- [ ] `GET /api/patterns?ruleset=conway` returns the ten Phase 1 patterns with complete metadata.
+- [ ] Responses are cacheable (`ETag`, `Cache-Control`).
+
+#### - [ ] P1-G-3 · `/live` broadcast
+**Depends on:** P1-G-1 · **Files:** `src/server/routes/live.ts`, `src/server/live-hub.ts`
+**Intent:** The inception document's "State Sync", scoped honestly per ADR-002: a shared, always-running exhibition grid anybody can watch.
+**Implementation notes** The server runs one `Simulation` (importing only the public engine surface), broadcasting `ChangeSet` deltas at a fixed 10 Hz to all subscribers, with a full keyframe on join. Read-only. Backpressure: if a socket's `bufferedAmount` exceeds a threshold, skip its deltas and send it a keyframe when it drains. Cap concurrent sockets; heartbeat ping/pong with dead-socket reaping.
+**Acceptance criteria**
+- [ ] 100 simultaneous clients stay in sync for 10 minutes with server memory flat.
+- [ ] A client stalled for 30 s is resynchronised by keyframe, not by disconnect.
+- [ ] Killing the server and restarting it does not wedge reconnecting clients (exponential backoff on the client).
+- [ ] Watching `/live` never interferes with the viewer's own local simulation.
+
+---
+
+### Workstream H — Testing & gates
+
+#### - [ ] P1-H-1 · Playwright harness
+**Depends on:** P1-D-1 · **Files:** `playwright.config.ts`, `tests/e2e/*.spec.ts`
+**Implementation notes** Chromium + Firefox + WebKit. Deterministic runs: seed the PRNG, freeze the clock, disable the intro choreography and inertia via a `?test=1` flag. Trace on first retry. Add the job to CI.
+**Acceptance criteria**
+- [ ] Specs covering: draw a glider and verify it moves; pan/zoom; every Phase 1 keybinding; undo/redo; ruleset switch; theme persistence across reload; share-link round trip; `/live` connect and receive.
+- [ ] Suite completes in < 4 minutes and is non-flaky over 10 consecutive CI runs.
+
+#### - [ ] P1-H-2 · Visual regression baseline
+**Depends on:** P1-H-1, P1-E-3 · **Files:** `tests/visual/*.spec.ts`
+**Implementation notes** Screenshot the shell, toolbar, transport, status bar, dialog and a rendered grid at three zoom levels, in Default light and dark. Mask the fps/ms readouts. Tolerance ≤ 0.1% pixels. This is the baseline Phase 3 will extend to six themes — establish the discipline now while there is one theme to fix.
+**Acceptance criteria**
+- [ ] Baselines committed and stable across three consecutive CI runs.
+- [ ] A deliberate 2 px padding change is caught.
+
+#### - [ ] P1-H-3 · Interaction performance budgets
+**Depends on:** P1-B-3, P0-I-4 (bench harness) · **Files:** `tests/bench/interaction.bench.ts`
+**Acceptance criteria**
+- [ ] Input-to-pixel latency for a paint stroke ≤ 32 ms at the 95th percentile (measured via the recorder + injected clock).
+- [ ] Pan at 1000 px/s holds ≥ 55 fps at 1080p.
+- [ ] Zooming from `cellSize` 32 to 0.5 and back never drops a frame below 30 fps.
+- [ ] These numbers are added to `bench-baseline.json` and gated in CI.
+
+---
+
+## 4. Quality gates for Phase 1
+
+| Gate | Threshold |
+|---|---|
+| All Phase 0 gates | still green (no regressions) |
+| `src/ui/**` coverage | ≥ 70% statements |
+| Playwright suite | green on Chromium, Firefox, WebKit; < 4 min; non-flaky ×10 |
+| Visual baselines | committed, stable |
+| Input-to-pixel latency | ≤ 32 ms p95 |
+| Pan at 1000 px/s | ≥ 55 fps @ 1080p |
+| Cold load → interactive | ≤ 1500 ms |
+| Client bundle (gzip) | ≤ 120 kB |
+| Axe-core on the shell | zero violations |
+| Keyboard-only walkthrough | every Phase 1 feature reachable without a mouse |
+| Orphan commands | zero (every command has a title, category, binding-or-explicit-opt-out) |
+
+---
+
+## 5. Risks & mitigations
+
+| Risk | Impact | Mitigation |
+|---|---|---|
+| Optimistic overlay desynchronises from worker state; ghost cells persist. | Users see cells that do not exist. Corrodes trust immediately. | Reconcile per-cell on every confirmed frame with a tick watermark; add a periodic full-consistency assertion in dev builds; E2E test that paints during a 500 TPS run and asserts convergence. |
+| The command-registry discipline erodes; someone wires a button directly. | Phase 4's palette silently misses features. | The P1-C-1 orphan-command test plus a lint rule banning `addEventListener('click')` outside `components/` primitives. |
+| Token discipline erodes; literal colours creep in. | Phase 3 becomes a search-and-replace archaeology project. | The P1-E-1 lint rule, enforced from the first component. |
+| Intro choreography is charming once and irritating forever. | Users bounce. | Any input skips it instantly; it does not replay within a session; a setting disables it permanently; reduced motion disables it. |
+| Touch/mobile turns into a second product. | Scope explosion. | Phase 1 targets touch for *pan, zoom, and paint* only. Full mobile layout is a Phase 6 task. State this in the README. |
+| `/live` becomes an attractive nuisance (abuse, resource use). | Ops burden. | Read-only, socket cap, heartbeat reaping, and it is a documented opt-in feature flag (`ENABLE_LIVE=1`), default on locally and reviewed before any public deploy in Phase 6. |
+
+---
+
+## 6. Definition of Done — Phase 1
+
+- [ ] Every task above is `- [x]` or `- [-]` with a recorded reason.
+- [ ] All Phase 1 quality gates (§4) green in CI on `main`.
+- [ ] A person who has never used the app can draw a glider and run it without instructions. **Verify this with an actual person, not an assumption.**
+- [ ] A person who never touches the mouse can do everything in the Phase 1 keybinding table.
+- [ ] Reloading the page restores the previous session exactly.
+- [ ] `/live` serves a shared grid to multiple browsers simultaneously.
+- [ ] `CHANGELOG.md` has a dated `[0.2.0]` entry; the commit is tagged `v0.2.0`.
+- [ ] `docs/demo/phase-1.*` shows drawing, panning, zooming, and running.
