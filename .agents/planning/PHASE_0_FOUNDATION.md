@@ -483,15 +483,25 @@ Emit a `CompiledRule` with the strategy selected automatically:
 - [x] `toroidal`: a glider on a 32×32 torus returns to its exact starting cells at generation 128.
 - [x] `infinite`: a glider run 10,000 generations produces a correct coordinate and does not degrade throughput by more than 20% versus generation 100 (proves chunk reclamation works behind the moving pattern).
 
-#### - [ ] P0-E-3 · Paint, clear, seed, ruleset switching
+#### - [x] P0-E-3 · Paint, clear, seed, ruleset switching
 **Depends on:** P0-E-1
 **Implementation notes**
 - `paint()` applies ops, updates counters, marks chunks dirty, and returns a `ChangeSet` identical in shape to a step's — so history and rendering treat user edits and evolution uniformly.
+  The inner loop inlines boundary maths (no per-cell tuple from `normalize` / `worldToChunk`),
+  writes through `Chunk.set` + a deferred `finishWrite` per touched page, and reuses the same
+  doubled ChangeSet buffers as `step()`. No-ops and bounded out-of-range writes are silent.
+- `clear()` empties the grid without advancing the tick.
+- `seedRandom(density, seed)` requires a finite width×height, resets the sim RNG from `seed`,
+  and fills in row-major order with the palette's primary live state. 1024×1024 @ 0.5 is
+  reproducible and within ±0.5 percentage points of target.
 - `setRuleset` with a differing state palette requires a `StateMigration` (`(old: StateId) => StateId`) or throws. Silent state reinterpretation is forbidden — it would produce beautiful nonsense.
+  The throw names both rulesets and both palettes (`"Conway's Game of Life" (dead, alive)` →
+  `"Brian's Brain" (dead, firing, refractory)`). Matching palettes (Conway → HighLife) switch
+  with no callback; a boundary change retile-normalises stored cells onto a fresh grid.
 **Acceptance criteria**
-- [ ] Painting 100,000 cells in one call takes < 20 ms and produces exactly 100,000 changes.
-- [ ] Switching Conway → Brian's Brain without a migration throws a message naming both palettes.
-- [ ] `seedRandom(0.5, seed)` is reproducible and yields density within ±0.5% of target on a 1M-cell field.
+- [x] Painting 100,000 cells in one call takes < 20 ms and produces exactly 100,000 changes.
+- [x] Switching Conway → Brian's Brain without a migration throws a message naming both palettes.
+- [x] `seedRandom(0.5, seed)` is reproducible and yields density within ±0.5% of target on a 1M-cell field.
 
 #### - [ ] P0-E-4 · Snapshot & restore
 **Depends on:** P0-E-1

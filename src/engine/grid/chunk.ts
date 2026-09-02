@@ -47,8 +47,22 @@ export class Chunk {
 
   /** Write one cell, keeping `population`, `perState` and `borderMask` correct incrementally. */
   set(localIndex: number, state: StateId): void {
+    if (!this.write(localIndex, state)) return;
+    const lx = localIndex & LAST;
+    const ly = (localIndex >>> 5) & LAST;
+    if (lx === 0 || lx === LAST || ly === 0 || ly === LAST) {
+      this.refreshBorder(lx, ly);
+    }
+  }
+
+  /**
+   * Write one cell, updating population counters but not `borderMask`.
+   * After a burst of writes, call {@link rebuildBorderMask} once.
+   * Returns whether the stored byte changed.
+   */
+  write(localIndex: number, state: StateId): boolean {
     const old = this.data[localIndex] as StateId;
-    if (old === state) return;
+    if (old === state) return false;
 
     this.perState[old] = (this.perState[old] ?? 0) - 1;
     this.perState[state] = (this.perState[state] ?? 0) + 1;
@@ -57,12 +71,24 @@ export class Chunk {
 
     this.data[localIndex] = state;
     this.dirty = true;
+    return true;
+  }
 
-    const lx = localIndex & LAST;
-    const ly = (localIndex >>> 5) & LAST;
-    if (lx === 0 || lx === LAST || ly === 0 || ly === LAST) {
-      this.refreshBorder(lx, ly);
+  /** Recompute `borderMask` from the current page. O(edges), not O(writes). */
+  rebuildBorderMask(): void {
+    this.borderMask = 0;
+    if (this.scanRow(0)) {
+      this.borderMask |= BORDER_N;
+      if (this.data[0] !== DEAD) this.borderMask |= BORDER_NW;
+      if (this.data[LAST] !== DEAD) this.borderMask |= BORDER_NE;
     }
+    if (this.scanRow(LAST)) {
+      this.borderMask |= BORDER_S;
+      if (this.data[LAST * CHUNK_SIZE] !== DEAD) this.borderMask |= BORDER_SW;
+      if (this.data[CHUNK_AREA - 1] !== DEAD) this.borderMask |= BORDER_SE;
+    }
+    if (this.scanCol(0)) this.borderMask |= BORDER_W;
+    if (this.scanCol(LAST)) this.borderMask |= BORDER_E;
   }
 
   /** Read one cell without going through the grid. */

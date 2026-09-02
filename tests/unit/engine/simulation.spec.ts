@@ -5,7 +5,7 @@ import { CONWAY } from '@engine/rules/builtin';
 import { validateRuleSet } from '@engine/rules/validate';
 import { Mulberry32 } from '@engine/rng';
 import { Simulation } from '@engine/simulation';
-import type { RuleSet } from '@engine/types';
+import type { PaintOp, RuleSet } from '@engine/types';
 
 const FIXTURES = fileURLToPath(new URL('../../fixtures/rules/valid/', import.meta.url));
 
@@ -64,6 +64,40 @@ describe('Phase 0 throughput floor', () => {
     for (let i = 0; i < STEPS; i++) sim.step();
     const elapsed = performance.now() - t0;
     expect((STEPS / elapsed) * 1000).toBeGreaterThanOrEqual(60);
+  });
+});
+
+describe('Phase 0 paint and seed budgets', () => {
+  it('paints 100,000 cells in one call in under 20 ms with exactly 100,000 changes', () => {
+    const sim = new Simulation({ ruleset: infiniteConway() });
+    const ops: PaintOp[] = [];
+    for (let i = 0; i < 100_000; i++) {
+      ops.push({ x: i % 400, y: (i / 400) | 0, state: 1 });
+    }
+    const warm = new Simulation({ ruleset: infiniteConway() });
+    warm.paint(ops.slice(0, 1024));
+
+    const t0 = performance.now();
+    const cs = sim.paint(ops);
+    const ms = performance.now() - t0;
+    expect(cs.count).toBe(100_000);
+    expect(sim.stats.population).toBe(100_000);
+    expect(ms).toBeLessThan(20);
+  });
+
+  it('seedRandom(0.5) is reproducible and within ±0.5% of target on a 1M-cell field', () => {
+    const field = { width: 1024, height: 1024 };
+    const a = new Simulation({ ruleset: CONWAY, ...field, seed: 0 });
+    const b = new Simulation({ ruleset: CONWAY, ...field, seed: 99 });
+    a.seedRandom(0.5, 0x51eed);
+    b.seedRandom(0.5, 0x51eed);
+    expect(a.snapshot().chunkData).toEqual(b.snapshot().chunkData);
+    expect(a.snapshot().chunkKeys).toEqual(b.snapshot().chunkKeys);
+
+    const n = 1024 * 1024;
+    const density = a.stats.population / n;
+    expect(density).toBeGreaterThanOrEqual(0.5 - 0.005);
+    expect(density).toBeLessThanOrEqual(0.5 + 0.005);
   });
 });
 

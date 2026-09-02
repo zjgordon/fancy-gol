@@ -83,6 +83,24 @@ describe('Chunk', () => {
     }
   });
 
+  it('write() + rebuildBorderMask() matches set() for a burst of fills', () => {
+    const rng = new Mulberry32(0x99);
+    const viaSet = Chunk.acquire();
+    const viaWrite = Chunk.acquire();
+    for (let i = 0; i < 80; i++) {
+      const idx = rng.nextInt(CHUNK_AREA);
+      const state = rng.nextInt(3);
+      viaSet.set(idx, state);
+      viaWrite.write(idx, state);
+    }
+    viaWrite.rebuildBorderMask();
+    expect(viaWrite.population).toBe(viaSet.population);
+    expect(viaWrite.borderMask).toBe(viaSet.borderMask);
+    expect(viaWrite.borderMask).toBe(bruteForceBorderMask(viaWrite.data));
+    Chunk.release(viaSet);
+    Chunk.release(viaWrite);
+  });
+
   it('a no-op set (same state) does not touch counters or dirty', () => {
     const chunk = Chunk.acquire();
     chunk.set(5, 0);

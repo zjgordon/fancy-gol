@@ -12,6 +12,7 @@ import { RuleValidationError } from './rules/errors';
 import { ChunkedGrid } from './grid/chunked-grid';
 import {
   CHUNK_SIZE,
+  WORLD_LIMIT,
   chunkFitsWorld,
   chunkToWorld,
   isCanonicalCell,
@@ -28,10 +29,12 @@ import {
   DEAD,
   type ChangeSet,
   type GridView,
+  type PaintOp,
   type Rect,
   type RuleSet,
   type Snapshot,
   type StateId,
+  type StateMigration,
 } from './types';
 
 const DEFAULT_SEED = 0x9e3779b9;
@@ -63,10 +66,25 @@ export interface TickStats {
 
 const ZERO_CLOCK: Clock = { now: () => 0 };
 
+function paletteSignature(rs: RuleSet): string {
+  return rs.states.map((s) => `${s.id}:${s.kind}:${s.name}`).join('|');
+}
+
+function paletteNames(rs: RuleSet): string {
+  return rs.states.map((s) => s.name).join(', ');
+}
+
+function primaryLiveState(rs: RuleSet): StateId {
+  for (const s of rs.states) {
+    if (s.countsAsAlive) return s.id;
+  }
+  throw new RangeError(`ruleset "${rs.name}" has no live state to seed`);
+}
+
 export class Simulation {
-  readonly ruleset: RuleSet;
-  private readonly grid: ChunkedGrid;
-  private readonly compiled: CompiledRule;
+  private _ruleset: RuleSet;
+  private grid: ChunkedGrid;
+  private compiled: CompiledRule;
   private readonly clock: Clock;
   private readonly rng: Mulberry32;
   private readonly width: number;
@@ -94,11 +112,12 @@ export class Simulation {
   private workList = new Int32Array(16);
   private workCount = 0;
   private readonly backs: Uint8Array[] = [];
-  private readonly neighbourScratch: Uint8Array;
+  private neighbourScratch: Uint8Array;
   private readonly halo = new Uint8Array(34 * 34);
+  private readonly touchedChunks = new Set<number>();
 
   constructor(opts: SimulationOptions) {
-    this.ruleset = opts.ruleset;
+    this._ruleset = opts.ruleset;
     this.width = opts.width ?? 0;
     this.height = opts.height ?? 0;
     if (
@@ -116,6 +135,10 @@ export class Simulation {
     this.clock = opts.clock ?? ZERO_CLOCK;
     this.rng = new Mulberry32(opts.seed ?? DEFAULT_SEED);
     this.neighbourScratch = new Uint8Array(this.compiled.neighbourCount);
+  }
+
+  get ruleset(): RuleSet {
+    return this._ruleset;
   }
 
   get tick(): number {
@@ -140,6 +163,163 @@ export class Simulation {
 
   bounds(): Rect {
     return this.grid.bounds();
+  }
+
+  /**
+   * Apply a batch of cell writes and return a `ChangeSet` identical in shape to
+   * {@link step}'s — history and rendering treat user edits and evolution uniformly.
+   * The arrays are reused; copy them if you need to keep them.
+   * No-ops (same state, or outside a bounded world) are not recorded.
+   */
+  paint(ops: readonly PaintOp[]): ChangeSet {
+    this.changeCount = 0;
+    this.dirtyCount = 0;
+    this.statsState.births = 0;
+    this.statsState.deaths = 0;
+    this.statsState.transitions = 0;
+    this.touchedChunks.clear();
+    this.ensureChangeCap(ops.length);
+
+    const stateCount = this.compiled.stateCount;
+    const boundary = this._ruleset.boundary;
+    const width = this.width;
+    const height = this.height;
+    let currentKey = 0x7fffffff;
+    let chunk: ReturnType<ChunkedGrid['rawChunk']>;
+    let marked = false;
+
+    for (let o = 0; o < ops.length; o++) {
+      const op = ops[o]!;
+      const state = op.state;
+      if (state < 0 || state >= stateCount || (state | 0) !== state) {
+        throw new RangeError(
+          `paint state ${state} is not in "${this._ruleset.name}"'s palette (0..${stateCount - 1})`,
+        );
+      }
+      let x = op.x;
+      let y = op.y;
+      if (boundary === 'toroidal') {
+        x = ((x % width) + width) % width;
+        y = ((y % height) + height) % height;
+      } else if (boundary === 'bounded') {
+        if (x < 0 || x >= width || y < 0 || y >= height) continue;
+      } else if (x > WORLD_LIMIT || x < -WORLD_LIMIT || y > WORLD_LIMIT || y < -WORLD_LIMIT) {
+        throw new RangeError(
+          `Coordinate (${x}, ${y}) exceeds the world limit of ±${WORLD_LIMIT} cells per axis`,
+        );
+      }
+      const key = (((x >> 5) & 0xffff) << 16) | ((y >> 5) & 0xffff);
+      if (key !== currentKey) {
+        chunk = this.grid.rawChunk(key);
+        currentKey = key;
+        marked = false;
+      }
+      const idx = ((y & 31) << 5) | (x & 31);
+      const prev = chunk?.at(idx) ?? DEAD;
+      if (prev === state) continue;
+      if (!chunk) {
+        if (state === DEAD) continue;
+        chunk = this.grid.ensureChunk(key);
+      }
+      chunk.write(idx, state);
+      if (prev === DEAD) this.statsState.births += 1;
+      else if (state === DEAD) this.statsState.deaths += 1;
+      else this.statsState.transitions += 1;
+      this.pushChange(((x & 0xffff) << 16) | (y & 0xffff), prev, state);
+      if (!marked) {
+        this.touchedChunks.add(key);
+        marked = true;
+      }
+    }
+
+    this.flushTouched();
+    this.refreshStats(this.statsState.stepMicros);
+    return this.changeSetView();
+  }
+
+  /** Empty the grid. Does not advance the tick. */
+  clear(): void {
+    this.grid.clear();
+    this.changeCount = 0;
+    this.dirtyCount = 0;
+    this.statsState.births = 0;
+    this.statsState.deaths = 0;
+    this.statsState.transitions = 0;
+    this.refreshStats(this.statsState.stepMicros);
+  }
+
+  /**
+   * Replace the field with a random soup of the primary live state. Requires a
+   * finite width×height (the 1M-cell AC uses 1024×1024). Reproducible for a
+   * given `(density, seed)` pair; consumes `this` RNG from `seed`.
+   */
+  seedRandom(density: number, seed: number): void {
+    if (!(density >= 0 && density <= 1)) {
+      throw new RangeError(`density must be in [0, 1], got ${density}`);
+    }
+    if (this.width <= 0 || this.height <= 0) {
+      throw new RangeError('seedRandom requires width and height');
+    }
+    this.grid.clear();
+    this.rng.reset(seed);
+    this.touchedChunks.clear();
+    const live = primaryLiveState(this._ruleset);
+    const width = this.width;
+    const height = this.height;
+    let currentKey = 0x7fffffff;
+    let chunk: ReturnType<ChunkedGrid['ensureChunk']> | undefined;
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (this.rng.next() >= density) continue;
+        const [cx, cy] = worldToChunk(x, y);
+        const key = packChunk(cx, cy);
+        if (key !== currentKey) {
+          chunk = this.grid.ensureChunk(key);
+          currentKey = key;
+          this.touchedChunks.add(key);
+        }
+        chunk!.write(localIndex(x, y), live);
+      }
+    }
+
+    this.flushTouched();
+    this.changeCount = 0;
+    this.dirtyCount = 0;
+    this.refreshStats(this.statsState.stepMicros);
+  }
+
+  /**
+   * Swap the running rule. A differing state palette requires {@link StateMigration}
+   * — silent reinterpretation of live cells is forbidden and produces beautiful nonsense.
+   */
+  setRuleset(rs: RuleSet, migrate?: StateMigration): void {
+    const prev = this._ruleset;
+    const palettesDiffer = paletteSignature(prev) !== paletteSignature(rs);
+    if (palettesDiffer && migrate === undefined) {
+      throw new RuleValidationError([
+        {
+          path: '/states',
+          message: `switching from "${prev.name}" (${paletteNames(prev)}) to "${rs.name}" (${paletteNames(rs)}) requires a StateMigration`,
+          hint: 'pass migrate: (old) => newState; silent reinterpretation of a live cell under a new palette is forbidden',
+        },
+      ]);
+    }
+    if (rs.boundary !== 'infinite' && (this.width <= 0 || this.height <= 0)) {
+      throw new RangeError(`boundary "${rs.boundary}" requires width and height`);
+    }
+
+    if (migrate !== undefined) {
+      this.migrateCells(migrate, rs.states.length);
+    }
+    if (rs.boundary !== prev.boundary) {
+      this.retile(rs.boundary);
+    }
+
+    this._ruleset = rs;
+    this.compiled = compileRule(rs);
+    this.neighbourScratch = new Uint8Array(this.compiled.neighbourCount);
+    this.refreshStats(this.statsState.stepMicros);
   }
 
   /**
@@ -235,6 +415,61 @@ export class Simulation {
       }
     }
     this.refreshStats(0);
+  }
+
+  private flushTouched(): void {
+    for (const key of this.touchedChunks) {
+      this.grid.rawChunk(key)?.rebuildBorderMask();
+      this.grid.finishWrite(key, true);
+      this.pushDirty(key);
+    }
+    this.touchedChunks.clear();
+  }
+
+  private migrateCells(migrate: StateMigration, stateCount: number): void {
+    this.touchedChunks.clear();
+    this.grid.forEachRawChunk((key, chunk) => {
+      const [ox, oy] = chunkToWorld(unpackChunkX(key), unpackChunkY(key));
+      const fits = chunkFitsWorld(ox, oy, this._ruleset.boundary, this.width, this.height);
+      let any = false;
+      for (let i = 0; i < 1024; i++) {
+        const x = ox + (i & 31);
+        const y = oy + (i >> 5);
+        if (!fits && !isCanonicalCell(x, y, this._ruleset.boundary, this.width, this.height)) {
+          continue;
+        }
+        const prev = chunk.at(i);
+        const next = migrate(prev);
+        if (next < 0 || next >= stateCount || (next | 0) !== next) {
+          throw new RangeError(
+            `StateMigration returned ${next}, which is not in the new palette (0..${stateCount - 1})`,
+          );
+        }
+        if (next === prev) continue;
+        chunk.set(i, next);
+        any = true;
+      }
+      if (any) this.touchedChunks.add(key);
+    });
+    this.flushTouched();
+  }
+
+  private retile(boundary: 'bounded' | 'toroidal' | 'infinite'): void {
+    const pending: Array<{ x: number; y: number; state: StateId }> = [];
+    this.grid.forEachRawChunk((key, chunk) => {
+      const [ox, oy] = chunkToWorld(unpackChunkX(key), unpackChunkY(key));
+      for (let i = 0; i < 1024; i++) {
+        const state = chunk.data[i] ?? DEAD;
+        if (state === DEAD) continue;
+        pending.push({ x: ox + (i & 31), y: oy + (i >> 5), state });
+      }
+    });
+    this.grid = new ChunkedGrid({
+      boundary,
+      ...(this.width > 0 ? { width: this.width } : {}),
+      ...(this.height > 0 ? { height: this.height } : {}),
+    });
+    for (const cell of pending) this.grid.set(cell.x, cell.y, cell.state);
   }
 
   private collectWork(): void {
@@ -479,22 +714,26 @@ export class Simulation {
   }
 
   private pushChange(packed: number, from: StateId, to: StateId): void {
-    if (this.changeCount === this.coords.length) {
-      const cap = this.coords.length * 2;
-      const coords = new Int32Array(cap);
-      coords.set(this.coords);
-      this.coords = coords;
-      const fromA = new Uint8Array(cap);
-      fromA.set(this.from);
-      this.from = fromA;
-      const toA = new Uint8Array(cap);
-      toA.set(this.to);
-      this.to = toA;
-    }
+    if (this.changeCount === this.coords.length) this.ensureChangeCap(this.changeCount + 1);
     this.coords[this.changeCount] = packed;
     this.from[this.changeCount] = from;
     this.to[this.changeCount] = to;
     this.changeCount += 1;
+  }
+
+  private ensureChangeCap(needed: number): void {
+    if (needed <= this.coords.length) return;
+    let cap = this.coords.length;
+    while (cap < needed) cap *= 2;
+    const coords = new Int32Array(cap);
+    coords.set(this.coords);
+    this.coords = coords;
+    const fromA = new Uint8Array(cap);
+    fromA.set(this.from);
+    this.from = fromA;
+    const toA = new Uint8Array(cap);
+    toA.set(this.to);
+    this.to = toA;
   }
 
   private pushDirty(key: number): void {

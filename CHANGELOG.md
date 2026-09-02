@@ -81,5 +81,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   side). A glider on a 32×32 torus returns to its starting cells at generation 128. A 10,000-
   generation infinite glider lands at (2500, 2500) without a trailing-chunk tax — empty pages
   behind it are reclaimed, and late-run throughput stays within 20% of generation 100. (P0-E-2)
+- `Simulation.paint` / `clear` / `seedRandom` / `setRuleset`. Paint returns a step-shaped
+  `ChangeSet` (same reused arrays) and writes 100,000 cells in one call in under 20 ms.
+  `seedRandom(0.5, seed)` is reproducible on a 1024×1024 field and lands within ±0.5% of
+  target density. Switching Conway → Brian's Brain without a `StateMigration` throws a
+  message that names both palettes; Conway → HighLife (same dead/alive palette) does not.
+  (P0-E-3)
 
 [Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/main...HEAD
