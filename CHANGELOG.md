@@ -196,5 +196,31 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   not partway through it. `DirtyAccumulator` batches across ticks, since `WorkerClient`'s own
   frame coalescing (P0-G-3) can skip several ticks' `frame` events — a render loop needs the
   union of everything skipped, not just the latest frame's own dirty list. (P0-H-1)
+- **`CHUNK_BITS`/`CHUNK_SIZE`/`CHUNK_AREA`/`chunkToWorld`/`localIndex` also live in
+  `shared/types.ts`** now, independently defined rather than re-exported from
+  `engine/grid/coords.ts` — `render/` (P0-H-2) needs them to walk a `GridView`'s chunks and may
+  only import `shared/`, never `engine/` (ADR-009). The re-export approach measurably regressed
+  the engine: routing `Simulation`'s hot loop through the extra module hop cost a real,
+  reproducible ~25% drop on the 512² soup floor test (P0-E-1), confirmed by toggling only that
+  indirection across 8+ interleaved runs. `engine/grid/coords.ts`'s own code is unchanged from
+  before this refactor. (P0-H-2's prerequisite)
+- `src/render/canvas2d.ts` — the Canvas2D renderer (ADR-005). Clips to each dirty rect (or the
+  whole visible viewport on a `null` full repaint), intersects it with what's actually visible,
+  then walks only the chunks it touches. Batches same-state cells into per-row runs so `fillRect`
+  is called once per state present, not once per cell — proven exactly: repainting a single
+  changed cell costs exactly 2 draw calls (one background fill, one run), a 5-cell run also 2,
+  and two different states 3, never something proportional to a chunk's 1,024 cells. Below
+  `cellSize` 4 device px, switches to a pre-rasterised `ImageData` tile (one `putImageData`, a
+  hand-written CSS-colour parser resolving each theme colour to RGBA once and caching it)
+  instead of thousands of sub-pixel `fillRect`s. `resize()` handles `devicePixelRatio` by setting
+  the canvas's actual device-pixel backing-store size directly and, for a real
+  `HTMLCanvasElement`, the CSS display size separately, so nothing renders blurry. `setTheme`/
+  `setViewport` are required before `draw()` — no fallback theme, no hardcoded grey. Tested
+  against a hand-written, functionally real 2D-context double (`fillRect`/`putImageData` write
+  into an actual RGBA buffer, not just a call log) driving a real `Simulation`/`GridView`. The
+  frame-time budget and the dpr pixel-identity criteria aren't provable here — `jsdom` has no
+  real canvas rasteriser and no bloat forbids adding one — and are deferred to the real bench
+  harness (P0-I-4) and Phase 1's E2E suite respectively; recorded as `[!]` blocked rather than
+  silently marked done. (P0-H-2)
 
 [Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/main...HEAD

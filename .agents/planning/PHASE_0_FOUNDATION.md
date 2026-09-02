@@ -606,18 +606,19 @@ Emit a `CompiledRule` with the strategy selected automatically:
 - [x] Merge correctness property test: the merged rect list covers exactly the same cell set as the input, for 10k random inputs — verified by rasterising both sides onto a grid and comparing exactly (manual comparison, not `toEqual`, in the hot loop — 10,000 deep-equal calls otherwise dominated the test's runtime, ~9s down to under 1s).
 - [x] The full-repaint fallback triggers at the documented ~60% threshold, verified by test (59% merges, 61% returns `null`; also tested independently of area via the 4,096-rect cap, and that `giveUpFraction` is itself configurable).
 
-#### - [ ] P0-H-2 · Canvas2D renderer
+#### - [!] P0-H-2 · Canvas2D renderer — blocked on real canvas rasterisation (frame-time bench, Phase 1 E2E) for two of three criteria
 **Depends on:** P0-H-1, P0-C-2 · **Files:** `src/render/canvas2d.ts`
 **Implementation notes**
-- Clip to dirty rects, then iterate only chunks intersecting them via `GridView.forEachChunkInRect`.
-- Batch by colour: build per-state path/rect runs and issue one fill per state per rect, not one `fillRect` per cell.
-- `cellSize < 4` → render via a pre-rasterised offscreen tile whose pixels are written through `ImageData` (one `putImageData` beats thousands of `fillRect`s).
-- Handle `devicePixelRatio` correctly; never render blurry.
-- Cell colours come from a `CompiledTheme` — a minimal one in Phase 0, the full ADR-008 module in Phase 3. Do not hardcode grey into the renderer.
+- Every dirty rect (or the whole visible viewport, on `dirty: null`) is intersected with the viewport first, then walked chunk-by-chunk via `GridView.forEachChunkInRect` — nothing outside what's actually visible is touched, even if it's in the dirty list.
+- Batches by colour: a hand-written row-run scan per chunk (`collectRuns`) merges consecutive same-state cells into one run; runs are grouped by state so `fillStyle` is set once per state present, not once per cell or per run. A background fill covers the whole clipped region first (one `fillRect`), so `DEAD` runs need no draw call at all.
+- `cellSize < 4` → the `ImageData` tile path: one `Uint8ClampedArray` buffer, written cell-by-cell as raw RGBA bytes (a hand-written `parseColor` resolves each theme colour string once, cached per renderer instance — no CSS-named-colour table, a theme wanting "red" writes `#ff0000`), blitted with a single `putImageData`.
+- `resize(widthPx, heightPx, dpr)` sets the canvas's actual backing-store size directly (already device-pixel dimensions, matching `Viewport.cellSize`'s own "device px per cell" units — no separate `ctx.scale(dpr,dpr)`) and, for a real `HTMLCanvasElement` (duck-typed via `'style' in canvas`, not `instanceof` — `OffscreenCanvas` has no `style`, and a structural test double can opt in without a real DOM), sets the CSS display size to `widthPx/dpr` × `heightPx/dpr` so a high-DPR canvas isn't upscaled-blurry.
+- `setTheme`/`setViewport` are both required before the first `draw()` (a clear thrown error, not a silent default) — matching "do not hardcode grey": there is no fallback theme.
+- Tested against a hand-written, *functionally real* `CanvasRenderingContext2D` double (`fillRect`/`putImageData` write into an actual RGBA backing buffer, not just a call log) driving a real `Simulation`/`GridView` — not the permanent "Canvas Bridge" recorder, which is P0-H-3's own module.
 **Acceptance criteria**
-- [ ] 1080p viewport, 100k visible cells, steady state: frame time ≤ 16.6 ms (bench).
-- [ ] Repainting a single changed cell issues a bounded, asserted number of draw calls (regression guard against accidental full repaints).
-- [ ] Rendering is pixel-identical at `dpr` 1 and 2 modulo scale (visual test in Phase 1 once E2E exists).
+- [ ] 1080p viewport, 100k visible cells, steady state: frame time ≤ 16.6 ms (bench) — not provable here: `jsdom` has no real canvas rasteriser (no native `canvas` package, which "no bloat" forbids adding anyway), so nothing in this environment can measure actual pixel-pushing cost. Deferred to `npm run bench` (P0-I-4) or a real-browser Playwright run.
+- [x] Repainting a single changed cell issues a bounded, asserted number of draw calls (regression guard against accidental full repaints) — asserted exactly (2: one background fill, one single-cell run), not just "small"; also proven for multi-cell runs (still 2, not N) and multi-state batches (one draw call per distinct state, not per cell).
+- [ ] Rendering is pixel-identical at `dpr` 1 and 2 modulo scale (visual test in Phase 1 once E2E exists) — the task's own note already defers this; no judgement call needed here.
 
 #### - [ ] P0-H-3 · Headless draw-call recorder — *the "Canvas Bridge" from the inception doc*
 **Depends on:** P0-H-2 · **Files:** `src/render/recorder.ts`, `tests/integration/canvas-bridge.spec.ts`
