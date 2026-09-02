@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| **Status** | ☐ Not started |
+| **Status** | ~ In progress — Workstream A (toolchain) complete |
 | **Ships version** | `0.1.0` |
 | **Prerequisites** | None. This is the first phase. |
 | **Theme of the phase** | **Make it correct.** |
@@ -186,7 +186,7 @@ Legend and ID scheme: see [`README.md`](./README.md) §2.
 
 ### Workstream A — Toolchain & repository skeleton
 
-#### - [ ] P0-A-1 · Package scaffold and scripts
+#### - [x] P0-A-1 · Package scaffold and scripts
 **Depends on:** —
 **Files:** `package.json`, `.gitignore`, `.editorconfig`, `.nvmrc`
 **Intent:** One command does everything; nobody ever asks "how do I run the tests?"
@@ -195,10 +195,10 @@ Legend and ID scheme: see [`README.md`](./README.md) §2.
 - Scripts: `dev` (vite + server concurrently, hand-rolled with `node --watch`, no `concurrently` package), `build`, `preview`, `test`, `test:watch`, `coverage`, `e2e`, `bench`, `lint`, `format`, `typecheck`, `boundaries`, and `verify` = `typecheck && lint && boundaries && test && build`.
 - Zero runtime dependencies at this point except `express` and `ws` (ADR-002). Everything else is `devDependencies`.
 **Acceptance criteria**
-- [ ] `npm ci && npm run verify` succeeds on a clean clone.
-- [ ] `npm ls --omit=dev` lists exactly `express` and `ws` (plus their transitives).
+- [x] `npm ci && npm run verify` succeeds on a clean clone.
+- [x] `npm ls --omit=dev` lists exactly `express` and `ws` (plus their transitives).
 
-#### - [ ] P0-A-2 · Strict TypeScript configuration
+#### - [x] P0-A-2 · Strict TypeScript configuration
 **Depends on:** P0-A-1 · **Files:** `tsconfig.json`, `tsconfig.node.json`
 **Intent:** Make illegal states unrepresentable at compile time so tests can spend their budget on behaviour.
 **Implementation notes**
@@ -206,29 +206,29 @@ Legend and ID scheme: see [`README.md`](./README.md) §2.
 - `target: "ES2022"`, `moduleResolution: "bundler"`.
 - Path aliases: `@engine/*`, `@shared/*`, `@render/*`, `@ui/*`, `@themes/*`, `@worker/*`. Mirror them in `vite.config.ts` and `vitest.config.ts`.
 **Acceptance criteria**
-- [ ] `npm run typecheck` passes with zero errors and zero `@ts-expect-error` outside `tests/`.
-- [ ] `any` appears nowhere in `src/` (lint rule enforces).
+- [x] `npm run typecheck` passes with zero errors and zero `@ts-expect-error` outside `tests/`.
+- [x] `any` appears nowhere in `src/` (lint rule enforces).
 
-#### - [ ] P0-A-3 · Vite + Vitest configuration
+#### - [x] P0-A-3 · Vite + Vitest configuration
 **Depends on:** P0-A-2 · **Files:** `vite.config.ts`, `vitest.config.ts`
 **Implementation notes**
 - Vite root is `src/client`, build output `dist/client`, worker format `es`.
 - Vitest: `environment: 'node'` by default (the engine is pure — it must not need jsdom), with a `jsdom` project for `src/ui` and `src/render` tests.
 - Coverage provider `v8`, reporters `text` + `lcov` + `json-summary`, thresholds exactly as README §3.5.
 **Acceptance criteria**
-- [ ] A trivial engine test runs in the `node` environment and fails if it touches `document`.
-- [ ] `npm run coverage` prints per-directory thresholds and exits non-zero when one is unmet.
+- [x] A trivial engine test runs in the `node` environment and fails if it touches `document`.
+- [x] `npm run coverage` prints per-directory thresholds and exits non-zero when one is unmet.
 
-#### - [ ] P0-A-4 · Lint & format
+#### - [x] P0-A-4 · Lint & format
 **Depends on:** P0-A-2 · **Files:** `eslint.config.js`, `.prettierrc`
 **Implementation notes**
 - Flat ESLint config, `typescript-eslint` with type-aware rules.
 - Custom-configured bans: `no-restricted-globals` in `src/engine/**` for `window document navigator localStorage fetch console process performance`; `no-restricted-syntax` banning `new Array`, `Array.prototype.push` inside files under `src/engine/**/hot/` (hot loops preallocate).
 - Prettier: 100 columns, single quotes, trailing commas, semicolons. No debates.
 **Acceptance criteria**
-- [ ] `npm run lint` is clean; a deliberate `document.title` in an engine file fails it.
+- [x] `npm run lint` is clean; a deliberate `document.title` in an engine file fails it.
 
-#### - [ ] P0-A-5 · Layer boundary checker
+#### - [x] P0-A-5 · Layer boundary checker
 **Depends on:** P0-A-1 · **Files:** `scripts/check-boundaries.mjs`
 **Intent:** Machine-enforce ADR-009 so "Pure Logic" is a property of the build, not of anyone's discipline.
 **Implementation notes**
@@ -237,18 +237,18 @@ Legend and ID scheme: see [`README.md`](./README.md) §2.
 - Second pass: scan `src/engine/**` for the forbidden global identifier list as whole words.
 - Report every violation with `file:line` before exiting `1`. Never stop at the first.
 **Acceptance criteria**
-- [ ] `npm run boundaries` passes on the real tree.
-- [ ] Fixture tests in `tests/unit/boundaries.spec.ts` prove it *catches* a `ui → engine/internal` import, an `engine → render` import, and a `window` reference in the engine.
+- [x] `npm run boundaries` passes on the real tree.
+- [x] Fixture tests in `tests/unit/boundaries.spec.ts` prove it *catches* a `ui → engine/internal` import, an `engine → render` import, and a `window` reference in the engine.
 
-#### - [ ] P0-A-6 · Conventional-commit hook, changelog, versioning
+#### - [x] P0-A-6 · Conventional-commit hook, changelog, versioning
 **Depends on:** P0-A-1 · **Files:** `.githooks/commit-msg`, `CHANGELOG.md`, `CONTRIBUTING.md`
 **Implementation notes**
 - ~40-line Node script validating `type(scope): subject`, allowed types and scopes per README §3.4, subject ≤ 72 chars, imperative mood check (reject a leading word ending in `ed`/`ing`).
 - Wire with `git config core.hooksPath .githooks` in a `prepare` script.
 - Seed `CHANGELOG.md` with Keep-a-Changelog headers and an `[Unreleased]` section.
 **Acceptance criteria**
-- [ ] `git commit -m "stuff"` is rejected with a helpful message listing valid types.
-- [ ] `git commit -m "feat(engine): add chunked grid"` is accepted.
+- [x] `git commit -m "stuff"` is rejected with a helpful message listing valid types.
+- [x] `git commit -m "feat(engine): add chunked grid"` is accepted.
 
 ---
 

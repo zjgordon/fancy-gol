@@ -1,0 +1,40 @@
+#!/usr/bin/env node
+// commit-msg — enforce Conventional Commits (AGENTS.md §7). ~40 lines, no commitlint.
+import { readFileSync } from 'node:fs';
+
+const TYPES = ['feat', 'fix', 'perf', 'refactor', 'test', 'docs', 'build', 'ci', 'chore', 'style', 'revert'];
+const SCOPES = [
+  'engine', 'rules', 'grid', 'history', 'worker', 'render', 'ui', 'themes',
+  'audio', 'server', 'docker', 'bench', 'planning', 'agents',
+];
+
+const msgFile = process.argv[2];
+const raw = readFileSync(msgFile, 'utf8');
+const header = raw.split('\n')[0].trim();
+
+const fail = (message) => {
+  console.error(`✗ commit-msg: ${message}`);
+  console.error(`  Expected: type(scope): imperative subject, ≤72 chars, no trailing period`);
+  console.error(`  Types:  ${TYPES.join(', ')}`);
+  console.error(`  Scopes: ${SCOPES.join(', ')}`);
+  process.exit(1);
+};
+
+if (header.startsWith('Merge ') || header.startsWith('Revert "')) process.exit(0);
+
+// Scope is optional, matching the Conventional Commits spec: "type(scope): subject" or "type: subject".
+const match = /^([a-z]+)(?:\(([a-z0-9-]+)\))?: (.+)$/.exec(header);
+if (!match) fail(`header "${header}" does not match "type(scope): subject"`);
+
+const [, type, scope, subject] = match;
+if (!TYPES.includes(type)) fail(`unknown type "${type}"`);
+if (scope !== undefined && !SCOPES.includes(scope)) fail(`unknown scope "${scope}"`);
+if (header.length > 72) fail(`header is ${header.length} chars, max is 72`);
+if (subject.endsWith('.')) fail('subject must not end with a period');
+
+const firstWord = /^[A-Za-z]+/.exec(subject)?.[0] ?? '';
+if (/(ed|ing)$/i.test(firstWord)) {
+  fail(`subject must be imperative mood ("add", not "${firstWord}")`);
+}
+
+process.exit(0);
