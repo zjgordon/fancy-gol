@@ -82,6 +82,20 @@ describe('forbidden globals in src/engine/**', () => {
     expect(hits).toHaveLength(0);
   });
 
+  it('does not flag a forbidden name mentioned only in a string or template literal', () => {
+    const hits = scanForbiddenGlobals(
+      "const a = 'a rule document must be a JSON object';\n" +
+        'const b = "no console.log here";\n' +
+        'const c = `performance and window are just words`;',
+    );
+    expect(hits).toHaveLength(0);
+  });
+
+  it('still catches a forbidden global right after a string literal on the same line', () => {
+    const hits = scanForbiddenGlobals("const a = 'document'; window.title = 'x';");
+    expect(hits).toContainEqual({ global: 'window', line: 1 });
+  });
+
   it('is clean for pure engine code', () => {
     const hits = scanForbiddenGlobals('export const add = (a: number, b: number) => a + b;');
     expect(hits).toHaveLength(0);
