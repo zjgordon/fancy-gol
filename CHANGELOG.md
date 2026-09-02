@@ -59,5 +59,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   sniffs B/S, legacy S/B, and Generations (both `B../S../G<n>` and Golly-order) notation, plus
   a trailing V/H neighbourhood suffix, and rejects Hensel/non-totalistic notation by name
   rather than mis-parsing it. 27 table-driven cases, each canonicalising idempotently. (P0-D-3)
+- `src/engine/rules/compile.ts` — `compileRule` turns a `RuleSet` into a `CompiledRule`: `lut8`
+  for 2-state Moore-r1 totalistic (Conway is an 18-byte table), `lutN` for other small
+  totalistic/generations rules, `denseTable` for a `stateTable` that fits under 4 MiB
+  (WireWorld's 256 KiB table), and a monomorphic `closure` for everything else. Cached on
+  ruleset identity (`compileRule.cache.clear()` for tests). 50,000-input equivalence against
+  the forced-closure reference for every worked example and every catalogue notation. (P0-D-4)
 
 [Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/main...HEAD

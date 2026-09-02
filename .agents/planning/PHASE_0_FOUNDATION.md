@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| **Status** | ~ In progress — Workstream A (toolchain) complete |
+| **Status** | ~ In progress — Workstreams A–C complete; D through the compiler |
 | **Ships version** | `0.1.0` |
 | **Prerequisites** | None. This is the first phase. |
 | **Theme of the phase** | **Make it correct.** |
@@ -384,7 +384,7 @@ Support, with a single entry point that sniffs the format:
   `canonical(s)` isn't independently defined anywhere, so this is what the property actually means.)
 - [x] Ambiguous or unsupported input throws with the input echoed and the supported forms listed.
 
-#### - [ ] P0-D-4 · Rule compiler
+#### - [x] P0-D-4 · Rule compiler
 **Depends on:** P0-D-3, P0-C-3 · **Files:** `src/engine/rules/compile.ts`
 **Intent:** Turn declarative data into the fastest possible per-cell decision, chosen by the shape of the rule. This is where "composable rulesets are data, not code branches" becomes true *and* fast.
 **Implementation notes**
@@ -397,10 +397,20 @@ Emit a `CompiledRule` with the strategy selected automatically:
 | Anything else | **`closure`** — a monomorphic JS function built once, never a switch inside the loop. |
 - The compiler must also emit `maxRadius`, `usesRandomness`, `isOuterTotalistic`, `stillLifeStates`, and a `stableWhenIsolated` flag the grid uses to skip fully-empty chunk interiors.
 - **Never** build the compiled artefact per step. Cache by ruleset identity; expose `compileRule.cache.clear()` for tests.
+- lutN is stored as `states × (neighbours+1)` bytes (`state * (n+1) + liveCount`). The plan's extra
+  `× states` axis would be unused padding once per-state counts collapse to an alive-count; same
+  answers, a factor-of-states less memory.
+- Cache is a `WeakMap` on ruleset object identity (so a `Simulation` holding one `RuleSet` never
+  recompiles). `compileRule.cache.clear()` replaces the map — `WeakMap` has no `clear()`.
 **Acceptance criteria**
-- [ ] For each builtin ruleset, the chosen strategy matches an asserted expectation (guards against silent perf cliffs).
-- [ ] Equivalence test: for 50,000 random `(state, neighbourCounts)` inputs, the `closure` strategy and the chosen fast strategy produce identical outputs for every builtin.
-- [ ] Compiling Conway 10,000 times takes < 50 ms thanks to the cache.
+- [x] For each builtin ruleset, the chosen strategy matches an asserted expectation (guards against silent perf cliffs).
+  (Builtins land in P0-D-5; pinned today against the 7 worked-example fixtures plus the 13
+  catalogue notations D-5 will ship — Conway/HighLife/Day&Night/Seeds/Replicator/Diamoeba/Maze/2×2/
+  Life without Death → `lut8`, Star Wars → `lutN`, Bloomerang's 24 states → `closure`. Revisit
+  once P0-D-5 lands.)
+- [x] Equivalence test: for 50,000 random `(state, neighbourCounts)` inputs, the `closure` strategy and the chosen fast strategy produce identical outputs for every builtin.
+  (Same stand-in corpus as above; 50,000 Mulberry32-driven neighbour configurations per rule.)
+- [x] Compiling Conway 10,000 times takes < 50 ms thanks to the cache.
 
 #### - [ ] P0-D-5 · Built-in ruleset catalogue
 **Depends on:** P0-D-4 · **Files:** `src/engine/rules/builtin/*.ts`
