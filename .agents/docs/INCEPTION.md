@@ -93,3 +93,37 @@ A cellular automata simulator with absolutely too much time spent on what's esse
  - For this repository, agents are allowed to commit code, using conventional commit messages, and in a logical and parsed manner - conducive to development.
 
 
+
+### Operating Rules (added during planning; binding on all agents)
+
+The rules above are the standard. These are how they are enforced in practice. The full contract
+lives in [`../AGENTS.md`](../AGENTS.md); it is mandatory reading for any agent before it touches
+this repository.
+
+ - **`.agents/` is the source of truth.** Every development document and artefact lives there:
+   this inception document, the architecture decisions, the seven phase plans, and the status
+   dashboard. Not in an issue, not in a chat log. There.
+ - **The phase documents are the tracker.** `.agents/planning/PHASE_<0-6>_*.md` are living
+   checklists — 155 tasks and 470 acceptance criteria. Agents tick boxes in place as they work.
+   Task IDs are permanent: never delete one, never renumber one; a dropped task is marked `- [-]`
+   with a reason.
+ - **The dashboard must be updated on task completion.** `.agents/dashboard.html` is a generated
+   projection of the phase-doc checkboxes. Any status change requires
+   `node .agents/scripts/build-dashboard.mjs`, committed alongside the work.
+   `--check` exits non-zero when it is stale.
+ - **The architecture decisions are binding.** `.agents/planning/ARCHITECTURE_DECISIONS.md`
+   (ADR-001…010) carries the contracts that implement this document. Amending one requires an
+   appended amendment block naming the tasks it invalidates.
+ - **`main` holds only the tested, stable output of a completed phase.** Each phase is built on
+   its own branch — `phase/0-foundation`, `phase/1-interaction`, and so on — and merged back only
+   when every gate for that phase is green, then tagged. Documentation-only changes under
+   `.agents/**` may land on `main` directly; implementation code may not.
+   *(At time of writing, `phase/0-foundation` has not yet been created. The next agent creates it
+   before writing any code.)*
+ - **Gates are not negotiable.** 95% statement coverage on `src/engine/**`, benchmark budgets
+   gated at a 10% regression tolerance, Playwright E2E with per-theme visual baselines, and a
+   machine-enforced layering check that makes "Pure Logic" a property of the build rather than of
+   anyone's discipline. Never weaken a gate to make a build pass — fix the code, or escalate.
+ - **Honesty is a feature.** No claimed limit we do not meet, no approximation presented as exact,
+   no metric silently downsampled, no user data or history discarded without an explicit and
+   informative confirmation.
