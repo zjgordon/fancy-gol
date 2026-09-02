@@ -87,3 +87,41 @@ export function normalize(
   }
   return x >= 0 && x < width && y >= 0 && y < height ? [x, y] : null;
 }
+
+/**
+ * True when `(x, y)` is the representative coordinate a cell is stored at.
+ * - `bounded`: inside `[0, width) × [0, height)`.
+ * - `toroidal`: the same, *after* wrapping — so `(width, 0)` is not canonical.
+ * - `infinite`: always, provided `normalize` does not throw.
+ *
+ * A 32×32 chunk page may cover cells that fail this test when the world is not a
+ * multiple of {@link CHUNK_SIZE}. Those slots are ghosts: never stored, never read
+ * as neighbours (use {@link normalize} / `read` instead).
+ */
+export function isCanonicalCell(
+  x: number,
+  y: number,
+  boundary: 'bounded' | 'toroidal' | 'infinite',
+  width: number,
+  height: number,
+): boolean {
+  const n = normalize(x, y, boundary, width, height);
+  return n !== null && n[0] === x && n[1] === y;
+}
+
+/**
+ * True when every cell of the 32×32 page whose top-left is `(ox, oy)` is canonical.
+ * The lut8 inner loop may memcpy that page; otherwise each neighbour must go
+ * through {@link normalize} (ADR-010: boundaries are not checked in the inner loop
+ * of a fully-contained page).
+ */
+export function chunkFitsWorld(
+  ox: number,
+  oy: number,
+  boundary: 'bounded' | 'toroidal' | 'infinite',
+  width: number,
+  height: number,
+): boolean {
+  if (boundary === 'infinite') return true;
+  return ox >= 0 && oy >= 0 && ox + CHUNK_SIZE <= width && oy + CHUNK_SIZE <= height;
+}

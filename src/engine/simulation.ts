@@ -12,7 +12,9 @@ import { RuleValidationError } from './rules/errors';
 import { ChunkedGrid } from './grid/chunked-grid';
 import {
   CHUNK_SIZE,
+  chunkFitsWorld,
   chunkToWorld,
+  isCanonicalCell,
   localIndex,
   normalize,
   packCell,
@@ -344,6 +346,10 @@ export class Simulation {
 
   /** Copy this chunk plus its 8 neighbours' abutting edges into the 34×34 halo pad. */
   private fillHaloFromChunks(src: Uint8Array, ox: number, oy: number): void {
+    if (!chunkFitsWorld(ox, oy, this.ruleset.boundary, this.width, this.height)) {
+      this.fillHaloByRead(ox, oy);
+      return;
+    }
     const halo = this.halo;
     for (let ly = 0; ly < CHUNK_SIZE; ly++) {
       const row = (ly + 1) * 34 + 1;
@@ -368,6 +374,21 @@ export class Simulation {
     halo[33] = ne[31 * 32] ?? 0;
     halo[33 * 34] = sw[31] ?? 0;
     halo[33 * 34 + 33] = se[0] ?? 0;
+  }
+
+  /**
+   * Slow halo fill for a page that straddles a world edge: every sample goes
+   * through {@link normalize}, so a wall or wrap inside the 32×32 page is honoured
+   * the same way as one that falls on a chunk seam.
+   */
+  private fillHaloByRead(ox: number, oy: number): void {
+    const halo = this.halo;
+    for (let hy = -1; hy <= CHUNK_SIZE; hy++) {
+      const row = (hy + 1) * 34;
+      for (let hx = -1; hx <= CHUNK_SIZE; hx++) {
+        halo[row + (hx + 1)] = this.read(ox + hx, oy + hy);
+      }
+    }
   }
 
   /** The 1024-byte page containing (x, y), or a zero page if that chunk is not allocated. */
@@ -416,9 +437,22 @@ export class Simulation {
   private applyChunk(key: number, back: Uint8Array): void {
     let chunk = this.grid.rawChunk(key);
     const [ox, oy] = chunkToWorld(unpackChunkX(key), unpackChunkY(key));
+    const fits = chunkFitsWorld(ox, oy, this.ruleset.boundary, this.width, this.height);
     let any = false;
     let borderChanged = false;
     for (let i = 0; i < 1024; i++) {
+      const lx = i & 31;
+      const ly = i >> 5;
+      const x = ox + lx;
+      const y = oy + ly;
+      if (!fits && !isCanonicalCell(x, y, this.ruleset.boundary, this.width, this.height)) {
+        const leftover = chunk?.data[i] ?? DEAD;
+        if (leftover !== DEAD && chunk) {
+          chunk.set(i, DEAD);
+          any = true;
+        }
+        continue;
+      }
       const next = back[i] ?? DEAD;
       const prev = chunk?.data[i] ?? DEAD;
       if (next === prev) continue;
@@ -427,13 +461,9 @@ export class Simulation {
         chunk = this.grid.ensureChunk(key);
       }
       chunk.set(i, next);
-      const x = ox + (i & 31);
-      const y = oy + (i >> 5);
       this.recordTransition(prev, next);
       this.pushChange(packCell(x, y), prev, next);
       any = true;
-      const lx = i & 31;
-      const ly = i >> 5;
       if (lx === 0 || ly === 0 || lx === 31 || ly === 31) borderChanged = true;
     }
     if (any && chunk) {

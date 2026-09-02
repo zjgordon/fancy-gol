@@ -461,12 +461,27 @@ Emit a `CompiledRule` with the strategy selected automatically:
 - [x] Determinism test: two `Simulation` instances with the same seed produce byte-identical snapshots at tick 5,000.
 - [x] Bench: ≥ 60 steps/sec on a 512×512 50%-density soup (README §3.6 Phase 0 floor).
 
-#### - [ ] P0-E-2 · Boundary modes
+#### - [x] P0-E-2 · Boundary modes
 **Depends on:** P0-E-1 · **Files:** `src/engine/simulation.ts`, `src/engine/grid/coords.ts`
+**Implementation notes**
+- `normalize` already implements the three modes. The step function's lut8 halo memcpy'd the
+  whole 32×32 page, so a wall or wrap that fell *inside* a chunk (world size not a multiple of
+  32) was invisible: east of x=23 on a 24×24 board read ghost slot 24, not DEAD / wrap-to-0.
+  Pages that do not `chunkFitsWorld` now fill the 34×34 halo through `read()` (i.e. `normalize`),
+  and `applyChunk` refuses to persist non-`isCanonicalCell` slots. Fully contained pages keep
+  the memcpy path — ADR-010: boundaries are not checked in the inner loop.
+- Conway physics: a SE glider crashing into a dead wall settles into a 2×2 block *on that wall*.
+  The spaceship is gone; it does not wrap. Asserted on both a 24×24 (wall inside the page) and
+  a 32×32 (wall on the chunk seam).
+- 32×32 torus: period-4 glider × 32 cells = generation 128, back on the starting cells. A 16×16
+  torus (wrap inside the page) returns at generation 64.
+- Infinite 10,000-gen glider: translated by (2500, 2500), population 5, live bounding box ≤ two
+  chunks (empty pages behind it reclaimed), and the last 400 steps are within 20% of the
+  generation-100 window.
 **Acceptance criteria**
-- [ ] `bounded`: a glider aimed at a wall dies at the wall and nothing appears on the far side.
-- [ ] `toroidal`: a glider on a 32×32 torus returns to its exact starting cells at generation 128.
-- [ ] `infinite`: a glider run 10,000 generations produces a correct coordinate and does not degrade throughput by more than 20% versus generation 100 (proves chunk reclamation works behind the moving pattern).
+- [x] `bounded`: a glider aimed at a wall dies at the wall and nothing appears on the far side.
+- [x] `toroidal`: a glider on a 32×32 torus returns to its exact starting cells at generation 128.
+- [x] `infinite`: a glider run 10,000 generations produces a correct coordinate and does not degrade throughput by more than 20% versus generation 100 (proves chunk reclamation works behind the moving pattern).
 
 #### - [ ] P0-E-3 · Paint, clear, seed, ruleset switching
 **Depends on:** P0-E-1

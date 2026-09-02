@@ -3,7 +3,9 @@ import { Mulberry32 } from '@engine/rng';
 import {
   CHUNK_SIZE,
   WORLD_LIMIT,
+  chunkFitsWorld,
   chunkToWorld,
+  isCanonicalCell,
   localIndex,
   normalize,
   packCell,
@@ -93,5 +95,35 @@ describe('normalize', () => {
       new RegExp(String(WORLD_LIMIT)),
     );
     expect(() => normalize(0, -(WORLD_LIMIT + 1), 'infinite', 0, 0)).toThrow(RangeError);
+  });
+});
+
+describe('isCanonicalCell / chunkFitsWorld', () => {
+  it('rejects bounded cells outside the rect, including the far edge', () => {
+    expect(isCanonicalCell(0, 0, 'bounded', 24, 24)).toBe(true);
+    expect(isCanonicalCell(23, 23, 'bounded', 24, 24)).toBe(true);
+    expect(isCanonicalCell(24, 0, 'bounded', 24, 24)).toBe(false);
+    expect(isCanonicalCell(-1, 8, 'bounded', 24, 24)).toBe(false);
+  });
+
+  it('rejects toroidal coordinates that would wrap — the stored representative is in-range', () => {
+    expect(isCanonicalCell(0, 0, 'toroidal', 16, 16)).toBe(true);
+    expect(isCanonicalCell(15, 15, 'toroidal', 16, 16)).toBe(true);
+    expect(isCanonicalCell(16, 0, 'toroidal', 16, 16)).toBe(false);
+    expect(isCanonicalCell(-1, 0, 'toroidal', 16, 16)).toBe(false);
+  });
+
+  it('treats infinite cells as canonical', () => {
+    expect(isCanonicalCell(-100, 50, 'infinite', 0, 0)).toBe(true);
+  });
+
+  it('chunkFitsWorld is true iff the 32×32 page lies entirely inside a finite world', () => {
+    expect(chunkFitsWorld(0, 0, 'toroidal', 32, 32)).toBe(true);
+    expect(chunkFitsWorld(0, 0, 'toroidal', 16, 16)).toBe(false);
+    expect(chunkFitsWorld(0, 0, 'bounded', 24, 24)).toBe(false);
+    expect(chunkFitsWorld(0, 0, 'bounded', 64, 64)).toBe(true);
+    expect(chunkFitsWorld(32, 0, 'bounded', 64, 64)).toBe(true);
+    expect(chunkFitsWorld(32, 0, 'toroidal', 48, 32)).toBe(false);
+    expect(chunkFitsWorld(0, 0, 'infinite', 0, 0)).toBe(true);
   });
 });

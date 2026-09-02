@@ -75,5 +75,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   neighbours still see last tick's cells; Conway-class `lut8` via a 34×34 halo into an 18-byte
   table; `ChangeSet` arrays reused across ticks. ADR-004 oracles: R-pentomino → 1103 / 116,
   acorn → 5206 / 633, glider (1,1) in 4 gens. ≥ 60 steps/sec on a 512×512 50% soup. (P0-E-1)
+- Boundary modes honoured at the world extent, not only at chunk seams: a page that straddles a
+  `bounded` wall or a `toroidal` wrap fills its halo through `normalize`, so a 24×24 wall inside
+  a 32×32 page still kills a glider (Conway ashes: a 2×2 block on that wall, never on the far
+  side). A glider on a 32×32 torus returns to its starting cells at generation 128. A 10,000-
+  generation infinite glider lands at (2500, 2500) without a trailing-chunk tax — empty pages
+  behind it are reclaimed, and late-run throughput stays within 20% of generation 100. (P0-E-2)
 
 [Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/main...HEAD
