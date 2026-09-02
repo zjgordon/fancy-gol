@@ -124,7 +124,7 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
     const dirty = buildDirtyRects(cs.dirtyChunks);
     opts.post(
       { type: 'frame', tick: active.tick, chunks, dirty, stats: copyStats(active.stats) },
-      [chunks.data.buffer],
+      [chunks.keys.buffer, chunks.data.buffer],
     );
   }
 
@@ -222,6 +222,13 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
         const active = requireSim();
         const snap = active.snapshot();
         opts.post({ id: cmd.id, type: 'ok', result: snap }, [snap.chunkKeys.buffer, snap.chunkData.buffer]);
+        return;
+      }
+      case 'restore': {
+        const active = requireSim();
+        active.restore(cmd.snapshot);
+        opts.post({ id: cmd.id, type: 'ok' });
+        postFullFrame(active);
         return;
       }
       case 'setViewport': {

@@ -252,6 +252,7 @@ type Command =
   | { id: number; cmd: 'loadPattern'; rle: string; x: number; y: number }
   | { id: number; cmd: 'seek'; tick: number }        // time travel (Phase 4)
   | { id: number; cmd: 'snapshot' }
+  | { id: number; cmd: 'restore'; snapshot: Snapshot } // added P0-G-3: see amendment below
   | { id: number; cmd: 'setViewport'; vp: Viewport } // worker sends only visible chunks
   | { id: number; cmd: 'dispose' };
 
@@ -275,6 +276,17 @@ the same protocol through an in-memory port with no browser at all.
   drawing feels instant before the worker confirms.
 - The protocol is versioned (`PROTOCOL_VERSION`) and validated at the boundary.
 - Rendering may move *into* the worker via `OffscreenCanvas` in Phase 5 with no protocol change.
+
+### Amendment (P0-G-3): `restore`
+The original contract had `snapshot` (worker → main, a read) but no way to push a `Snapshot` back
+*into* a worker — `init` only takes a fresh `(ruleset, width, height, seed)`. That's a hard blocker
+for this phase's "kill and restart the worker mid-run recovers from the last snapshot" requirement
+(`WorkerClient`, P0-G-3), and reusing `init` for double duty (fresh vs. restored) would tangle two
+different meanings into one command's validation. Added `restore` as `init`'s natural write
+counterpart to `snapshot`'s read: `{ id, cmd: 'restore', snapshot: Snapshot }`, handled by
+`Simulation.restore()` (already existed, unused by the wire protocol until now) and replying with a
+full-world `frame`, the same honest "everything changed" shape `clear`/`seedRandom`/`seek` already
+use for non-incremental mutations.
 
 ---
 

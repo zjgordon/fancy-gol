@@ -31,6 +31,7 @@ function kindOf(cmd: Command['cmd']): Command['cmd'] {
     case 'loadPattern':
     case 'seek':
     case 'snapshot':
+    case 'restore':
     case 'setViewport':
     case 'dispose':
       return cmd;
@@ -51,6 +52,7 @@ const ALL_KINDS: readonly Command['cmd'][] = [
   'loadPattern',
   'seek',
   'snapshot',
+  'restore',
   'setViewport',
   'dispose',
 ];
@@ -80,6 +82,11 @@ const VALID_COMMANDS: Record<Command['cmd'], Record<string, unknown>> = {
   loadPattern: { id: 9, cmd: 'loadPattern', rle: 'bo$2bo$3o!', x: 0, y: 0 },
   seek: { id: 10, cmd: 'seek', tick: 42 },
   snapshot: { id: 11, cmd: 'snapshot' },
+  restore: {
+    id: 14,
+    cmd: 'restore',
+    snapshot: { tick: 0, chunkKeys: new Int32Array(0), chunkData: new Uint8Array(0), rngState: 1 },
+  },
   setViewport: {
     id: 12,
     cmd: 'setViewport',

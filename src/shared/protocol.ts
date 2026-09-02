@@ -12,7 +12,7 @@
  * module `shared/` may not import from (ADR-009). The worker handler (`worker/`, which may
  * import both) runs that deeper check once a `Command` has already been structurally accepted.
  */
-import type { PaintOp, Rect, RuleSet, StatSample, TickStats } from './types';
+import type { PaintOp, Rect, RuleSet, Snapshot, StatSample, TickStats } from './types';
 
 export const PROTOCOL_VERSION = 1;
 
@@ -70,6 +70,7 @@ export type Command =
     }
   | { readonly id: number; readonly cmd: 'seek'; readonly tick: number } // time travel (Phase 4)
   | { readonly id: number; readonly cmd: 'snapshot' }
+  | { readonly id: number; readonly cmd: 'restore'; readonly snapshot: Snapshot } // added P0-G-3 (ADR-006 amendment): snapshot's write counterpart, for recovering a killed-and-restarted worker
   | { readonly id: number; readonly cmd: 'setViewport'; readonly viewport: Viewport } // worker sends only visible chunks
   | { readonly id: number; readonly cmd: 'dispose' };
 
@@ -137,6 +138,17 @@ function isPaintOpShaped(v: unknown): v is PaintOp {
   );
 }
 
+/** Shallow: the right container types in the right fields. `Simulation.restore` is what actually checks the data is internally consistent. */
+function isSnapshotShaped(v: unknown): v is Snapshot {
+  return (
+    isRecord(v) &&
+    isFiniteNumber(v['tick']) &&
+    v['chunkKeys'] instanceof Int32Array &&
+    v['chunkData'] instanceof Uint8Array &&
+    isFiniteNumber(v['rngState'])
+  );
+}
+
 function isViewportShaped(v: unknown): v is Viewport {
   if (!isRecord(v) || !isFiniteNumber(v['scale'])) return false;
   const rect = v['rect'];
@@ -161,6 +173,7 @@ const COMMAND_KINDS = [
   'loadPattern',
   'seek',
   'snapshot',
+  'restore',
   'setViewport',
   'dispose',
 ] as const;
@@ -252,6 +265,12 @@ export function parseCommand(raw: unknown): ParseResult<Command> {
     }
     case 'snapshot':
       return ok({ id, cmd });
+    case 'restore': {
+      if (!isSnapshotShaped(raw['snapshot'])) {
+        return fail('snapshot', 'restore.snapshot must be a {tick, chunkKeys, chunkData, rngState} Snapshot');
+      }
+      return ok({ id, cmd, snapshot: raw['snapshot'] });
+    }
     case 'setViewport': {
       if (!isViewportShaped(raw['viewport'])) {
         return fail('viewport', 'setViewport.viewport must be a {rect: Rect, scale: number}');

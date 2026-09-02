@@ -236,6 +236,36 @@ describe('worker-protocol: the full Phase 0 command set, through an in-memory po
     expect(reply?.transfer?.length).toBe(2);
   });
 
+  it('restore replies ok and pushes a full frame that reproduces the snapshotted state (P0-G-3: recovering a killed-and-restarted worker)', () => {
+    // The scenario this exists for: a worker dies mid-run, the client spins up a fresh one,
+    // and pushes back the last snapshot it cached — rather than restarting from the seed.
+    const port = createPort();
+    port.send({ id: 1, cmd: 'init', ruleset: CONWAY, width: 16, height: 16, seed: 1 });
+    port.send({
+      id: 2,
+      cmd: 'paint',
+      ops: [
+        { x: 4, y: 4, state: 1 },
+        { x: 5, y: 4, state: 1 },
+        { x: 4, y: 5, state: 1 },
+        { x: 5, y: 5, state: 1 },
+      ],
+    });
+    port.send({ id: 3, cmd: 'snapshot' });
+    const snapshotReply = replyTo(port.events, 3);
+    const snapshot = snapshotReply?.type === 'ok' ? snapshotReply.result : undefined;
+
+    // A brand-new worker (fresh port) that never saw the painted cells.
+    const freshPort = createPort();
+    freshPort.send({ id: 1, cmd: 'init', ruleset: CONWAY, width: 16, height: 16, seed: 1 });
+    freshPort.send({ id: 2, cmd: 'restore', snapshot });
+
+    expect(replyTo(freshPort.events, 2)).toEqual({ id: 2, type: 'ok' });
+    const frame = lastByType(freshPort.events, 'frame');
+    expect(frame?.stats.population).toBe(4);
+    expect(frame?.chunks.data[4 + (4 << 5)]).toBe(1);
+  });
+
   it('setViewport is acknowledged', () => {
     const port = createPort();
     port.send({ id: 1, cmd: 'init', ruleset: CONWAY, width: 16, height: 16, seed: 1 });
