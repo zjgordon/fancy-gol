@@ -1,0 +1,68 @@
+---
+description: Purity, layering, determinism and hot-loop discipline for the simulation engine, worker and shared types.
+globs: src/engine/**, src/worker/**, src/shared/**
+alwaysApply: false
+---
+
+# Engine rules — `src/engine`, `src/worker`, `src/shared`
+
+## Purity (ADR-009) — machine-enforced, non-negotiable
+
+`src/engine/**` may import **only** from `src/engine/**` and `src/shared/types/**`.
+
+It must never reference: `window`, `document`, `navigator`, `localStorage`, `fetch`, `console`,
+`process`, `require`, or `performance` (inject a `Clock` instead).
+
+`scripts/check-boundaries.mjs` enforces this in CI. **Never weaken the checker to pass — fix the code.**
+
+Layering matrix: `worker/` → `engine/` + `shared/` · `render/` → `shared/` + theme types ·
+`ui/` → `shared/` + `render/types` + `themes/` + `audio/` · `server/` → `shared/` and
+`validateRuleSet` from the engine only.
+
+## Multi-state from commit one (ADR-001)
+
+A cell is a `StateId` (unsigned int, `0` = dead), **not a boolean**. Conway is the degenerate
+2-state case, not the privileged one. Rules are *data* (`RuleSet` with a state palette, a
+neighbourhood and a transition spec), never code branches.
+
+## Grid representation (ADR-010)
+
+Sparse `Map` of dense **32×32 `Uint8Array` chunks**, lazily allocated, pooled and reclaimed.
+Each chunk maintains `population`, `perStateCounts`, `dirty`, `lastTick` and a border-occupancy
+mask **incrementally** — never recount by scanning. These summaries also feed the statistics
+engine and the Phase 5 density LOD: one structure, three consumers.
+
+## Determinism is load-bearing
+
+Same ruleset + seed + boundary mode + edit log ⇒ **bit-identical state at any tick, on any
+platform, in any build.** All randomness flows through the injected seedable `Mulberry32`.
+Time travel, the Laboratory diff and every test oracle depend on this.
+
+## Hot-loop discipline
+
+- **Zero allocation in steady state.** Preallocate and reuse; `ChangeSet` buffers are reused
+  across ticks and callers must not retain them.
+- Iterate `activeChunks` only. Fast path over the 30×30 chunk interior with no bounds checks;
+  bounds-checked slow path for the border ring.
+- No per-cell function calls, no `switch` inside the loop — the rule compiler emits a lookup
+  table or a monomorphic closure once, cached by ruleset identity.
+
+## Changes are first-class
+
+`step()` returns a `ChangeSet`. History, statistics and dirty-rect rendering are all derived from
+it (ADR-007). Never make it a side effect.
+
+## Correctness bar
+
+Verified against externally-known truths, not just against itself: glider returns translated
+(1,1) after 4 generations; R-pentomino stabilises at generation **1103** with **116** cells;
+acorn at **5206** / **633**; Gosper gun period 30; toroidal glider returns after 128 generations
+on a 32×32 torus.
+
+Coverage gate: **95% statements / 90% branches on `src/engine/**`.** May be raised, never lowered.
+
+## Performance work (Phase 5)
+
+Every fast path — bitboard kernel, chunk skipping, HashLife — must prove **byte-identical
+equivalence** against the scalar reference kernel over a large random corpus before it is
+accepted. The scalar kernel is never deleted; it is the permanent oracle.

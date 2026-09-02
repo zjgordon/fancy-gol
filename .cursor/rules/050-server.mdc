@@ -1,0 +1,52 @@
+---
+description: Scope, security and behaviour rules for the Express and WebSocket server.
+globs: src/server/**, docker/**
+alwaysApply: false
+---
+
+# Server rules
+
+## Scope (ADR-002) — the server is not the simulator
+
+The simulation runs **entirely in the browser**, in a Web Worker. The server only:
+
+1. serves the built client,
+2. exposes a small JSON API for rulesets, patterns and saved sessions,
+3. runs one read-only WebSocket endpoint, `/live`, broadcasting a server-owned exhibition grid.
+
+There is no authoritative multiplayer and no headless compute offload in the 0.x–1.0 scope.
+**The server is never authoritative over a user's simulation.**
+
+## Offline-first
+
+The app must be **fully functional with the server unreachable** — built-in rulesets and a bundled
+starter pattern set ship in the client bundle. Network features degrade with a single
+non-intrusive notice; they never break the app and never repeat the warning.
+
+## One validator
+
+Server-side ruleset validation reuses `validateRuleSet` from the engine. This is the *only*
+permitted `server → engine` import. One validator, one source of truth, one set of error messages.
+
+## Security
+
+- Hand-written middleware, no `helmet` (~30 lines of headers — the No Bloat rule applies):
+  CSP with no `unsafe-inline`/`unsafe-eval`, `X-Content-Type-Options`, `Referrer-Policy`,
+  `Permissions-Policy`, COOP/COEP (needed for `SharedArrayBuffer` in Phase 5), HSTS behind TLS.
+- Token-bucket rate limiting on write routes; body caps (64 kB rulesets, 4 MB sessions).
+- Strict path sanitisation on every id — traversal attempts return 400.
+- WebSocket origin checking, per-IP connection cap, heartbeat ping/pong with dead-socket reaping.
+- Atomic file writes (temp + rename) — persistence is file-backed JSON on a mounted volume, no database.
+- Structured request logging with **no PII and no user content**.
+
+## `/live` behaviour
+
+Read-only, 10 Hz delta broadcast with a keyframe on join. Backpressure: when a socket's
+`bufferedAmount` exceeds the threshold, skip its deltas and send a keyframe when it drains —
+resynchronise, never disconnect. Behind an `ENABLE_LIVE` flag, default off in the published image.
+
+## Container
+
+Multi-stage, non-root, `--omit=dev` in the runtime stage, `HEALTHCHECK` on `/api/health`,
+graceful SIGTERM. Production image < 200 MB. Every environment variable documented with its
+default and its effect.

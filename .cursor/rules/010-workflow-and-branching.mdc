@@ -1,0 +1,70 @@
+---
+description: The task work loop, the mandatory dashboard update, the branch and release model, and commit conventions for fancy-gol.
+alwaysApply: true
+---
+
+# Workflow, branching, and commits
+
+## Current state
+
+- `main` contains **planning artefacts only** — no implementation code yet.
+- Next task: **P0-A-1**. Confirm in `.agents/dashboard.html`.
+- **The `phase/0-foundation` branch does not exist yet. Create it before writing any code.**
+
+## Branch and release model
+
+`main` holds **only the tested, stable output of a completed phase.** Each phase is developed on
+its own branch and merged back when every gate for that phase is green, then tagged.
+
+```bash
+git checkout main && git pull
+git checkout -b phase/0-foundation      # before any Phase 0 code
+```
+
+| Phase | Branch | Tag on merge |
+|---|---|---|
+| 0 | `phase/0-foundation` | `v0.1.0` |
+| 1 | `phase/1-interaction` | `v0.2.0` |
+| 2 | `phase/2-library-and-stats` | `v0.3.0` |
+| 3 | `phase/3-theme-engine` | `v0.4.0` |
+| 4 | `phase/4-power-ux` | `v0.5.0` |
+| 5 | `phase/5-scale-and-perf` | `v0.6.0` |
+| 6 | `phase/6-launch` | `v1.0.0` |
+
+Documentation-only changes under `.agents/**` may land on `main`. **Implementation code may not.**
+
+## The work loop
+
+1. **Find** — `.agents/dashboard.html` "Next up", or the first `- [ ]` task in the phase doc whose
+   `Depends on` list is fully `- [x]`.
+2. **Claim** — `#### - [ ] P0-A-1 ·` → `#### - [~] P0-A-1 ·`, regenerate dashboard, commit.
+3. **Build** — follow the task's implementation notes and the ADR contracts.
+4. **Prove** — write the named tests; tick each acceptance criterion only when measurably true;
+   run `npm run verify`, plus `npm run bench` if a hot path was touched.
+5. **Close** — task `- [x]`, update `CHANGELOG.md`, regenerate the dashboard, commit together.
+
+### Status markers
+
+`- [ ]` not started · `- [~]` in progress · `- [x]` done · `- [!]` blocked · `- [-]` cut (with reason)
+
+## The dashboard update is mandatory
+
+```bash
+node .agents/scripts/build-dashboard.mjs          # regenerate — after ANY checkbox change
+node .agents/scripts/build-dashboard.mjs --check  # exits 1 when stale (wire into CI at P0-I-5)
+```
+
+The phase documents are the single source of truth; the dashboard is a projection of them.
+**Never hand-edit the generated `PROJECT_STATE` block.** A commit that ticks a checkbox without
+regenerating the dashboard is incomplete.
+
+## Commits
+
+Conventional Commits. Small, atomic, each independently green.
+
+- Types: `feat` `fix` `perf` `refactor` `test` `docs` `build` `ci` `chore` `style` `revert`
+- Scopes: `engine` `rules` `grid` `history` `worker` `render` `ui` `themes` `audio` `server`
+  `docker` `bench` `planning` `agents`
+- Imperative subject, no trailing period, ≤72 chars. Body explains *why*. Reference the task ID
+  (`Closes P0-C-2.`).
+- Never mix a refactor with a feature, or a formatting sweep with anything.

@@ -1,0 +1,59 @@
+---
+description: fancy-gol core identity, source of truth, and the seven standing rules from INCEPTION.md. Applies to all work in this repository.
+alwaysApply: true
+---
+
+# fancy-gol — core rules
+
+**`.agents/` is the source of truth for this project.** Read `.agents/AGENTS.md` in full before
+doing anything. It is the operating manual; these rules are a summary of it.
+
+| Need | File |
+|---|---|
+| The contract for agents | `.agents/AGENTS.md` |
+| The vision and the standard | `.agents/docs/INCEPTION.md` |
+| Current status and the next task | `.agents/dashboard.html` |
+| Rules that apply everywhere | `.agents/planning/README.md` §3 |
+| Binding architecture decisions | `.agents/planning/ARCHITECTURE_DECISIONS.md` (ADR-001…010) |
+| Exactly what to build | `.agents/planning/PHASE_<0-6>_*.md` |
+
+## What this is
+
+A cellular automata simulator that intends to be **fabulous**, built as an open agentic coding
+experiment — the agent files are in the repo on purpose. Someone will read your commits.
+
+The bar is **excellent, optimised, and fabulous**, never merely "working":
+
+- **Excellent** — a beginner uses it without documentation; an expert has everything at their fingertips.
+- **Optimised** — nothing allocates in a hot loop, nothing re-renders without a state change, every budget is measured and gated.
+- **Fabulous** — if it is boring, it is not finished.
+
+## The seven standing rules (from INCEPTION.md)
+
+1. **No Bloat** — if a library can be written in 50 lines of TS, don't import a package.
+   The *entire* permitted runtime dependency surface is `express` and `ws`. The ruleset validator,
+   RLE codec, charting module, fuzzy matcher, easing solvers, audio synthesis, boundary checker and
+   changelog automation are hand-written **by design**, each a named task.
+2. **Pure Logic** — the simulation logic must never know the UI exists.
+3. **Stay Fancy** — if a feature is boring, find the version of it that is visually interesting.
+4. **Automated Proof** — every step passes its Vitest suite before it is "done".
+5. **Agit-Prop** — if the code is "just okay", it is not finished. This applies to your own output.
+6. **Changelog** — Keep-a-Changelog format and semver from commit one, updated in the same commit
+   as the change, never retroactively.
+7. **Conventional commits** — small, atomic, logically parsed, each independently green.
+
+## Never
+
+- Add a runtime dependency beyond `express` and `ws` without meeting the No Bloat bar.
+- Weaken a coverage threshold, boundary rule, performance budget or visual baseline to make a build pass.
+- Re-baseline a failing benchmark or screenshot without investigating and recording why.
+- Delete or renumber a task ID — mark it `- [-]` with a reason.
+- Present an approximation as exact. Sampled, downsampled and degraded outputs are always labelled.
+- Silently discard user data or history. Destructive actions require explicit, informative confirmation.
+
+## Escalate rather than guess
+
+Stop and ask when an ADR looks wrong or two conflict, when acceptance criteria cannot be met as
+written, when a budget can only be met by breaking a design principle, or when a gate cannot be
+made green. Record the answer in the relevant document — a decision that lives only in a chat log
+did not happen.

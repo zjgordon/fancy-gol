@@ -1,0 +1,56 @@
+---
+description: Test expectations, coverage thresholds, performance budgets and CI gates. Applies to all source and test files.
+globs: src/**, tests/**, scripts/**, vitest.config.ts, playwright.config.ts
+alwaysApply: false
+---
+
+# Testing and gates
+
+## Automated Proof
+
+Nothing is "done" until its tests exist and pass. Tests must be **behavioural** — if a test's
+failure would not indicate a user-visible defect, it is the wrong test. Coverage that asserts
+implementation detail is worse than no coverage.
+
+```bash
+npm run verify      # typecheck + lint + boundaries + test + build   ← the gate
+npm run coverage    # thresholds enforced
+npm run bench       # budgets, fails on >10% regression
+npm run e2e         # Playwright (from Phase 1)
+```
+
+## Coverage thresholds — ratcheted, never lowered
+
+| Path | Stmts | Branch | Funcs |
+|---|---|---|---|
+| `src/engine/**`, `src/shared/**` | **95%** | **90%** | **95%** |
+| `src/render/**`, `src/server/**` | 85% | 75% | 85% |
+| `src/ui/**`, `src/themes/**` | 70% | 60% | 70% |
+
+A phase that would lower a threshold must instead delete or fix the untested code.
+
+## Performance budgets (CI-gated, 10% tolerance)
+
+| Metric | Phase 0 floor | Phase 5 target |
+|---|---|---|
+| Conway steps/sec @ 512² soup | ≥ 60 | ≥ 400 |
+| Conway steps/sec @ 4096² @1% | ≥ 5 | ≥ 60 |
+| Frame time, 1080p steady state | ≤ 16.6 ms | ≤ 8 ms |
+| Main-thread block per tick | ≤ 4 ms | ≤ 1 ms |
+| Cold interactive load | ≤ 1500 ms | ≤ 800 ms |
+| Client JS bundle (gzip) | ≤ 120 kB | ≤ 180 kB |
+
+Benchmarks take the median of N runs against a committed `bench-baseline.json`. Updating the
+baseline is a reviewed commit, never a reflex.
+
+## Other standing gates
+
+- **Boundary checker** — zero violations, with fixtures proving it *catches* violations.
+- **Determinism** — identical snapshots at tick 5,000 across instances and across builds.
+- **Allocation** — < 1 MB heap growth over 1,000 steps in steady state.
+- **Playwright E2E** (Phase 1+) — green on Chromium, Firefox and WebKit; non-flaky over 10 runs.
+- **Visual regression** (Phase 1+, per-theme from Phase 3) — 48 baselines, ≤ 0.1% pixel tolerance.
+- **axe-core** — zero violations, in every theme from Phase 3.
+- **Dashboard freshness** — `node .agents/scripts/build-dashboard.mjs --check`.
+
+**Never weaken a gate to make a build pass.** Fix the code, or escalate.

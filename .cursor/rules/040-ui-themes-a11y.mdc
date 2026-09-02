@@ -1,0 +1,67 @@
+---
+description: Design tokens, command registry, motion, audio, accessibility and rendering rules for the client.
+globs: src/ui/**, src/themes/**, src/render/**, src/audio/**, src/client/**
+alwaysApply: false
+---
+
+# Client rules — UI, themes, render, audio
+
+## Design tokens — no literals
+
+**No component may contain a literal colour, font, radius, shadow or duration.** Everything reads
+from the `--gol-*` custom-property contract in `src/themes/tokens.css`. A lint rule enforces this
+from Phase 1. Token names must be theme-neutral (never `--gol-neon-pink`).
+
+This is what lets six themes exist without six copies of the UI.
+
+## Everything is a command
+
+If a user can do it, it is a registered `AppCommand` with a title, a category and a keybinding (or
+an explicit `noBinding: true`). A button's handler is `bus.run('sim.toggleRun')` and nothing else.
+
+A test enumerates every command and fails on orphans. This discipline is why the Phase 4 command
+palette is a *view* over an existing registry rather than a retrofit — if a feature is missing from
+the palette, the bug is that the feature bypassed the registry.
+
+## Rendering (ADR-005)
+
+- One `Renderer` interface; Canvas2D through Phase 4, WebGL2 added in Phase 5. **No UI, theme or
+  engine code may depend on which renderer is active.**
+- Dirty-rect invalidation always. Never full-repaint when a rect will do; batch draws by colour;
+  use the tile atlas below `cellSize` 4 and the density LOD below 1.
+- Correct `devicePixelRatio` handling. Never render blurry.
+- **The overlay layer (selection, cursor, grid lines, ghosts) is never obscured, tinted or blurred
+  by a theme effect.** Usability outranks beauty.
+
+## Themes are sensory modules (ADR-008)
+
+Tokens + cell palette (with an age ramp) + render hooks + motion signature + sound pack.
+A theme is finished only when a screenshot with the UI chrome cropped out is instantly
+identifiable as that theme. If you can only tell by the button colours, it is not done.
+
+Every theme declares a `cost`; the degrade governor measures real frame time and drops
+post-process, then effects, then background — **visibly, never silently**. Quality 0 must hold
+60 fps under 4× CPU throttling in every theme.
+
+## Audio
+
+**Zero audio assets** — everything is synthesised from WebAudio oscillators and noise buffers.
+Muted by default, unlocked only by a user gesture, hard cap of 24 voices with oldest-first
+stealing, look-ahead scheduling (25 ms tick / 100 ms horizon). High-rate events are **aggregated**,
+never machine-gunned: at 10,000 births/sec the output is a texture, not 10,000 blips.
+
+## Accessibility — a gate, not a nicety
+
+- Every control keyboard-reachable with a visible focus ring; every icon-only control has an
+  accessible name.
+- WCAG AA contrast for chrome text **in every theme**; palettes distinguishable under
+  deuteranopia and protanopia.
+- `prefers-reduced-motion: reduce` disables non-essential animation, collapses every choreography
+  to an instant state change, and silences ambient audio — with no exceptions.
+- axe-core: zero violations, every panel, every theme.
+
+## Feel
+
+Optimistic painting — the cell lights up under the cursor before the worker confirms. Readouts
+throttle to 10 Hz with tabular figures so nothing jitters. Every transition goes through the
+theme's motion system, never a hardcoded CSS transition.
