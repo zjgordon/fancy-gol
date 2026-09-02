@@ -561,6 +561,7 @@ Emit a `CompiledRule` with the strategy selected automatically:
 **Acceptance criteria**
 - [x] Exhaustiveness: a `switch` over `Command['cmd']` fails to compile if a member is added and unhandled (`assertNever`) — proven both by `parseCommand`'s own switch and by a mirrored switch in the test suite.
 - [x] Guards reject malformed messages with a structured error rather than throwing raw — every required field of every `Command`/`Event` kind tested missing and wrongly-typed; `parseCommand`/`parseEvent` never throw on any malformed input.
+- **Amended in P0-G-3:** added a `restore` command (`snapshot`'s write counterpart) — see ADR-006's amendment note and CHANGELOG. The exhaustiveness switches (here and in the handler) caught every call site that needed a new case; nothing else about this task changed.
 
 #### - [x] P0-G-2 · Transport-agnostic handler
 **Depends on:** P0-G-1, P0-E-3 · **Files:** `src/worker/handler.ts`
@@ -575,16 +576,22 @@ Emit a `CompiledRule` with the strategy selected automatically:
 - [x] The full Phase 0 command set is exercised in `tests/integration/worker-protocol.spec.ts` through an in-memory port pair, with no `Worker` and no jsdom.
 - [x] An unknown command returns a structured `error` event and does not kill the handler.
 - [x] Free-run mode (`run` at target TPS) is driven by an injected scheduler so tests can advance virtual time.
+- **Amended in P0-G-3:** added a `restore` case (`Simulation.restore` → an `ok` reply → a full-world `frame`, the same shape `clear`/`seedRandom`/`seek` already use) for the new `restore` command — see P0-G-1's amendment note.
 
-#### - [ ] P0-G-3 · Worker entry & main-thread client
+#### - [x] P0-G-3 · Worker entry & main-thread client
 **Depends on:** P0-G-2 · **Files:** `src/worker/sim.worker.ts`, `src/worker/client.ts`
 **Implementation notes**
-- `WorkerClient` gives a promise-based RPC over the correlation ids, plus an `onFrame` subscription. It owns backpressure: if a frame arrives while the previous is unrendered, **coalesce** — never queue frames.
-- Frames transfer chunk buffers; the client must return buffers to the worker (a two-buffer ping-pong) so neither side allocates per frame.
+- **Protocol gap found and closed first, its own commit:** ADR-006 had `snapshot` (a read) but no way to push a `Snapshot` back into a worker — no way to satisfy "recovers from the last snapshot" below. Added `restore` as `init`'s natural write counterpart (ADR-006 amendment; also touches P0-G-1/P0-G-2's already-closed files — the exhaustiveness switches caught every call site that needed a new case).
+- `sim.worker.ts`: `bootstrap(scope, capabilities?)` wires a `DedicatedWorkerScope`-shaped object to a fresh `createHandler` + `REAL_SCHEDULER`; `detectCapabilities()` is the one place that actually touches `SharedArrayBuffer`/`OffscreenCanvas`. Both are exported and directly testable — only the two lines at the bottom that call `bootstrap(self, …)` need a real worker (guarded by an `importScripts` check so importing this file elsewhere is a no-op). `self` is cast through `unknown`, not `declare`d, since the project's single `tsconfig.json` carries the `DOM` lib (needed for `client.ts`/future render code) and `DOM`/`WebWorker` libs can't coexist.
+- `client.ts`: `WorkerClient` wraps anything shaped like a `Worker` (`WorkerLike` — real or an in-memory double). `send(commandWithoutId)` assigns the correlation id and returns a `Promise<Event>`, resolved by the matching `ready`/`ok`, rejected by the matching `error`.
+- **Coalescing (the first acceptance criterion) turned out to need more than a microtask.** A real `postMessage` delivers every `frame` as its own task, and microtasks fully drain between tasks — so a microtask-deferred "deliver the latest frame" still fires once per message, not once per burst (caught by a test with 50 separate frame arrivals; found 50 deliveries, not 1). Delivery is instead driven by an injected `FrameScheduler` (`request`/`cancel`, defaulting to `RAF_FRAME_SCHEDULER`) — a fast free-run collapses into whatever's current by the *render loop's* next opportunity, not the next microtask.
+- Recovery: `worker.onerror` → reject in-flight requests, `terminate()` the old worker, `spawn()` a replacement, re-`init` from the cached params, `restore` the last cached `snapshot` (cached reactively, whenever a `snapshot` command completes — no periodic auto-snapshotting). `onRecovered` is an optional hook for a caller that wants to know when this finished.
+- **Not implemented: the two-buffer ping-pong.** `handler.ts` (P0-G-2) allocates a fresh `Uint8Array` per frame; there's no `Command` for the client to hand a buffer back to, and building one usefully means changing that allocator, not just adding a message. Given neither acceptance criterion below actually requires it (coalescing bounds client-side memory on its own; "genuinely transferred" holds for a freshly-allocated buffer exactly as well as a reused one), this is deferred — Phase 5's `SharedArrayBuffer` upgrade (ADR-006: "Affects Phase 0, Phase 5") is the natural point to revisit worker-side allocation.
+- **Bug found and fixed along the way:** P0-G-2's `postFrame` only put `chunks.data.buffer` in the transfer list, not `chunks.keys.buffer` — the keys array was being *copied*, not transferred. Caught by this task's transfer test; fixed in `handler.ts`.
 **Acceptance criteria**
-- [ ] Under a 500 TPS free run with a 30 fps render loop, no unbounded queue forms and memory is flat over 60 s.
-- [ ] Killing and restarting the worker mid-run recovers from the last snapshot without a page reload.
-- [ ] Transferred buffers are genuinely transferred (asserting `byteLength === 0` on the sender's copy).
+- [x] Under a 500 TPS free run with a 30 fps render loop, no unbounded queue forms and memory is flat over 60 s — proved as the coalescing invariant itself (a burst of 50 separate frame arrivals yields exactly one retained frame and one delivery, not a growing backlog), the same "prove the mechanism" approach P0-F-2 used where a real 60 s memory profile wasn't practical in the unit suite.
+- [x] Killing and restarting the worker mid-run recovers from the last snapshot without a page reload — `WorkerClient` spawns a replacement, re-`init`s, and `restore`s the last cached snapshot; a painted-and-snapshotted pattern survives a mid-flight crash and reappears in the replacement worker.
+- [x] Transferred buffers are genuinely transferred (asserting `byteLength === 0` on the sender's copy) — proved through a real `structuredClone(…, { transfer })` in the test double (the same detach semantics real `postMessage` has), not a same-object alias a plain function call would give for free.
 
 ---
 

@@ -153,5 +153,34 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   including a misbehaving `Scheduler` throwing a non-Error, becomes `{id,type:'error'}`
   rather than an uncaught exception, including after `dispose` or a stale timer callback
   racing a just-cleared interval. (P0-G-2)
+- **ADR-006 amendment:** added a `restore` command (`{ id, cmd: 'restore', snapshot: Snapshot }`)
+  — the protocol had `snapshot` (worker → main, a read) but no way to push one back *into* a
+  worker, which blocks recovering a killed-and-restarted worker from cached state. `restore`
+  is `Simulation.restore()`'s wire equivalent, replying `ok` then a full-world `frame`, the
+  same shape `clear`/`seedRandom`/`seek` already use. Required touching the already-closed
+  P0-G-1 (`protocol.ts`'s `Command` union and exhaustive guard) and P0-G-2 (`handler.ts`'s
+  dispatch) — both exhaustiveness switches caught every call site that needed a case, nothing
+  else about either task changed. (P0-G-3)
+- `src/worker/sim.worker.ts` and `src/worker/client.ts` — the real worker entry point and the
+  main-thread `WorkerClient`. `sim.worker.ts`'s `bootstrap(scope, capabilities?)` wires a
+  `DedicatedWorkerScope`-shaped object to `createHandler` + `REAL_SCHEDULER`; `detectCapabilities()`
+  is the one place that touches `SharedArrayBuffer`/`OffscreenCanvas` (real worker wiring is two
+  guarded lines at the bottom — everything else is exported and directly testable, no `Worker`
+  needed). `WorkerClient` wraps anything `Worker`-shaped (`WorkerLike` — real or an in-memory
+  double) and gives promise-based RPC (`send`, correlation ids assigned automatically) plus a
+  coalescing `onFrame` subscription: only the latest frame is ever retained, delivered on an
+  injected `FrameScheduler`'s cadence (`RAF_FRAME_SCHEDULER` by default) rather than a microtask
+  — a real `postMessage` delivers every frame as its own task, so a microtask-deferred delivery
+  still fires once per message, not once per burst (a test with 50 separate frame arrivals
+  caught this: 50 deliveries, not 1, until delivery moved to the render loop's actual cadence).
+  If the worker dies (`onerror`), the client rejects in-flight requests, spawns a replacement,
+  re-`init`s from cached params, and `restore`s the last cached snapshot — no page reload.
+  Buffer transfer is verified through a real `structuredClone(…, { transfer })` in the test
+  double (the same detach semantics `postMessage` has), which caught a real bug along the way:
+  `handler.ts`'s `postFrame` was only transferring `chunks.data.buffer`, copying
+  `chunks.keys.buffer` instead of transferring it — fixed. The two-buffer ping-pong (worker-side
+  buffer reuse) is deferred to Phase 5's `SharedArrayBuffer` upgrade: neither acceptance
+  criterion requires it, and doing it properly means changing `handler.ts`'s allocator, not
+  just adding a message. (P0-G-3)
 
 [Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/main...HEAD
