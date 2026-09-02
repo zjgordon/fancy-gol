@@ -254,7 +254,7 @@ Legend and ID scheme: see [`README.md`](./README.md) §2.
 
 ### Workstream B — Core types, RNG, coordinates
 
-#### - [ ] P0-B-1 · Engine type vocabulary
+#### - [x] P0-B-1 · Engine type vocabulary
 **Depends on:** P0-A-2 · **Files:** `src/engine/types.ts`
 **Intent:** Every later phase speaks this vocabulary. Get the names right now; renaming `StateId` in Phase 4 costs a day.
 **Implementation notes**
@@ -262,25 +262,25 @@ Legend and ID scheme: see [`README.md`](./README.md) §2.
 - `PaintOp = { x, y, state }` — brushes are a UI concept that resolve to a flat op list before crossing the worker boundary. The engine never hears the word "brush".
 - Document every field with a TSDoc comment. This file is read more than any other in the repo.
 **Acceptance criteria**
-- [ ] No type in this file imports from outside `src/engine/` or `src/shared/types`.
-- [ ] `tests/unit/engine/types.spec.ts` contains compile-time assertions (`expectTypeOf`) pinning the shape of `RuleSet` and `ChangeSet`.
+- [x] No type in this file imports from outside `src/engine/` or `src/shared/types`.
+- [x] `tests/unit/engine/types.spec.ts` contains compile-time assertions (`expectTypeOf`) pinning the shape of `RuleSet` and `ChangeSet`.
 
-#### - [ ] P0-B-2 · Seedable PRNG
+#### - [x] P0-B-2 · Seedable PRNG
 **Depends on:** P0-B-1 · **Files:** `src/engine/rng.ts`
 **Implementation notes** Mulberry32. ~12 lines. Exposes `next(): number` in `[0,1)`, `nextInt(n)`, `fork(): Mulberry32`, and `state` for snapshotting. Hand-written per the no-bloat rule.
 **Acceptance criteria**
-- [ ] Same seed → identical 10,000-value sequence across runs and across Node/browser builds.
-- [ ] `fork()` produces an independent stream that does not advance the parent.
-- [ ] Chi-square uniformity test over 100k samples in 16 buckets passes at p > 0.01.
+- [x] Same seed → identical 10,000-value sequence across runs and across Node/browser builds.
+- [x] `fork()` produces an independent stream that does not advance the parent.
+- [x] Chi-square uniformity test over 100k samples in 16 buckets passes at p > 0.01.
 
-#### - [ ] P0-B-3 · Injectable clock
+#### - [x] P0-B-3 · Injectable clock
 **Depends on:** P0-B-1 · **Files:** `src/engine/clock.ts`
 **Intent:** The engine measures its own step time for `TickStats` but must not touch `performance`. Inject it.
 **Acceptance criteria**
-- [ ] `TestClock` lets a test assert `stepMicros` deterministically.
-- [ ] `src/engine` contains zero references to `performance` or `Date`.
+- [x] `TestClock` lets a test assert `stepMicros` deterministically.
+- [x] `src/engine` contains zero references to `performance` or `Date`.
 
-#### - [ ] P0-B-4 · Coordinate system & boundary normalisation
+#### - [x] P0-B-4 · Coordinate system & boundary normalisation
 **Depends on:** P0-B-1 · **Files:** `src/engine/grid/coords.ts`
 **Implementation notes**
 - `packCell(x,y): number` (two signed 16-bit halves) with `unpackX` / `unpackY`; `packChunk(cx,cy)`.
@@ -288,9 +288,9 @@ Legend and ID scheme: see [`README.md`](./README.md) §2.
 - `normalize(x, y, boundary, w, h)` returns the wrapped coordinate for `toroidal`, `null` for out-of-range `bounded`, and the input for `infinite`.
 - Document the addressable range (±1,048,576) as a named constant `WORLD_LIMIT` and make out-of-range a thrown `RangeError`, never silent corruption.
 **Acceptance criteria**
-- [ ] Round-trip property test: 100k random coords in range survive pack→unpack unchanged, including negatives.
-- [ ] Toroidal wrap is correct for negative coordinates (`normalize(-1, -1, 'toroidal', 32, 32) === [31, 31]`).
-- [ ] Exceeding `WORLD_LIMIT` throws with a message naming the limit.
+- [x] Round-trip property test: 100k random coords in range survive pack→unpack unchanged, including negatives.
+- [x] Toroidal wrap is correct for negative coordinates (`normalize(-1, -1, 'toroidal', 32, 32) === [31, 31]`).
+- [x] Exceeding `WORLD_LIMIT` throws with a message naming the limit.
 
 ---
 

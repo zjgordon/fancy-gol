@@ -75,6 +75,13 @@ describe('forbidden globals in src/engine/**', () => {
     expect(hits).toHaveLength(0);
   });
 
+  it('does not flag a forbidden name mentioned only in a comment', () => {
+    const hits = scanForbiddenGlobals(
+      '// this must never call performance.now() or new Date()\n/** window, document */\nexport const x = 1;',
+    );
+    expect(hits).toHaveLength(0);
+  });
+
   it('is clean for pure engine code', () => {
     const hits = scanForbiddenGlobals('export const add = (a: number, b: number) => a + b;');
     expect(hits).toHaveLength(0);

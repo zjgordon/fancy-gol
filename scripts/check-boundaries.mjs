@@ -39,6 +39,9 @@ export const FORBIDDEN_ENGINE_GLOBALS = [
   'process',
   'require',
   'performance',
+  // Not in ADR-009's list, but time must be injected (src/engine/clock.ts, P0-B-3) —
+  // `Date` is just as much a hidden non-determinism source as `performance`.
+  'Date',
 ];
 
 const IMPORT_RE = /(?:import|export)\s[^;]*?\sfrom\s*['"]([^'"]+)['"]/g;
@@ -85,9 +88,19 @@ export function isImportAllowed(fromLayer, targetRelPath) {
   return allowed.some((entry) => matches(entry, targetRelPath));
 }
 
+/** Blank out comment bodies (preserving line breaks and column count) so prose mentioning a
+ *  forbidden word (e.g. a TSDoc comment explaining *why* `performance` is banned) doesn't
+ *  trip the scanner. Imperfect for comment-like text inside string literals — acceptable for
+ *  an ~100-line hand-written tool. */
+function stripComments(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+    .replace(/\/\/[^\n]*/g, (m) => ' '.repeat(m.length));
+}
+
 export function scanForbiddenGlobals(source) {
   const hits = [];
-  const lines = source.split('\n');
+  const lines = stripComments(source).split('\n');
   for (const global of FORBIDDEN_ENGINE_GLOBALS) {
     const re = new RegExp(`(?<![.\\w$])${global}(?![\\w$])`, 'g');
     lines.forEach((line, i) => {

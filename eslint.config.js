@@ -13,6 +13,9 @@ const ENGINE_FORBIDDEN_GLOBALS = [
   'console',
   'process',
   'performance',
+  // Time must be injected (src/engine/clock.ts, P0-B-3); Date is a hidden non-determinism
+  // source just like performance.now().
+  'Date',
 ];
 
 export default tseslint.config(

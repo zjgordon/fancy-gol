@@ -17,5 +17,18 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `scripts/check-boundaries.mjs` — hand-written layer-boundary checker enforcing the ADR-009
   dependency matrix and the `src/engine/**` global ban, with unit fixtures proving it catches
   cross-layer and forbidden-global violations. (P0-A-5)
+- `src/engine/types.ts` — the engine's public type vocabulary (ADR-001): `StateId`, `StateDef`,
+  `Neighborhood`, `TransitionSpec`, `RuleSet`, `ChangeSet`, `GridView`, `Snapshot`,
+  `StateMigration`, and friends, pinned by compile-time `expectTypeOf` assertions. (P0-B-1)
+- `src/engine/rng.ts` — a hand-written, deterministic Mulberry32 PRNG (`next`, `nextInt`,
+  `fork`, `state`), verified deterministic across runs and uniform by a chi-square test.
+  (P0-B-2)
+- `src/engine/clock.ts` — an injectable `Clock` interface and `TestClock`, so the engine can
+  measure its own step time without ever touching `performance` or `Date`. The boundary
+  checker's forbidden-global list now also bans `Date` in `src/engine/**`, and no longer
+  misfires on globals merely mentioned in a comment. (P0-B-3)
+- `src/engine/grid/coords.ts` — chunk sizing, cell/chunk coordinate packing, and boundary-mode
+  (`bounded`/`toroidal`/`infinite`) normalisation, with the `WORLD_LIMIT` (±1,048,576 cells)
+  documented and enforced rather than silently exceeded. (P0-B-4)
 
 [Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/main...HEAD
