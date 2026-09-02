@@ -71,5 +71,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   library, and has a published behavioural oracle. Highlands/Liquid thresholds were retuned
   (`0–6 / 7–14 / 15–24`) so a land/water wall is stable and a documented soup bands within 200
   generations; the schema worked example matches. (P0-D-5)
+- `src/engine/simulation.ts` — the step function. Active chunks only; per-chunk back pages so
+  neighbours still see last tick's cells; Conway-class `lut8` via a 34×34 halo into an 18-byte
+  table; `ChangeSet` arrays reused across ticks. ADR-004 oracles: R-pentomino → 1103 / 116,
+  acorn → 5206 / 633, glider (1,1) in 4 gens. ≥ 60 steps/sec on a 512×512 50% soup. (P0-E-1)
 
 [Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/main...HEAD

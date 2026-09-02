@@ -148,4 +148,15 @@ describe('ChunkedGrid — GridView', () => {
     expectTypeOf<ChunkView['at']>().returns.toEqualTypeOf<StateId>();
     expectTypeOf<ReturnType<GridView['getChunk']>>().not.toEqualTypeOf<Uint8Array>();
   });
+
+  it('clear() releases every chunk and leaves the grid empty', () => {
+    const grid = new ChunkedGrid({ boundary: 'infinite' });
+    grid.set(0, 0, 1);
+    grid.set(100, 100, 1);
+    expect(grid.chunkCount).toBe(2);
+    grid.clear();
+    expect(grid.chunkCount).toBe(0);
+    expect(grid.get(0, 0)).toBe(DEAD);
+    expect(grid.activeChunks.size).toBe(0);
+  });
 });

@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| **Status** | ~ In progress — Workstreams A–D complete |
+| **Status** | ~ In progress — Workstreams A–D complete; E through the step function |
 | **Ships version** | `0.1.0` |
 | **Prerequisites** | None. This is the first phase. |
 | **Theme of the phase** | **Make it correct.** |
@@ -435,7 +435,7 @@ Emit a `CompiledRule` with the strategy selected automatically:
 
 ### Workstream E — The Simulation
 
-#### - [ ] P0-E-1 · Step function, standard path
+#### - [x] P0-E-1 · Step function, standard path
 **Depends on:** P0-C-2, P0-D-4 · **Files:** `src/engine/simulation.ts`
 **Intent:** The hot loop. This function's quality determines the ceiling of the entire product.
 **Implementation notes**
@@ -443,11 +443,23 @@ Emit a `CompiledRule` with the strategy selected automatically:
 - Neighbour counting for the common case is an incremental 3-row sliding window, not 8 independent reads.
 - Write into the back buffer; accumulate changes into preallocated `ChangeSet` arrays that grow by doubling and are **reused across ticks** (documented as such — callers must not retain them).
 - **Zero allocation in steady state.** Assert this in a test (see acceptance).
+- Per-chunk back pages are filled for every active chunk *before* any of them is applied, so a
+  neighbour still sees last tick's cells. Conway-class (`lut8`) gathers a 34×34 halo then indexes
+  the 18-byte table with no per-cell function call. Empty chunk interiors are skipped when
+  `stableWhenIsolated` (the flag P0-D-4 emits).
+- `ChunkedGrid.markActive` wraps through `normalize`, so a toroidal 512×512 soup cannot grow a
+  ghost halo of chunks at negative coordinates. Writes during `step` go through `Chunk.set` +
+  `finishWrite`, not `grid.set`, so the inner loop does not re-normalise every changed cell.
+- Snapshot/restore lives here because the determinism criterion needs it; P0-E-4 will prove
+  structured-clone / transferable round-trips. Turmite rules throw — they are not a per-cell CA.
+- The ≥60 steps/sec floor is asserted in the unit suite (warm, then 60 timed steps). P0-I-4
+  will commit the harness baseline the CI gate compares against.
 **Acceptance criteria**
-- [ ] All ADR-004 oracle tests pass, including R-pentomino → 1103 generations / 116 cells and acorn → 5206 / 633.
-- [ ] Allocation test: run 1,000 Conway steps on a stable oscillator field and assert heap growth < 1 MB.
-- [ ] Determinism test: two `Simulation` instances with the same seed produce byte-identical snapshots at tick 5,000.
-- [ ] Bench: ≥ 60 steps/sec on a 512×512 50%-density soup (README §3.6 Phase 0 floor).
+- [x] All ADR-004 oracle tests pass, including R-pentomino → 1103 generations / 116 cells and acorn → 5206 / 633.
+- [x] Allocation test: run 1,000 Conway steps on a stable oscillator field and assert heap growth < 1 MB.
+  (Still-life block field, which is the stronger "nothing happens" case of a stable oscillator field.)
+- [x] Determinism test: two `Simulation` instances with the same seed produce byte-identical snapshots at tick 5,000.
+- [x] Bench: ≥ 60 steps/sec on a 512×512 50%-density soup (README §3.6 Phase 0 floor).
 
 #### - [ ] P0-E-2 · Boundary modes
 **Depends on:** P0-E-1 · **Files:** `src/engine/simulation.ts`, `src/engine/grid/coords.ts`

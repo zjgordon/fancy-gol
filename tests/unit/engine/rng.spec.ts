@@ -74,4 +74,16 @@ describe('Mulberry32', () => {
     // reject uniformity at p > 0.01.
     expect(chiSquare).toBeLessThan(30.578);
   });
+
+  it('reset() restores a snapshotted state and replays the same sequence', () => {
+    const rng = new Mulberry32(99);
+    rng.next();
+    rng.next();
+    const saved = rng.state;
+    const a = rng.next();
+    const b = rng.next();
+    rng.reset(saved);
+    expect(rng.next()).toBe(a);
+    expect(rng.next()).toBe(b);
+  });
 });

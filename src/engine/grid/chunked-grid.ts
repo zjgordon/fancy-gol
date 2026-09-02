@@ -12,6 +12,7 @@ import { DEAD, type ChunkView, type GridView, type Rect, type StateId } from '..
 import { Chunk } from './chunk';
 import {
   CHUNK_SIZE,
+  chunkToWorld,
   localIndex,
   normalize,
   packChunk,
@@ -87,11 +88,34 @@ export class ChunkedGrid {
   }
 
   private markActive(cx: number, cy: number): void {
+    const [ox, oy] = chunkToWorld(cx, cy);
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
-        this.activeChunks.add(packChunk(cx + dx, cy + dy));
+        const norm = normalize(
+          ox + dx * CHUNK_SIZE,
+          oy + dy * CHUNK_SIZE,
+          this.boundary,
+          this.width,
+          this.height,
+        );
+        if (norm === null) continue;
+        const [ncx, ncy] = worldToChunk(norm[0], norm[1]);
+        this.activeChunks.add(packChunk(ncx, ncy));
       }
     }
+  }
+
+  /**
+   * After a Simulation step has written a chunk via `Chunk.set` (not `grid.set`),
+   * update the empty-hysteresis book and the next-tick work list.
+   */
+  finishWrite(key: number, includeNeighbors: boolean): void {
+    const chunk = this.chunks.get(key);
+    if (!chunk) return;
+    if (includeNeighbors) this.markActive(unpackChunkX(key), unpackChunkY(key));
+    else this.activeChunks.add(key);
+    if (chunk.population === 0) this.emptySince.set(key, this.currentTick);
+    else this.emptySince.delete(key);
   }
 
   /**
@@ -155,6 +179,26 @@ export class ChunkedGrid {
     return chunk ? this.toChunkView(key, chunk) : undefined;
   }
 
+  /** The raw `Chunk` for a packed key, or `undefined` if that page is not allocated. */
+  rawChunk(key: number): Chunk | undefined {
+    return this.chunks.get(key);
+  }
+
+  /** Allocate (or return) the chunk at `key`. Used when a previously-empty neighbour is born into. */
+  ensureChunk(key: number): Chunk {
+    let chunk = this.chunks.get(key);
+    if (!chunk) {
+      chunk = Chunk.acquire();
+      this.chunks.set(key, chunk);
+    }
+    return chunk;
+  }
+
+  /** Visit every allocated chunk. The callback must not retain the `Chunk` reference past the step. */
+  forEachRawChunk(fn: (key: number, chunk: Chunk) => void): void {
+    for (const [key, chunk] of this.chunks) fn(key, chunk);
+  }
+
   forEachChunkInRect(rect: Rect, fn: (chunk: ChunkView) => void): void {
     const [cx0, cy0] = worldToChunk(rect.x, rect.y);
     const [cx1, cy1] = worldToChunk(rect.x + rect.width - 1, rect.y + rect.height - 1);
@@ -164,6 +208,14 @@ export class ChunkedGrid {
         if (view) fn(view);
       }
     }
+  }
+
+  /** Release every allocated chunk. Used by `Simulation.restore` to load a snapshot onto a clean grid. */
+  clear(): void {
+    for (const chunk of this.chunks.values()) Chunk.release(chunk);
+    this.chunks.clear();
+    this.emptySince.clear();
+    this.activeChunks.clear();
   }
 
   /** A read-only, no-copy façade for the renderer and stats engine. */

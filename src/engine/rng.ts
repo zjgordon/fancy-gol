@@ -40,4 +40,9 @@ export class Mulberry32 {
     t = (t ^ (t >>> 15)) >>> 0;
     return new Mulberry32(t);
   }
+
+  /** Restore a previously snapshotted {@link state}. Used by `Simulation.restore`. */
+  reset(state: number): void {
+    this.a = state >>> 0;
+  }
 }
