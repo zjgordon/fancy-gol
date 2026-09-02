@@ -37,7 +37,10 @@ import {
   type Snapshot,
   type StateId,
   type StateMigration,
+  type TickStats,
 } from './types';
+
+export type { TickStats } from './types';
 
 const DEFAULT_SEED = 0x9e3779b9;
 const INITIAL_CHANGE_CAP = 1024;
@@ -56,17 +59,6 @@ export interface SimulationOptions {
   readonly history?: false | true | HistoryJournalOptions;
   /** Injected clock for `TickStats.stepMicros`. Defaults to a zero-delta stub. */
   readonly clock?: Clock;
-}
-
-export interface TickStats {
-  tick: number;
-  population: number;
-  perState: Uint32Array;
-  births: number;
-  deaths: number;
-  transitions: number;
-  activeChunks: number;
-  stepMicros: number;
 }
 
 const ZERO_CLOCK: Clock = { now: () => 0 };
