@@ -28,5 +28,9 @@ export default defineConfig({
     // reachable through Docker's published port (docker/docker-compose.dev.yml, P0-I-3). Harmless
     // for a bare `npm run dev` too: localhost still resolves to it either way.
     host: true,
+    // Vite 8 checks the Host header and 403s anything other than localhost. Docker users (and
+    // this sandbox) reach the published port via a hostname or LAN IP, so allow every host.
+    // Same pairing as `host: true`: a dev-server concern, never the production image.
+    allowedHosts: true,
   },
 });

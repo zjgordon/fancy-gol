@@ -1,5 +1,8 @@
+name: fancy-gol
+
 services:
   app:
+    image: fancy-gol:latest
     build:
       context: ..
       dockerfile: docker/Dockerfile

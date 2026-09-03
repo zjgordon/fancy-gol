@@ -262,14 +262,17 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Node's own `fetch`) and a dev image running `npm run dev` against a bind-mounted source tree.
   Required a compiled server, which didn't exist yet: added `tsconfig.server.json` and a
   `build:server` script (folded into `build`, so `npm run verify` now also catches a broken server
-  compile), and a `start` script. `vite.config.ts`'s dev server now binds all interfaces
-  (`host: true`), needed for the dev container's published port to reach it. **Acceptance criteria
-  marked `[!]` blocked, not `[x]`**: this sandbox's Docker daemon cannot build or pull any image at
-  all (confirmed systemic — even a one-line sanity Dockerfile and a bare `docker pull` fail
-  identically), so none of the three ACs could be exercised in a real container. Verified as much as
-  possible without one: the exact production-only `npm ci --omit=dev` dependency set (69 packages,
-  4.6 MB, zero dev tooling) runs the compiled server correctly end-to-end, including a clean 5ms
-  `SIGTERM` exit. (P0-I-3)
+  compile), and a `start` script. `vite.config.ts`'s dev server binds all interfaces (`host: true`)
+  and allows every `Host` header (`allowedHosts: true`) so Vite 8 does not 403 the published port
+  when reached by hostname rather than `localhost`. Compose files set explicit project names and
+  image tags (`fancy-gol:latest` / `fancy-gol:dev`) so building one does not overwrite the other.
+  **Revalidated 2026-09-03 against a working Docker daemon:** `docker compose -f docker/docker-compose.yml
+  up` serves the Gosper gun on `:8080`; production image 241 MB (`docker images`), runs as
+  `uid=1000(node)`, reports `healthy`. The remaining criterion — bind-mount HMR via
+  `docker-compose.dev.yml` — stays `[!]` blocked: this sandbox talks to a remote dind
+  (`DOCKER_HOST=tcp://sandbox-dind:2376`) that cannot see the workspace, so the bind mount overlays
+  an empty directory. `Dockerfile.dev` itself was proven in a real container without that mount
+  (Vite HMR reloads on an in-container edit). (P0-I-3)
 
 ### Fixed
 
