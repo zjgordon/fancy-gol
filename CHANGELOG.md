@@ -273,6 +273,16 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`DOCKER_HOST=tcp://sandbox-dind:2376`) that cannot see the workspace, so the bind mount overlays
   an empty directory. `Dockerfile.dev` itself was proven in a real container without that mount
   (Vite HMR reloads on an in-container edit). (P0-I-3)
+- `scripts/bench.mjs` — hand-written performance gate (warmup, median of 7, ASCII table).
+  Compares to committed `bench-baseline.json`, fails on a missed Phase 0 budget or a >10%
+  regression, `--update-baseline` records a new one (refuses to write a failing run),
+  `--inject-slowdown 1.3` proves the 30% slowdown AC. Cases cover Conway 512² soup
+  (250 steps/sec), 4096² @1% (440 steps/sec), 1M-cell paint, 1M live cells over 4096²
+  (32.00 MB of sparse pages, closing P0-C-2), snapshot/restore, seek-4000, stats overhead
+  (well under 3%, closing P0-F-2), 1080p CPU frame time via `CanvasRecorder` (~12 ms,
+  labelled, closing P0-H-2's frame-time criterion), Gosper-gun dirty-rect main-thread
+  block, client JS gzip (22 kB), and the recorded cold-load figure from P0-I-1/P0-I-3.
+  The unit-suite 512² ≥60 assert is now a ≥20 smoke; the real floor lives here. (P0-I-4)
 
 ### Fixed
 

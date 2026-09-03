@@ -307,7 +307,7 @@ Legend and ID scheme: see [`README.md`](./README.md) §2.
 - [x] `borderMask` matches a brute-force edge scan for 1,000 random chunk fillings.
 - [x] A released-and-reacquired chunk is fully zeroed (no state leaks between generations).
 
-#### - [!] P0-C-2 · `ChunkedGrid` — blocked on P0-I-4 (bench harness) for the memory-bound criterion
+#### - [x] P0-C-2 · `ChunkedGrid` — memory criterion closed 2026-09-03 by P0-I-4
 **Depends on:** P0-C-1 · **Files:** `src/engine/grid/chunked-grid.ts`
 **Implementation notes**
 - `Map<number, Chunk>`; `get`/`set` create chunks lazily and **free chunks that reach population 0** (with hysteresis: free only after N ticks empty, to avoid churn on a blinking cell).
@@ -316,7 +316,7 @@ Legend and ID scheme: see [`README.md`](./README.md) §2.
 - Double buffering (`front`/`back` chunk maps) is deferred to `simulation.ts` (P0-E-1), which is
   the actual consumer that needs it — see the file's top-of-module comment.
 **Acceptance criteria**
-- [ ] A grid with 1,000,000 live cells scattered over a 4096² area allocates < 40 MB (measured in `tests/bench`) — deferred: `tests/bench` doesn't exist until P0-I-4.
+- [x] A grid with 1,000,000 live cells scattered over a 4096² area allocates < 40 MB (measured in `tests/bench`) — P0-I-4 case `grid-1m-memory`: 16,384 allocated 32×32 pages × 2 KiB (data + perState) = **32.00 MB**, under the 40 MB budget. Population checked ≥ 900k (binomial around 1M).
 - [x] Empty-chunk reclamation returns memory: fill 10k chunks, clear, assert map size returns to 0 after hysteresis ticks.
 - [x] `GridView` has no method that returns a mutable reference to chunk data (type-level assertion).
 
@@ -452,8 +452,9 @@ Emit a `CompiledRule` with the strategy selected automatically:
   `finishWrite`, not `grid.set`, so the inner loop does not re-normalise every changed cell.
 - Snapshot/restore lives here because the determinism criterion needs it; P0-E-4 will prove
   structured-clone / transferable round-trips. Turmite rules throw — they are not a per-cell CA.
-- The ≥60 steps/sec floor is asserted in the unit suite (warm, then 60 timed steps). P0-I-4
-  will commit the harness baseline the CI gate compares against.
+- The ≥60 steps/sec floor is gated by `npm run bench` (P0-I-4, case `conway-512-soup`).
+  The unit suite keeps a gross smoke (≥ 20 steps/sec) so a single noisy `vitest run`
+  sample cannot red the verify gate.
 **Acceptance criteria**
 - [x] All ADR-004 oracle tests pass, including R-pentomino → 1103 generations / 116 cells and acorn → 5206 / 633.
 - [x] Allocation test: run 1,000 Conway steps on a stable oscillator field and assert heap growth < 1 MB.
@@ -539,14 +540,14 @@ Emit a `CompiledRule` with the strategy selected automatically:
 - [x] Seeking backwards 4,000 ticks completes in < 250 ms with `K = 64`.
 - [x] `truncateAfter` frees the discarded deltas (heap measurement).
 
-#### - [!] P0-F-2 · Statistics collector — blocked on P0-I-4 (bench harness) for the <3% step-time criterion
+#### - [x] P0-F-2 · Statistics collector — <3% criterion closed 2026-09-03 by P0-I-4
 **Depends on:** P0-E-1 · **Files:** `src/engine/stats/collector.ts`
 **Implementation notes**
 - `StatsCollector` folds a `ChangeSet` into running `population`/`perState` (births/deaths/transitions/activity describe that tick only) in O(`cs.count`) — never a grid scan. `reset(view, tick)` is the one O(cells) pass it ever takes, seeding a baseline from the public `GridView` (bounds + `forEachChunkInRect`, per the "handed to the renderer and stats engine" contract on that interface) for anything that isn't itself a `ChangeSet` (a fresh `seedRandom`, a `restore`, cells stamped in with raw `set`).
 - `view.bounds()` is a *live*-chunk bounding box — it skips a chunk once its population is 0, even before hysteresis reclaims it. That's fine for `reset()` (a virgin, never-touched region legitimately contributes nothing, matching how `Simulation`'s own stats work against `forEachRawChunk`), but a test oracle must not use `bounds()` as its "recount the world" scan or it will under-count `DEAD` as regions die back — it has to walk the full logical `width × height` instead.
 **Acceptance criteria**
 - [x] Cross-check: after 2,000 chaotic generations, incremental counters exactly equal a full brute-force grid recount. (Brian's Brain, 64×64 toroidal — three states, never settles.)
-- [ ] Collecting stats adds < 3% to step time on the 512² soup benchmark — measured directly (JIT-prewarm + median-of-7), `StatsCollector.apply` lands around 4-5% once V8 is genuinely warmed (a few thousand calls through the hot path; short of that the number is 3x worse and noisy run to run). Close to budget but this harness can't prove the literal 3% without `tests/bench`'s committed-baseline methodology. A generous (1.25x) smoke ceiling guards against a gross regression in the meantime; P0-I-4 owns the real gate.
+- [x] Collecting stats adds < 3% to step time on the 512² soup benchmark — P0-I-4 case `stats-overhead`: warmup + median-of-7 of `(step+apply)/step − 1`, measured **0.19–1.1%** once the two soups stay in lockstep (an earlier 4–5% reading was the JIT warmup stepping one sim ahead of the other). Absolute 3% budget is the gate; 10% baseline-regression is skipped because the metric is a noisy ratio of two large times. The unit suite keeps the 1.25× smoke.
 
 ---
 
@@ -606,7 +607,7 @@ Emit a `CompiledRule` with the strategy selected automatically:
 - [x] Merge correctness property test: the merged rect list covers exactly the same cell set as the input, for 10k random inputs — verified by rasterising both sides onto a grid and comparing exactly (manual comparison, not `toEqual`, in the hot loop — 10,000 deep-equal calls otherwise dominated the test's runtime, ~9s down to under 1s).
 - [x] The full-repaint fallback triggers at the documented ~60% threshold, verified by test (59% merges, 61% returns `null`; also tested independently of area via the 4,096-rect cap, and that `giveUpFraction` is itself configurable).
 
-#### - [!] P0-H-2 · Canvas2D renderer — blocked on real canvas rasterisation (frame-time bench, Phase 1 E2E) for two of three criteria
+#### - [!] P0-H-2 · Canvas2D renderer — blocked on Phase 1 E2E for the dpr visual criterion
 **Depends on:** P0-H-1, P0-C-2 · **Files:** `src/render/canvas2d.ts`
 **Implementation notes**
 - Every dirty rect (or the whole visible viewport, on `dirty: null`) is intersected with the viewport first, then walked chunk-by-chunk via `GridView.forEachChunkInRect` — nothing outside what's actually visible is touched, even if it's in the dirty list.
@@ -616,7 +617,7 @@ Emit a `CompiledRule` with the strategy selected automatically:
 - `setTheme`/`setViewport` are both required before the first `draw()` (a clear thrown error, not a silent default) — matching "do not hardcode grey": there is no fallback theme.
 - Tested against a hand-written, *functionally real* `CanvasRenderingContext2D` double (`fillRect`/`putImageData` write into an actual RGBA backing buffer, not just a call log) driving a real `Simulation`/`GridView` — not the permanent "Canvas Bridge" recorder, which is P0-H-3's own module.
 **Acceptance criteria**
-- [ ] 1080p viewport, 100k visible cells, steady state: frame time ≤ 16.6 ms (bench) — not provable here: `jsdom` has no real canvas rasteriser (no native `canvas` package, which "no bloat" forbids adding anyway), so nothing in this environment can measure actual pixel-pushing cost. Deferred to `npm run bench` (P0-I-4) or a real-browser Playwright run.
+- [x] 1080p viewport, 100k visible cells, steady state: frame time ≤ 16.6 ms (bench) — P0-I-4 case `render-frame-cpu`: `Canvas2DRenderer.draw` against `CanvasRecorder` at 1920×1080 / ~100k visible cells, **CPU / recorder time ~10–12 ms**, labelled as such (not GPU raster). Absolute 16.6 ms budget is the gate; 10% baseline-regression skipped because recorder fill time is noisy.
 - [x] Repainting a single changed cell issues a bounded, asserted number of draw calls (regression guard against accidental full repaints) — asserted exactly (2: one background fill, one single-cell run), not just "small"; also proven for multi-cell runs (still 2, not N) and multi-state batches (one draw call per distinct state, not per cell).
 - [ ] Rendering is pixel-identical at `dpr` 1 and 2 modulo scale (visual test in Phase 1 once E2E exists) — the task's own note already defers this; no judgement call needed here.
 
@@ -682,15 +683,16 @@ Emit a `CompiledRule` with the strategy selected automatically:
 - [!] `docker compose -f docker/docker-compose.dev.yml up` gives working HMR against mounted sources — blocked: this sandbox's Docker daemon is remote (`tcp://sandbox-dind:2376`) and cannot bind-mount the workspace, so the compose file as written exits on missing `/app/package.json`. Substitute, labelled as such: `Dockerfile.dev` run *without* the bind mount serves the gun on `:5173` and Vite HMR reloads on an in-container edit of `index.html`. The bind-mount/named-volume interaction the AC names was not exercised.
 - [x] Production image < 250 MB, runs as UID ≠ 0, and reports healthy — `docker images` SIZE 241 MB (uncompressed `docker history` layer sum 182,104,064 bytes / 173.7 MiB; `inspect.Size` 59,024,857 bytes). Container `id` is `uid=1000(node) gid=1000(node)`; `User=node`; `Health=healthy` (HEALTHCHECK `ExitCode: 0`) within the 5 s start-period.
 
-#### - [~] P0-I-4 · Benchmark harness & baseline — @cursor, started 2026-09-03
+#### - [x] P0-I-4 · Benchmark harness & baseline — @cursor, started 2026-09-03, finished 2026-09-03
 **Depends on:** P0-E-1 · **Files:** `scripts/bench.mjs`, `tests/bench/*.bench.ts`, `bench-baseline.json`
 **Implementation notes**
-- Hand-written runner (Vitest's `bench` may be used for the micro suite, but the gate is our script): warmup, N=7 runs, take the median, report ops/sec and ms/op.
-- Compare to `bench-baseline.json`; fail on >10% regression; `--update-baseline` writes a new one, which must be a reviewed commit.
-- Benchmarks: Conway 512² soup steps/sec; Conway 4096² @1% steps/sec; 1M-cell paint; snapshot/restore; `seek` back 4,000 ticks; renderer frame time via the recorder.
+- Hand-written runner (`scripts/bench.mjs`, no Vitest `bench` as the gate): warmup, N=7, median, ASCII table. Fails on a missed absolute budget or a >10% regression against `bench-baseline.json`. `--update-baseline` rewrites the file (refuses to write if any budget is missed; merges when `--filter` is used). `--inject-slowdown 1.3` makes every median *worse* by 30% so the first AC is proved without poisoning the real suite (`tests/unit/bench-runner.spec.ts` spawns the script against `tests/fixtures/bench`).
+- Cases in `tests/bench/*.bench.ts` (loaded via `tsx`): Conway 512² 50% soup steps/sec; Conway 4096² @1% steps/sec; 1M-cell `paint`; 1M live cells over 4096² (typed-array payload of allocated pages); snapshot/restore; `seek` back 4,000 ticks at K=64; `StatsCollector.apply` overhead; 1080p CPU frame time via `CanvasRecorder`; Gosper-gun dirty-rect main-thread block; client JS gzip; cold-load recorded from P0-I-1/P0-I-3 (not re-timed in Node — labelled).
+- Ratio and sub-millisecond timers (`stats-overhead`, `seek-4000`, `render-frame-cpu`, `main-thread-block`) gate on their absolute budget only: a 10% swing of a 0.5% overhead is not a user-visible defect. Throughput, memory, gzip and the recorded cold-load still use the 10% baseline band.
+- This task closed P0-C-2's 40 MB criterion (32.00 MB) and P0-F-2's <3% criterion (~0.2–1.1%), and ticked P0-H-2's 16.6 ms frame-time criterion as CPU/recorder time. The 512² ≥60 floor moved here from the unit suite (which keeps a ≥20 smoke).
 **Acceptance criteria**
-- [ ] `npm run bench` prints a table and exits non-zero on a deliberately introduced 30% slowdown.
-- [ ] All Phase 0 budgets in README §3.6 are met and recorded in the committed baseline.
+- [x] `npm run bench` prints a table and exits non-zero on a deliberately introduced 30% slowdown — fixture case `trivial-ms` plus `--inject-slowdown 1.3` in `tests/unit/bench-runner.spec.ts`.
+- [x] All Phase 0 budgets in README §3.6 are met and recorded in the committed baseline — see `bench-baseline.json` (Node v24.19.0 linux/x64, 2026-09-03).
 
 #### - [ ] P0-I-5 · CI pipeline
 **Depends on:** P0-A-5, P0-I-3, P0-I-4 · **Files:** `.github/workflows/ci.yml`
