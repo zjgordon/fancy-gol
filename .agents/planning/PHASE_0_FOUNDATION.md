@@ -682,7 +682,7 @@ Emit a `CompiledRule` with the strategy selected automatically:
 - [!] `docker compose -f docker/docker-compose.dev.yml up` gives working HMR against mounted sources — blocked: this sandbox's Docker daemon is remote (`tcp://sandbox-dind:2376`) and cannot bind-mount the workspace, so the compose file as written exits on missing `/app/package.json`. Substitute, labelled as such: `Dockerfile.dev` run *without* the bind mount serves the gun on `:5173` and Vite HMR reloads on an in-container edit of `index.html`. The bind-mount/named-volume interaction the AC names was not exercised.
 - [x] Production image < 250 MB, runs as UID ≠ 0, and reports healthy — `docker images` SIZE 241 MB (uncompressed `docker history` layer sum 182,104,064 bytes / 173.7 MiB; `inspect.Size` 59,024,857 bytes). Container `id` is `uid=1000(node) gid=1000(node)`; `User=node`; `Health=healthy` (HEALTHCHECK `ExitCode: 0`) within the 5 s start-period.
 
-#### - [ ] P0-I-4 · Benchmark harness & baseline
+#### - [~] P0-I-4 · Benchmark harness & baseline — @cursor, started 2026-09-03
 **Depends on:** P0-E-1 · **Files:** `scripts/bench.mjs`, `tests/bench/*.bench.ts`, `bench-baseline.json`
 **Implementation notes**
 - Hand-written runner (Vitest's `bench` may be used for the micro suite, but the gate is our script): warmup, N=7 runs, take the median, report ops/sec and ms/op.
