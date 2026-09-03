@@ -268,11 +268,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   image tags (`fancy-gol:latest` / `fancy-gol:dev`) so building one does not overwrite the other.
   **Revalidated 2026-09-03 against a working Docker daemon:** `docker compose -f docker/docker-compose.yml
   up` serves the Gosper gun on `:8080`; production image 241 MB (`docker images`), runs as
-  `uid=1000(node)`, reports `healthy`. The remaining criterion — bind-mount HMR via
-  `docker-compose.dev.yml` — stays `[!]` blocked: this sandbox talks to a remote dind
-  (`DOCKER_HOST=tcp://sandbox-dind:2376`) that cannot see the workspace, so the bind mount overlays
-  an empty directory. `Dockerfile.dev` itself was proven in a real container without that mount
-  (Vite HMR reloads on an in-container edit). (P0-I-3)
+  `uid=1000(node)`, reports `healthy`. **Bind-mount HMR closed the same day** after the sandbox
+  remounted the agent worktree into dind at `/workspace`: `docker compose -f docker/docker-compose.dev.yml
+  up --build` serves Vite on `:5173`; editing `src/client/index.html` on the agent produced Vite
+  `page reload index.html` and Playwright at `http://sandbox-dind:5173/` showed the new HUD
+  label with no image rebuild. Published ports still listen on the dind host, not this shell's
+  `127.0.0.1`. (P0-I-3)
 - `scripts/bench.mjs` — hand-written performance gate (warmup, median of 7, ASCII table).
   Compares to committed `bench-baseline.json`, fails on a missed Phase 0 budget or a >10%
   regression, `--update-baseline` records a new one (refuses to write a failing run),

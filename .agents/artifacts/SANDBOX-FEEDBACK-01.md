@@ -4,19 +4,31 @@
 **Repo:** `fancy-gol` (cellular automata simulator). Branch at writing: `phase/0-foundation`.
 **Date:** 2026-09-03.
 **Recorded by:** agent session on host `5a45f4c2adb0` (user `abc`, uid 1000).
+**Status (later the same day):** §3 is **cleared**. A sandbox remount made
+`/workspace/github/fancy-gol` visible to dind; P0-I-3 bind-mount HMR is now `[x]`.
+§4 (published ports on dind, not agent loopback) and §6 still apply.
 
 This note collects sandbox quirks hit while building Phase 0, with enough topology and
 reproduction that you can decide what is fixable. The product compose files are ordinary;
-the bind-mount failure is environmental.
+the original bind-mount failure was environmental.
 
 ---
 
 ## 1. What we need from you
 
-The one item that currently **blocks a named acceptance criterion** is **§3
-(P0-I-3 bind-mount HMR)**. Everything else is friction, a false localhost, or a
-footgun. If you only fix one thing, make the agent workspace visible to `sandbox-dind`
-at the same absolute path the agent uses (`/workspace/...`).
+**Update 2026-09-03 (evening):** the preferred fix in this section — make the agent
+worktree visible to `sandbox-dind` at `/workspace/...` — appears to have landed.
+`docker run -v /workspace/github/fancy-gol:/probe` now sees `package.json`, and
+`docker compose -f docker/docker-compose.dev.yml up` gives Vite HMR against an
+agent-worktree edit of `src/client/index.html` (Playwright at
+`http://sandbox-dind:5173/`). P0-I-3 is closed. Remaining asks are §4 (proxy
+published ports onto the agent’s `127.0.0.1`) and §6 (Node 24 vs `.nvmrc` 22,
+`npm_config_devdir` warning, CI not visible without a PR).
+
+*Original ask, kept for the record:* the item that **blocked** a named acceptance
+criterion was **§3 (P0-I-3 bind-mount HMR)**. If you only fixed one thing, making
+the agent workspace visible to `sandbox-dind` at the same absolute path the agent
+uses (`/workspace/...`) was the right one.
 
 ---
 
@@ -97,6 +109,12 @@ $ docker run --rm -v /workspace/github/fancy-gol:/probe alpine:3.20 \
     sh -c 'ls /probe; test -f /probe/package.json && echo HAS || echo NO'
 # → empty aside from leftover node_modules (see §3.4); NO package.json
 ```
+
+**Resolved the same evening.** The same probe now prints `HAS_PACKAGE_JSON` and a 33-entry
+worktree listing. `docker compose -f docker/docker-compose.dev.yml up --build` starts Vite;
+an edit of `src/client/index.html` on the **agent** worktree logs `page reload index.html`
+and Playwright at `http://sandbox-dind:5173/` shows the new HUD row. Compose file unchanged.
+The historical reproduction below is kept so the failure mode stays searchable.
 
 The host-side path the agent itself is mounted from is also invisible to dind:
 
@@ -267,6 +285,8 @@ only because revalidation against this dind is how we caught it.
 ## 7. What already works (so you don’t over-fix)
 
 - `docker compose -f docker/docker-compose.yml build && up` against this dind.
+- `docker compose -f docker/docker-compose.dev.yml up` with HMR against the mounted
+  agent worktree (cleared 2026-09-03 evening).
 - Production image size, non-root, HEALTHCHECK.
 - Playwright MCP → `http://sandbox-dind:<port>` (Chromium, `DISPLAY=:1.0`).
 - `npm run verify`, `npm run bench`, in-process tests, `tsx` server spawn on
@@ -278,11 +298,11 @@ only because revalidation against this dind is how we caught it.
 
 ## 8. Impact on remaining work
 
-| Work | Impact if §3 is not fixed |
+| Work | After the remount (2026-09-03 evening) |
 |---|---|
-| Close P0-I-3 | Stays `[!]` on bind-mount HMR. Phase 0 DoD “`docker compose up`” is already true for **prod** compose. |
-| Phase 1 Playwright against `docker-compose.dev.yml` | Same empty `/app`. Will need the same labelled substitute or a real shared mount. |
-| Agents rewriting compose to “work here” | Please don’t. Keep the product file honest. |
+| Close P0-I-3 | **Done.** Bind-mount HMR ticked `[x]`. Prod compose was already green. |
+| Phase 1 Playwright against `docker-compose.dev.yml` | Unblocked on the mount. Still use `http://sandbox-dind:5173/`, not agent localhost (§4). |
+| Agents rewriting compose to “work here” | Still don’t. The product file was honest the whole time. |
 
 ---
 
