@@ -32,7 +32,8 @@
       "@render/*": ["src/render/*"],
       "@ui/*": ["src/ui/*"],
       "@themes/*": ["src/themes/*"],
-      "@worker/*": ["src/worker/*"]
+      "@worker/*": ["src/worker/*"],
+      "@server/*": ["src/server/*"]
     }
   },
   "include": ["src", "tests", "scripts/*.d.mts", "vite.config.ts", "vitest.config.ts"],

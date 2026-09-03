@@ -14,6 +14,7 @@ export default defineConfig({
       '@ui': alias('./src/ui'),
       '@themes': alias('./src/themes'),
       '@worker': alias('./src/worker'),
+      '@server': alias('./src/server'),
     },
   },
   test: {

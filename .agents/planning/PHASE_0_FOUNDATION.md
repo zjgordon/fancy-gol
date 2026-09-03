@@ -653,13 +653,19 @@ Emit a `CompiledRule` with the strategy selected automatically:
 - [x] Idle (paused) CPU usage is effectively zero — the rAF loop must not spin when nothing changed — true by construction (see implementation notes); confirmed empirically by pausing and observing the tick readout stay frozen (no further `frame` events, hence no further rAF requests) across a multi-second wait.
 - [x] No console errors or warnings — confirmed via Playwright's console listener across boot, play, pause, and reset (including the empty-world edge case above once fixed); a stray `favicon.ico` 404 found during the first pass was closed with `<link rel="icon" href="data:,">`.
 
-#### - [ ] P0-I-2 · Express server skeleton
+#### - [x] P0-I-2 · Express server skeleton — @claude, started 2026-09-03, finished 2026-09-03
 **Depends on:** P0-A-1 · **Files:** `src/server/app.ts`, `src/server/index.ts`
-**Implementation notes** `createApp()` returns an app without listening, so tests can drive it in-process. Serves `dist/client` with correct cache headers (hashed assets immutable, `index.html` no-store) and implements `GET /api/health`. Graceful SIGTERM shutdown. **No API routes yet** — Phase 1 owns those.
+**Implementation notes**
+- `createApp()` (`src/server/app.ts`) builds and returns the Express app without listening, so tests drive it fully in-process — a real `http.Server` on an ephemeral port plus plain `fetch`, no extra test-only HTTP client dependency (`supertest` et al. aren't in the declared dependency surface, and didn't need to be). `src/server/index.ts` is the thin real-environment adapter that actually calls `.listen()`, the same split `worker/handler.ts`/`worker/sim.worker.ts` already established — and it's excluded from coverage by the existing `src/**/index.ts` rule, by design.
+- ADR-002's fuller `/api/health` contract (`{ ok, version, uptime }`) is implemented, a superset of this task's own AC (`{ ok: true, version }`) — the ADR is binding, the AC is a minimum bar, not a whitelist.
+- Cache headers: `express.static(distDir, { index: false, ... })` serves everything except `index.html` (which gets its own handler); a `setHeaders` hook adds `Cache-Control: public, max-age=31536000, immutable` only for paths under `assets/` (Vite's content-hashed output — safe to cache forever). `index.html` itself always gets `Cache-Control: no-store`, since it's the one file whose content (which hashed assets it points at) changes on every deploy.
+- Unknown `/api/*` paths hit a dedicated `app.use('/api', ...)` 404 returning JSON, registered *before* the final catch-all so an API client never has to sniff HTML out of a 404. Everything else falls through to the SPA-shell handler, which also 404s as JSON (not an unhandled `sendFile` error) if `index.html` itself is missing — a broken/incomplete build degrades cleanly rather than crashing the request.
+- Graceful shutdown (`installGracefulShutdown()`) takes the server and its `process`/`exit` dependencies as parameters rather than reaching for the real `process` internally, so the shutdown *policy* (close, wait, force-exit after a timeout, never double-exit) is unit-tested with fakes — covering the timeout-forced-exit path deterministically via `vi.useFakeTimers()`, which a real 5-second wait never could. The literal AC wording ("SIGTERM closes the listener and exits 0 within 5 s") is a statement about the *real* process, though, so `tests/integration/server-process.spec.ts` also spawns the actual `tsx src/server/index.ts` entry point, confirms it's genuinely accepting connections (a real `/api/health` request), sends a real `SIGTERM`, and measures the actual wall-clock exit — proof, not just policy.
+- Manually verified end-to-end against the real `npm run build` output (not just the test fixture): health, asset caching, `index.html` no-store, SPA fallback, unknown-`/api/*` JSON 404, and a clean SIGTERM exit, all curled directly against a running `tsx src/server/index.ts`.
 **Acceptance criteria**
-- [ ] `GET /api/health` returns `{ ok: true, version }` matching `package.json`.
-- [ ] Unknown paths return the SPA shell; unknown `/api/*` paths return a JSON 404, not HTML.
-- [ ] SIGTERM closes the listener and exits 0 within 5 s.
+- [x] `GET /api/health` returns `{ ok: true, version }` matching `package.json` — verified both with an injected version (`createApp({ version })`, for deterministic tests) and with no override, reading `package.json`'s real version.
+- [x] Unknown paths return the SPA shell; unknown `/api/*` paths return a JSON 404, not HTML — both directions tested, plus the missing-`index.html` edge case.
+- [x] SIGTERM closes the listener and exits 0 within 5 s — proved against a real spawned process, not just the shutdown policy's unit tests.
 
 #### - [ ] P0-I-3 · Docker
 **Depends on:** P0-I-2 · **Files:** `docker/Dockerfile`, `docker/Dockerfile.dev`, `docker/docker-compose.yml`, `docker/docker-compose.dev.yml`, `.dockerignore`

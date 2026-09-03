@@ -26,7 +26,7 @@ export const MATRIX = {
   server: ['server', 'engine', 'shared'],
 };
 
-const ALIASES = ['engine', 'shared', 'render', 'ui', 'themes', 'worker'];
+const ALIASES = ['engine', 'shared', 'render', 'ui', 'themes', 'worker', 'server'];
 
 /** Global identifiers forbidden anywhere under src/engine/**. */
 export const FORBIDDEN_ENGINE_GLOBALS = [

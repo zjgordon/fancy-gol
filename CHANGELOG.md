@@ -246,6 +246,16 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   construction. Verified in a real Chromium instance (Playwright) against the Vite dev server —
   Phase 1 hasn't wired up `npm run e2e` yet — since this task's acceptance criteria are about real
   browser behaviour a headless test can't stand in for. (P0-I-1)
+- `src/server/app.ts`/`src/server/index.ts` — the Express server skeleton (ADR-002). `createApp()`
+  serves the built client with correct cache headers (Vite's hashed `assets/` files get
+  `immutable`, `index.html` always `no-store`), implements `GET /api/health` (`{ ok, version,
+  uptime }`), and 404s unknown `/api/*` paths as JSON rather than falling through to the SPA
+  shell's HTML — including when `index.html` itself is missing (a broken/incomplete build degrades
+  to a clean 404 instead of an unhandled error). `installGracefulShutdown()` closes the listener on
+  `SIGTERM`, force-exiting after a timeout if a stuck connection never lets `close()` finish; the
+  policy is unit-tested with fakes (including the timeout path, via fake timers), and the literal
+  "closes within 5s" acceptance criterion is separately proved against a real spawned process sent
+  a real `SIGTERM`. No API routes yet — Phase 1 owns those. (P0-I-2)
 
 ### Fixed
 
