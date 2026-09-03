@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "recorded": "2026-09-03",
+  "node": "fixture",
+  "platform": "test",
+  "note": "Fixture baseline for the 30% slowdown gate test. Not a real machine run.",
+  "tolerance": 0.1,
+  "cases": {
+    "trivial-ms": {
+      "median": 100,
+      "unit": "ms",
+      "budget": 200,
+      "higherIsBetter": false
+    }
+  }
+}

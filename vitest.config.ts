@@ -33,6 +33,7 @@ export default defineConfig({
             'tests/unit/ui/**',
             'tests/unit/render/**',
             'tests/unit/themes/**',
+            'tests/bench/**',
             'src/ui/**',
             'src/render/**',
             'src/themes/**',

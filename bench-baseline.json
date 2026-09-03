@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "recorded": "2026-09-03",
+  "node": "v24.19.0",
+  "platform": "linux x64",
+  "note": "Real machine run. Medians of 7 after per-case warmup. Updating this file is a reviewed commit, never a reflex.",
+  "tolerance": 0.1,
+  "cases": {
+    "client-js-gzip": {
+      "median": 21.8984375,
+      "unit": "kB",
+      "budget": 120,
+      "higherIsBetter": false
+    },
+    "cold-load-recorded": {
+      "median": 48.6,
+      "unit": "ms",
+      "budget": 1500,
+      "higherIsBetter": false
+    },
+    "conway-512-soup": {
+      "median": 248.92597155682245,
+      "unit": "steps/sec",
+      "budget": 60,
+      "higherIsBetter": true
+    },
+    "conway-4096-1pct": {
+      "median": 439.2071818455652,
+      "unit": "steps/sec",
+      "budget": 5,
+      "higherIsBetter": true
+    },
+    "paint-1m": {
+      "median": 39183408.3656421,
+      "unit": "ops/sec",
+      "higherIsBetter": true
+    },
+    "grid-1m-memory": {
+      "median": 32,
+      "unit": "MB",
+      "budget": 40,
+      "higherIsBetter": false
+    },
+    "snapshot-restore": {
+      "median": 1.2464549999995143,
+      "unit": "ms",
+      "higherIsBetter": false
+    },
+    "seek-4000": {
+      "median": 0.23090100000081293,
+      "unit": "ms",
+      "budget": 250,
+      "higherIsBetter": false
+    },
+    "stats-overhead": {
+      "median": 0.19036703318321596,
+      "unit": "%",
+      "budget": 3,
+      "higherIsBetter": false
+    },
+    "render-frame-cpu": {
+      "median": 12.007491999997,
+      "unit": "ms",
+      "budget": 16.6,
+      "higherIsBetter": false
+    },
+    "main-thread-block": {
+      "median": 0.657206000003498,
+      "unit": "ms",
+      "budget": 4,
+      "higherIsBetter": false
+    }
+  }
+}

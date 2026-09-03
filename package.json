@@ -17,7 +17,7 @@
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "e2e": "playwright test",
-    "bench": "node scripts/bench.mjs",
+    "bench": "node --expose-gc --import tsx scripts/bench.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit -p tsconfig.json",

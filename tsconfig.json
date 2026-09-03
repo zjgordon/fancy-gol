@@ -22,6 +22,7 @@
     "noUnusedParameters": true,
 
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "allowJs": false,
     "types": ["vite/client", "node"],
 
