@@ -1,0 +1,19 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    ports:
+      - '5173:5173' # Vite dev server, HMR
+      - '8080:8080' # Express dev server
+    environment:
+      - PORT=8080
+    volumes:
+      - ../:/app
+      # A named volume, mounted on top of the bind mount above, so the container keeps its own
+      # (Linux, matching-arch) node_modules instead of the host's bind-mounted one shadowing it —
+      # the standard Docker Compose pattern for a Node dev container over a live source mount.
+      - node_modules:/app/node_modules
+
+volumes:
+  node_modules:

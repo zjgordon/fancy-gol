@@ -24,5 +24,9 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // `true` binds all interfaces (0.0.0.0), not just localhost — needed so the dev server is
+    // reachable through Docker's published port (docker/docker-compose.dev.yml, P0-I-3). Harmless
+    // for a bare `npm run dev` too: localhost still resolves to it either way.
+    host: true,
   },
 });

@@ -256,6 +256,20 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   policy is unit-tested with fakes (including the timeout path, via fake timers), and the literal
   "closes within 5s" acceptance criterion is separately proved against a real spawned process sent
   a real `SIGTERM`. No API routes yet — Phase 1 owns those. (P0-I-2)
+- `docker/Dockerfile`, `docker/Dockerfile.dev`, `docker/docker-compose{,.dev}.yml`, `.dockerignore`
+  — a three-stage production image (`deps` → `build` → `runtime` on `node:22-alpine`, non-root,
+  `--omit=dev` in the runtime stage, a dependency-free `HEALTHCHECK` against `/api/health` using
+  Node's own `fetch`) and a dev image running `npm run dev` against a bind-mounted source tree.
+  Required a compiled server, which didn't exist yet: added `tsconfig.server.json` and a
+  `build:server` script (folded into `build`, so `npm run verify` now also catches a broken server
+  compile), and a `start` script. `vite.config.ts`'s dev server now binds all interfaces
+  (`host: true`), needed for the dev container's published port to reach it. **Acceptance criteria
+  marked `[!]` blocked, not `[x]`**: this sandbox's Docker daemon cannot build or pull any image at
+  all (confirmed systemic — even a one-line sanity Dockerfile and a bare `docker pull` fail
+  identically), so none of the three ACs could be exercised in a real container. Verified as much as
+  possible without one: the exact production-only `npm ci --omit=dev` dependency set (69 packages,
+  4.6 MB, zero dev tooling) runs the compiled server correctly end-to-end, including a clean 5ms
+  `SIGTERM` exit. (P0-I-3)
 
 ### Fixed
 

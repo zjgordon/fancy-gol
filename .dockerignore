@@ -1,0 +1,19 @@
+# Never needed inside the image; keeping these out of the build context also keeps unrelated
+# edits (docs, tests) from busting Docker's layer cache on `COPY . .`.
+node_modules
+dist
+coverage
+.git
+.github
+.agents
+docs
+tests
+*.log
+.env
+.env.*
+.vscode
+.idea
+.DS_Store
+.playwright-mcp
+playwright-report
+test-results
