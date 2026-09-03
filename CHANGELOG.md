@@ -283,6 +283,18 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   labelled, closing P0-H-2's frame-time criterion), Gosper-gun dirty-rect main-thread
   block, client JS gzip (22 kB), and the recorded cold-load figure from P0-I-1/P0-I-3.
   The unit-suite 512² ≥60 assert is now a ≥20 smoke; the real floor lives here. (P0-I-4)
+- `.github/workflows/ci.yml` — the CI pipeline, four jobs on every push to `main` and every PR:
+  `verify` (typecheck, lint, boundaries, `vitest run --coverage`, then a dashboard-staleness
+  check) and `build` each run on a Node LTS matrix (current `22`, previous `20`, matching
+  `.nvmrc` and the `engines` floor); `bench` runs `npm run bench` against the committed
+  `bench-baseline.json` on Node 22; `docker` builds `docker/Dockerfile`'s production image,
+  runs it, polls `docker inspect`'s health status to `healthy`, and probes `/api/health`
+  directly, always dumping container logs and tearing the container down afterwards. Coverage
+  and the bench baseline are uploaded as artifacts. The three failure-mode acceptance criteria
+  (coverage regression, boundary violation, bench regression) all rest on gates already proven
+  in-repo by P0-A-5's and P0-I-4's own fixtures — CI only wires them in. The `docker` job's
+  build-run-healthcheck sequence was hand-verified end-to-end against this sandbox's remote
+  dind daemon before being committed. (P0-I-5)
 
 ### Fixed
 

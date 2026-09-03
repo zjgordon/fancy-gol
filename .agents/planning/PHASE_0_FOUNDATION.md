@@ -694,13 +694,53 @@ Emit a `CompiledRule` with the strategy selected automatically:
 - [x] `npm run bench` prints a table and exits non-zero on a deliberately introduced 30% slowdown — fixture case `trivial-ms` plus `--inject-slowdown 1.3` in `tests/unit/bench-runner.spec.ts`.
 - [x] All Phase 0 budgets in README §3.6 are met and recorded in the committed baseline — see `bench-baseline.json` (Node v24.19.0 linux/x64, 2026-09-03).
 
-#### - [ ] P0-I-5 · CI pipeline
+#### - [x] P0-I-5 · CI pipeline — @claude, started 2026-09-03, finished 2026-09-03
 **Depends on:** P0-A-5, P0-I-3, P0-I-4 · **Files:** `.github/workflows/ci.yml`
 **Implementation notes** Jobs: `verify` (typecheck, lint, boundaries, unit + coverage), `build`, `bench` (with baseline comparison), `docker` (build + healthcheck the container). Node LTS matrix (current + previous). Cache `~/.npm`. Upload coverage and bench reports as artifacts.
+- `verify` and `build` run as a `node: ['20', '22']` matrix — `22` tracks `.nvmrc`, `20` tracks
+  `package.json`'s `engines` floor; `actions/setup-node`'s `cache: npm` caches `~/.npm` keyed on
+  `package-lock.json`. `verify` runs `typecheck`, `lint`, `boundaries`, then `coverage` (not
+  plain `test`, so the per-directory thresholds in `vitest.config.ts` are the actual gate), and
+  — once, on the Node-22 leg only — `node .agents/scripts/build-dashboard.mjs --check`, so a
+  commit that ticks a checkbox without regenerating the dashboard fails CI (AGENTS.md §5).
+  Coverage reports upload as an artifact per Node version.
+- `bench` runs once on Node 22: `npm run bench` compares live medians against the committed
+  `bench-baseline.json` and fails on a missed absolute budget or a >10% regression, printing the
+  ASCII before/after table (P0-I-4's own gate — CI just invokes it); the baseline file uploads
+  as an artifact for inspection.
+- `docker` builds `docker/Dockerfile`'s production image, runs it detached, polls
+  `docker inspect --format='{{.State.Health.Status}}'` until `healthy` (or fails fast on
+  `unhealthy`/timeout), then separately probes `GET /api/health` with `curl --fail`, and always
+  dumps container logs and removes the container afterward, healthy or not.
+- Runs on `push` to `main` and on every `pull_request`, with `concurrency` cancelling a
+  superseded run on the same ref.
+- **Verification note:** GitHub Actions itself could not be exercised from this sandbox (no
+  workflow run is triggered outside GitHub), so each job's underlying command was verified
+  directly instead. `npm run verify`'s constituent steps (typecheck/lint/boundaries/test/build)
+  and `npm run coverage` were run locally, green (605 tests, coverage thresholds already enforced
+  by `vitest.config.ts`). The boundary checker's `file:line` output on a forbidden-global hit and
+  its exit-nonzero behaviour are proven by the existing `tests/unit/boundaries.spec.ts` fixtures
+  (P0-A-5) — CI adds no new logic there, only wiring. The bench regression/before-after-table
+  behaviour is proven by P0-I-4's own `--inject-slowdown` fixture test. The `docker` job's
+  build → run → poll-healthy → probe `/api/health` → teardown sequence was run by hand against
+  this sandbox's remote dind daemon (`DOCKER_HOST=tcp://sandbox-dind:2376`): image built, container
+  reached `Health=healthy` on the second poll, `curl .../api/health` returned
+  `{"ok":true,"version":"0.1.0","uptime":...}`, and the test container/image were removed after.
+  Ports publish on the dind host rather than this shell's `127.0.0.1` (the same sandbox
+  limitation P0-I-3 recorded) — irrelevant to real GitHub-hosted runners, which run Docker
+  natively.
 **Acceptance criteria**
-- [ ] A PR that drops engine coverage below 95% fails.
-- [ ] A PR that adds a boundary violation fails with the offending `file:line` in the log.
-- [ ] A PR that regresses a benchmark >10% fails with a before/after table.
+- [x] A PR that drops engine coverage below 95% fails — `verify`'s `npm run coverage` step
+  enforces `vitest.config.ts`'s per-directory thresholds (`src/engine/**` at 95/90/95
+  statements/branches/functions); a threshold miss is a non-zero exit, failing the job.
+- [x] A PR that adds a boundary violation fails with the offending `file:line` in the log —
+  `verify`'s `npm run boundaries` step runs `scripts/check-boundaries.mjs`, which prints
+  `` ✗ ${file}:${line}: forbidden global "..." `` for an engine-purity hit (and
+  `` ✗ ${file}: ${layer}/ may not import ... `` for a layering hit) and exits 1; both paths are
+  covered by `tests/unit/boundaries.spec.ts`'s fixtures.
+- [x] A PR that regresses a benchmark >10% fails with a before/after table — the `bench` job's
+  `npm run bench` step is exactly P0-I-4's gate, proven against a deliberate 30% slowdown in
+  `tests/unit/bench-runner.spec.ts`.
 
 #### - [ ] P0-I-6 · Foundational documentation
 **Depends on:** all above · **Files:** `README.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `docs/ruleset-schema.md`
