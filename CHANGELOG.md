@@ -136,6 +136,20 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   accepts `+Infinity` (a real, structured-clone-safe value, not a sentinel string) for "unbounded"
   — `worker/handler.ts` needed no other change, since `1000 / Infinity === 0` already schedules at
   the shortest interval the platform allows. (P1-D-2)
+- Status bar (`src/ui/components/statusbar.ts`): generation, population, auto-generated per-state
+  chips (one per ruleset state, colour sourced from the active theme's palette), cursor world
+  coordinates, the cell state under the cursor, zoom %, fps, step ms, render ms, and a clearly
+  `~`-prefixed client-side memory estimate — never presented as exact, since it reflects only what
+  `FrameGridMirror` has mirrored, not the worker's own `Simulation` memory. Every numeric readout
+  is a fixed-width column so a digit-count change never shifts its label. Throttled to 10 Hz by
+  the caller (`client/main.ts`'s own `setInterval`, not tied to simulation frame delivery — which
+  stops entirely while paused, yet cursor/zoom must keep updating) rather than by the component
+  itself, which just renders whatever `update()` is given, whenever it's called. Cursor tracking
+  needed its own lightweight `pointermove`/`pointerleave` pair on the canvas, since
+  `attachInputRouter` only forwards moves during an active stroke (P1-B-1's documented
+  limitation) — snapped to the cell a paint would target, the same `Math.round` convention
+  `brush.ts`/`fill.ts` already use. `FrameGridMirror` gained a `pageCount` getter for the memory
+  estimate's basis. (P1-D-3)
 
 ## [0.1.0] — 2026-09-04
 

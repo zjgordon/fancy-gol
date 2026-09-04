@@ -403,13 +403,46 @@ wide-shot-to-framed camera move.
 - [x] Above capability the UI clearly shows "target 1000 / actual 340" rather than silently lying — `speed.ts`'s readout renders both numbers unconditionally from independent sources (the requested `targetTps`, the measured `actualTps`), never one derived from the other; proven with exactly that scenario (`speed.spec.ts`, "honestly reflects a rate below target rather than reporting the target"), and the literal string format proven too (`speed.spec.ts`, "renders both target and actual TPS").
 - [x] Every control has an accessible name and a keyboard equivalent — every transport button has visible text (an accessible name by construction) plus a `title` naming its keybinding, and is a registered `sim.*` command so `[`/`]`/`Space`/`.`/`R`/`C`/`N` all reach it for real through the same `CommandBus`/`Keymap` P1-C-1/P1-C-2 built; the speed slider and unbounded toggle carry explicit `aria-label`s and are natively keyboard-operable HTML controls (arrow keys / Tab+Enter) without needing a bespoke global shortcut of their own — proven in `transport.spec.ts`/`speed.spec.ts`.
 
-#### - [ ] P1-D-3 · Status bar & readouts
-**Depends on:** P1-D-1
+#### - [x] P1-D-3 · Status bar & readouts — @claude, started 2026-09-04, finished 2026-09-04
+**Depends on:** P1-D-1 · **Files:** `src/ui/components/statusbar.ts`
 **Implementation notes** Generation, population, per-state counts (auto-generated chips from the ruleset palette), cursor world coordinates, cell state under cursor, zoom %, fps, step ms, render ms, memory estimate. Numbers use tabular figures and are throttled to 10 Hz — a 60 Hz number is unreadable and wastes a frame budget.
+- **Throttling is a caller discipline, not something `statusbar.ts` enforces on itself** — `update()`
+  renders whatever it's given, whenever it's called; `client/main.ts` drives it from its own
+  `setInterval(STATUS_THROTTLE_MS)` (the exported "10 Hz" constant), deliberately *not* tied to
+  `renderFrame`'s delivery cadence — that would both blow past the 10 Hz budget while running fast
+  and go silent entirely while paused, when no frames arrive at all but the cursor/zoom readouts
+  must keep updating regardless.
+- **Cursor tracking needed a listener of its own**: `attachInputRouter` (P1-B-1) only forwards
+  pointer moves *during* an active stroke — no bare-hover stream, a limitation that module's own
+  doc comment already flagged. `main.ts` adds a lightweight, independent `pointermove`/
+  `pointerleave` pair on the canvas purely to track the latest cursor world position (via
+  `camera.screenToWorld`, `Math.round`-snapped to the cell a paint would target — the same
+  convention `brush.ts`/`fill.ts` already use); the throttled tick is what turns that into a
+  render, not the listener itself.
+- **"Cell state under cursor"** reads `mirror.view().get(x, y)` — the client's own `FrameGridMirror`
+  (P0-H-3), not a round-trip to the worker; honest about staleness the same way every other
+  mirror-backed readout in this codebase already is (it reflects the latest *delivered* frame, not
+  a live poll).
+- **"Memory estimate" is client-side and explicitly labelled, never presented as exact** — the
+  inception document's own rule. `FrameGridMirror` gained a `pageCount` getter (`worker/
+  frame-view.ts`); `pageCount * CHUNK_AREA` is what the client has actually mirrored, not a
+  measurement of the worker's own `Simulation` memory (which lives on the other side of the wire
+  and can genuinely differ, e.g. after a reclamation this mirror hasn't been told about). The
+  readout renders with a `~` prefix for exactly this reason.
+- **Per-state chip colours come from the active theme's palette**
+  (`THEME.palette(stateId, 0)` — age 0, a representative "just born" swatch), not a literal in
+  `statusbar.ts` — the component only ever receives a `color: string` per chip and sets it as a
+  CSS custom property (`--gol-chip-color`) for the swatch to read, so it holds no colour literal
+  of its own even provisionally.
+- **Zoom % needed a 100%-reference convention nothing else in the codebase had defined yet** —
+  picked `ui/camera.ts`'s own default `cellSize` (16 CSS px/cell, "however a fresh `Camera`
+  starts") as 100%. Provisional and documented as such (`statusbar.ts`'s own doc comment) — open
+  to revision once a "fit to content"/double-click-zoom affordance gives "100%" a more natural
+  meaning.
 **Acceptance criteria**
-- [ ] No layout shift as digit counts change (fixed-width numerics).
-- [ ] Readout updates cost < 0.3 ms/frame (measured).
-- [ ] Population matches an engine recount exactly at 100 random ticks.
+- [x] No layout shift as digit counts change (fixed-width numerics) — every readout is a `.status-value` span with a reserved `min-width` column (`index.html`) plus the `.row`'s existing `tabular-nums`, so a digit count changing never nudges the label beside it or the panel's own width; real-pixel verification needs a browser and belongs with `P1-H-2`'s visual regression baseline (which doesn't exist yet — the same relocation `P1-D-1`'s own responsive-layout criterion already got). Proven at the level available today: `statusbar.spec.ts` confirms every numeric span carries the class the CSS rule targets.
+- [x] Readout updates cost < 0.3 ms/frame (measured) — measured as CPU dispatch against a real (jsdom) DOM, not browser paint/composite time, the same honest scope `P0-H-2`'s and `P1-A-3`'s own frame-time budgets already use: 2,000 warmed-up `update()` calls against a realistic worst-case state (both chips, cursor and cell populated, large numbers) average well under 0.3 ms each (`statusbar.spec.ts`, skipped under coverage instrumentation, which skews timing).
+- [x] Population matches an engine recount exactly at 100 random ticks — proven directly against a real `Simulation`: `sim.stats.population` (exactly what `frame.stats.population` carries, unmodified, across `worker/handler.ts`'s `copyStats` and into the status bar) equals a brute-force recount of every cell after each of 100 random ticks on a seeded random soup, with zero divergence (`statusbar.spec.ts`). This duplicates the *shape* of `P0-F-2`'s own considerably stronger (2,000-generation) cross-check deliberately — that test proves the engine's invariant; this one is this task's own literal, self-contained evidence.
 
 #### - [ ] P1-D-4 · Ruleset picker
 **Depends on:** P1-D-1, P0-D-5 · **Files:** `src/ui/components/ruleset-picker.ts`
