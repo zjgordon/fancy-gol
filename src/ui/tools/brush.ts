@@ -109,8 +109,13 @@ function symmetryOffsets(mode: SymmetryMode, dx: number, dy: number): ReadonlyAr
   }
 }
 
-/** Classic integer Bresenham — every cell from `(x0,y0)` to `(x1,y1)`, inclusive, none skipped. */
-function bresenham(x0: number, y0: number, x1: number, y1: number): Array<readonly [number, number]> {
+/**
+ * Classic integer Bresenham — every cell from `(x0,y0)` to `(x1,y1)`, inclusive, none skipped.
+ * Exported for reuse by `line.ts` (P1-B-4) rather than a second hand-written copy — both live in
+ * the same `ui/` layer, so this is an ordinary import, not the ADR-009 boundary duplication the
+ * PRNG above needed.
+ */
+export function bresenham(x0: number, y0: number, x1: number, y1: number): Array<readonly [number, number]> {
   const points: Array<readonly [number, number]> = [];
   let x = x0;
   let y = y0;
@@ -135,8 +140,11 @@ function bresenham(x0: number, y0: number, x1: number, y1: number): Array<readon
   return points;
 }
 
-/** Same packing `shared/types.ts`'s `ChangeSet.coords` documents — a shared convention, not a shared import. */
-function packXY(x: number, y: number): number {
+/**
+ * Same packing `shared/types.ts`'s `ChangeSet.coords` documents — a shared convention, not a
+ * shared import. Exported for reuse by the other `ui/tools/*` shape tools (P1-B-4).
+ */
+export function packXY(x: number, y: number): number {
   return (x << 16) | (y & 0xffff);
 }
 

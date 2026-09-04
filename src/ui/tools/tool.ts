@@ -6,15 +6,25 @@
  * has no return channel at all, so a cancelled gesture cannot produce a commit even by accident —
  * the type system makes "Escape leaves the grid byte-identical" load-bearing, not a convention.
  *
- * `ToolContext` wraps the single thing every tool needs today (P1-B-1's `ToolEvent`) rather than
- * being that type directly, so a later task (P1-B-3: paint state, brush size, symmetry mode) can
- * widen it without changing every `Tool` implementation's method signatures.
+ * `ToolContext` wraps `ToolEvent` (rather than being that type directly) so a later task can
+ * widen it without changing every `Tool` implementation's method signatures. P1-B-3's brush/
+ * eraser turned out not to need this — size, shape, state, symmetry all live as plain properties
+ * on the tool itself, set directly by whatever future component exposes them. `grid` below is
+ * the widening's first real use: P1-B-4's flood fill is the first tool that needs to *read*
+ * existing cell state, not just generate ops from cursor position alone.
  */
-import type { PaintOp } from '@shared/types';
+import type { GridView, PaintOp } from '@shared/types';
 import type { ToolEvent } from '@ui/input/router';
 
 export interface ToolContext {
   readonly event: ToolEvent;
+  /**
+   * Read-only live grid access. Optional because most tools are purely generative from cursor
+   * position and never need it. Wiring an actual live `GridView` in here — sourced from a real
+   * `WorkerClient`'s frame mirror — is a follow-up for whichever task first composes the full
+   * tool pipeline; `ToolRegistry.handlers` (P1-B-2) doesn't supply one today.
+   */
+  readonly grid?: GridView;
 }
 
 export interface Tool {
