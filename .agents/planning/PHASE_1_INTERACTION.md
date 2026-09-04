@@ -191,12 +191,15 @@ simulation via `panBy`, not a tween, so it doesn't need it either. See the modul
 - [x] Losing pointer capture (alt-tab mid-drag) cleanly cancels the active tool with no partial edit committed — the native `lostpointercapture` event is treated exactly like `pointercancel`: it fires `onCancel`, clears the active pointer, and any further (stray, late) event for that pointer is ignored rather than resuming the stroke.
 - [x] Pen pressure is exposed for the brush even though nothing consumes it yet — every `ToolPoint` (down, move, and each coalesced sample) carries the native event's `pressure`, unconsumed until P1-B-3.
 
-#### - [ ] P1-B-2 · Tool framework
+#### - [x] P1-B-2 · Tool framework
 **Depends on:** P1-B-1 · **Files:** `src/ui/tools/tool.ts`, `src/ui/tools/registry.ts`
 **Implementation notes** `Tool` interface with `onDown/onMove/onUp/onCancel`, a `preview(): PaintOp[]` used for the live ghost, and `cursor`. Tools produce data only; the `CommandBus` commits it. `Escape` cancels any in-progress tool. Every tool registers as a command with a single-key binding.
+- `onCancel(): void` has no return channel at all — a cancelled gesture cannot produce a commit even by accident, so "Escape leaves the grid byte-identical" is a type-level guarantee, not just a convention the registry happens to follow.
+- `ToolRegistry.onCommit` (constructor option) is the seam P1-C-1's `CommandBus` plugs into once it exists; until then a missing `onCommit` just drops finalised ops, same as there being no bus yet. `ToolRegistry.handlers` is shaped to pass straight to P1-B-1's `attachInputRouter` with zero glue code.
+- `Tool.id`-as-command-id and the single-key binding are P1-C-1/P1-C-2's job (`CommandBus`, the keybinding registry) — neither exists yet. What's built here (`register()`, `activate()`, `attachEscapeHandling`) is everything a tool needs to be fully live *today*; wiring a `Tool.id` into an actual `AppCommand` is a mechanical follow-up for whichever of those two tasks lands first, not a gap in this one.
 **Acceptance criteria**
-- [ ] Adding a new tool requires touching exactly one new file plus one registry line (proved by a fixture tool in tests).
-- [ ] `Escape` mid-drag leaves the grid byte-identical to before the drag.
+- [x] Adding a new tool requires touching exactly one new file plus one registry line (proved by a fixture tool in tests) — a fixture `Tool` implementation plus a single `registry.register(new FixtureTool())` call is immediately gettable, listable, auto-activated (first tool registered), and fully wired through `handlers`/`onCommit` — no change to `tool.ts` or `registry.ts` itself.
+- [x] `Escape` mid-drag leaves the grid byte-identical to before the drag — proved literally, not just by absence of a commit call: a real `Simulation` is snapshotted before a down+move+cancel sequence (never `onUp`) and after; tick, RNG state, and every live chunk's bytes are asserted unchanged. A contrasting test proves the wiring is genuinely live: an uncancelled down+up *does* commit and *does* change the simulation.
 
 #### - [ ] P1-B-3 · Brush & eraser
 **Depends on:** P1-B-2 · **Files:** `src/ui/tools/brush.ts`, `src/ui/tools/eraser.ts`
@@ -237,6 +240,7 @@ simulation via `panBy`, not a tween, so it doesn't need it either. See the modul
 #### - [ ] P1-C-1 · Command registry & bus
 **Depends on:** Phase 0 · **Files:** `src/ui/commands/registry.ts`, `src/ui/commands/bus.ts`, `src/client/app-context.ts`
 **Implementation notes** Registration is duplicate-checked at startup and throws loudly. `bus.run(id, arg)` resolves `isEnabled` first, dispatches, records to the edit stack when `undoable`, and emits telemetry-free events that Phase 4's palette will show as "recent".
+**Follow-up from P1-B-2:** wire `ToolRegistry.onCommit` (P1-B-2) to this bus so a tool's finalised `PaintOp[]` actually reaches `WorkerClient.paint()`, and register one `tool.select.<id>` command per `ToolRegistry` entry (`Tool.id` was chosen to already match that naming). Neither is a change to `tool.ts`/`registry.ts` — both are additions here.
 **Acceptance criteria**
 - [ ] A test enumerates every registered command and asserts each has a `title`, a `category`, and either a `defaultBinding` or an explicit `noBinding: true`. **No orphan commands.**
 - [ ] Running a disabled command is a no-op with a debug warning, never a throw.

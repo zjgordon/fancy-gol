@@ -35,6 +35,12 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   a `Camera`. A native `lostpointercapture` (alt-tab mid-drag) is treated exactly like a cancel,
   so no partial edit can ever reach a consumer from a drag that never properly ended. Pen
   pressure is carried on every point, unconsumed until P1-B-3. (P1-B-1)
+- `Tool` interface and `ToolRegistry` (`src/ui/tools/tool.ts`, `src/ui/tools/registry.ts`):
+  tools produce `PaintOp[]` data only — `onCancel` has no return channel at all, so a cancelled
+  gesture cannot commit even by accident. The registry owns which tool is active, relays
+  `router.ts`'s `ToolEvent`s to it, and cancels the active tool on Escape. Adding a tool is one
+  new file plus one `register()` call; `onCommit` is the seam P1-C-1's `CommandBus` plugs into
+  once it exists. (P1-B-2)
 
 ## [0.1.0] — 2026-09-04
 
