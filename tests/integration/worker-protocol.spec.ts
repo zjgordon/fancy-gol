@@ -207,6 +207,19 @@ describe('worker-protocol: the full Phase 0 command set, through an in-memory po
     expect(port.events[1]?.type).toBe('error');
   });
 
+  it('run accepts tps === Infinity — the "unbounded" mode (P1-D-2) — and schedules at the shortest interval', () => {
+    const scheduler = new FakeScheduler();
+    const port = createPort(scheduler);
+    port.send({ id: 1, cmd: 'init', ruleset: CONWAY, width: 16, height: 16, seed: 1 });
+    expect(() => port.send({ id: 2, cmd: 'run', tps: Infinity })).not.toThrow();
+    expect(replyTo(port.events, 2)).toEqual({ id: 2, type: 'ok' });
+    const [job] = scheduler.jobs.values();
+    expect(job?.ms).toBe(0); // 1000 / Infinity — "as fast as the scheduler allows"
+
+    scheduler.tick(3);
+    expect(lastByType(port.events, 'frame')?.tick).toBe(3);
+  });
+
   it('loadPattern is not yet implemented (Phase 2) and rejects structurally', () => {
     const port = createPort();
     port.send({ id: 1, cmd: 'init', ruleset: CONWAY, width: 16, height: 16, seed: 1 });
@@ -378,5 +391,32 @@ describe('REAL_SCHEDULER', () => {
     REAL_SCHEDULER.clearInterval(id);
     vi.advanceTimersByTime(35);
     expect(calls).toBe(3); // no further ticks once cleared
+  });
+
+  /**
+   * P1-D-2's "achieved TPS is within 5% of target ... verified by test" acceptance criterion,
+   * proven at the level this codebase actually controls: `run`'s `1000 / tps` interval math,
+   * driven through the *real* `setInterval`/`clearInterval` `REAL_SCHEDULER` wraps (not
+   * `FakeScheduler`, whose `tick(n)` fires jobs immediately regardless of `ms` and so proves
+   * nothing about real timing). `vi.useFakeTimers()` makes this exact and deterministic rather
+   * than a flaky real-wall-clock wait — the "up to the machine's capability" half of the
+   * criterion is a real-hardware claim no unit test can honestly assert on; `TpsMeter`'s own
+   * tests (`speed.spec.ts`) separately prove the *actual-TPS measurement* is accurate for a rate
+   * a real machine falls short at, which is the other half of "never silently lying" this
+   * criterion cares about.
+   */
+  it.each([1, 20, 250])('run achieves target tps=%i to within 5%% over simulated wall-clock time', (targetTps) => {
+    const port = createPort(REAL_SCHEDULER);
+    port.send({ id: 1, cmd: 'init', ruleset: CONWAY, width: 16, height: 16, seed: 1 });
+    port.send({ id: 2, cmd: 'run', tps: targetTps });
+
+    const simulatedMs = 5000;
+    vi.advanceTimersByTime(simulatedMs);
+
+    const lastFrame = lastByType(port.events, 'frame');
+    expect(lastFrame).toBeDefined();
+    const achievedTps = (lastFrame!.tick / simulatedMs) * 1000;
+    expect(achievedTps).toBeGreaterThan(targetTps * 0.95);
+    expect(achievedTps).toBeLessThan(targetTps * 1.05);
   });
 });

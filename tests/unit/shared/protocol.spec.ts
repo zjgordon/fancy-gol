@@ -186,6 +186,20 @@ describe('parseCommand: malformed messages reject with a structured issue, never
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.issue.path).toBe('rle');
   });
+
+  it('accepts run.tps === Infinity — the "unbounded" mode (P1-D-2)', () => {
+    const result = parseCommand({ id: 1, cmd: 'run', tps: Infinity });
+    expect(result.ok).toBe(true);
+    if (result.ok && result.value.cmd === 'run') expect(result.value.tps).toBe(Infinity);
+  });
+
+  it('rejects run.tps === -Infinity and run.tps === NaN', () => {
+    for (const tps of [-Infinity, NaN]) {
+      const result = parseCommand({ id: 1, cmd: 'run', tps });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.issue.path).toBe('tps');
+    }
+  });
 });
 
 const VALID_EVENTS: Record<Event['type'], Record<string, unknown>> = {

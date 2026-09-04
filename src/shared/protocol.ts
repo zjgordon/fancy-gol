@@ -51,7 +51,7 @@ export type Command =
     }
   | { readonly id: number; readonly cmd: 'setRuleset'; readonly ruleset: RuleSet }
   | { readonly id: number; readonly cmd: 'step'; readonly n: number }
-  | { readonly id: number; readonly cmd: 'run'; readonly tps: number } // free-run at target ticks/sec
+  | { readonly id: number; readonly cmd: 'run'; readonly tps: number } // free-run at target ticks/sec; tps === Infinity is "unbounded" (P1-D-2) — steps as fast as the scheduler allows
   | { readonly id: number; readonly cmd: 'pause' }
   | { readonly id: number; readonly cmd: 'paint'; readonly ops: readonly PaintOp[] }
   | { readonly id: number; readonly cmd: 'clear' }
@@ -116,6 +116,15 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 function isFiniteNumber(v: unknown): v is number {
   return typeof v === 'number' && Number.isFinite(v);
+}
+
+/** Like {@link isFiniteNumber}, but also admits `+Infinity` — `run.tps`'s "unbounded" mode
+ * (P1-D-2), a real, structured-clone-safe `number` value, not a magic string sentinel. Still
+ * rejects `NaN`/`-Infinity`/non-numbers; `run.tps <= 0` is caught at dispatch by
+ * `worker/handler.ts`, matching this field's existing (pre-P1-D-2) division of labour between
+ * shape-checking here and value-checking there. */
+function isFiniteOrPositiveInfinity(v: unknown): v is number {
+  return typeof v === 'number' && !Number.isNaN(v) && v !== -Infinity;
 }
 
 function isNonEmptyString(v: unknown): v is string {
@@ -231,7 +240,8 @@ export function parseCommand(raw: unknown): ParseResult<Command> {
       return ok({ id, cmd, n: raw['n'] });
     }
     case 'run': {
-      if (!isFiniteNumber(raw['tps'])) return fail('tps', 'run.tps must be a finite number');
+      if (!isFiniteOrPositiveInfinity(raw['tps']))
+        return fail('tps', 'run.tps must be a number (Infinity allowed, for "unbounded")');
       return ok({ id, cmd, tps: raw['tps'] });
     }
     case 'pause':
