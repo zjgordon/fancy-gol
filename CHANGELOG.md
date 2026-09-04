@@ -48,6 +48,14 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   also keeps overlapping stamps from bloating the op count. Paints any `StateId` by property
   assignment — multi-state rules need no dedicated UI to reach state 2+. `Eraser` is a thin
   `Brush` wrapper forced to `DEAD`, exposing no way to paint anything else. (P1-B-3)
+- `LineTool`, `RectTool`, `EllipseTool`, `FillTool` (`src/ui/tools/{line,rect,ellipse,fill}.ts`):
+  Shift constrains a line to 45°/a rectangle to a square/an ellipse to a circle; Alt draws from
+  centre; rect/ellipse offer filled or outline-only. `EllipseTool` uses the classic midpoint
+  ellipse algorithm (one quadrant, mirrored). `FillTool` is a scanline flood fill capped both by
+  cell count (default 1,000,000) and by wall-clock time, so the 500ms budget holds regardless of
+  machine speed, not just in a fast environment; `ToolContext` gained an optional `grid?:
+  GridView` for it — the extension point P1-B-2 left open, used for the first time here.
+  (P1-B-4)
 
 ## [0.1.0] — 2026-09-04
 
