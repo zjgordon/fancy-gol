@@ -7,6 +7,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0] — 2026-09-04
+
+Phase 0 — Foundation (*Make it correct.*). Workstreams **A–I**: toolchain (A), core types /
+RNG / clock / coordinates (B), chunked grid (C), ruleset schema · validator · parsers ·
+compiler · catalogue (D), simulation (E), history and statistics (F), worker protocol (G),
+renderer and canvas bridge (H), client shell · Express · Docker · CI · this documentation (I).
+
 ### Added
 
 - Repository toolchain scaffold: `package.json` scripts (`dev`, `build`, `test`, `coverage`,
@@ -296,6 +303,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   in-repo by P0-A-5's and P0-I-4's own fixtures — CI only wires them in. The `docker` job's
   build-run-healthcheck sequence was hand-verified end-to-end against this sandbox's remote
   dind daemon before being committed. (P0-I-5)
+- Foundational docs: a short root `README.md` (inception premise, `npm ci && npm run dev`,
+  honest Phase 0 status), `docs/ARCHITECTURE.md` (data-flow diagram and every ADR), an expanded
+  `CONTRIBUTING.md` that points at `.agents/dashboard.html` and the agent contract, and a
+  dated `[0.1.0]` changelog, and `docs/demo/phase-0.gif` of the running gun. The ruleset field
+  guide remains `docs/ruleset-schema.md` (P0-D-1). (P0-I-6)
 
 ### Changed
 
@@ -331,4 +343,5 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   known limitation (P0-H-3). Fixed locally: the reset handler now forces one full `draw()` right
   after resetting the mirror, before repainting the gun. (P0-I-1)
 
-[Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/main...HEAD
+[Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/ZJGordon/fancy-gol/releases/tag/v0.1.0

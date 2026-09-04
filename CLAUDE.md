@@ -30,9 +30,9 @@ it is not done. That rule is named **Agit-Prop** in the inception document and i
 
 ## Current state
 
-- `main` contains **planning artefacts only**. No implementation code yet.
-- Next task: **P0-A-1** (see `.agents/dashboard.html`).
-- **The `phase/0-foundation` branch does not exist yet. Create it before writing any code.**
+- Phase 0 is complete on `phase/0-foundation`. Next: merge to `main`, tag `v0.1.0`, then
+  `phase/1-interaction`. Confirm in `.agents/dashboard.html`.
+- **Do not commit implementation code to `main`.**
 
 ## Branching — important
 
@@ -41,7 +41,7 @@ own branch and merged back when all of that phase's gates are green.
 
 ```bash
 git checkout main && git pull
-git checkout -b phase/0-foundation      # ← do this before any Phase 0 code
+git checkout -b phase/1-interaction     # ← after v0.1.0 is on main
 ```
 
 Branch names: `phase/0-foundation`, `phase/1-interaction`, `phase/2-library-and-stats`,
@@ -102,8 +102,6 @@ npm run boundaries    # layering + engine purity enforcement
 node .agents/scripts/build-dashboard.mjs           # after every task
 node .agents/scripts/build-dashboard.mjs --check   # CI: fail if stale
 ```
-
-*(These npm scripts arrive with task P0-A-1. Until then the repo has no `package.json`.)*
 
 ## Do not
 

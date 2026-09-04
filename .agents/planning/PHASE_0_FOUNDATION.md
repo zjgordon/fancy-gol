@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| **Status** | ~ In progress — Workstreams A–D complete; E through the step function |
+| **Status** | Complete on `phase/0-foundation` — merge to `main` and tag `v0.1.0` to ship |
 | **Ships version** | `0.1.0` |
 | **Prerequisites** | None. This is the first phase. |
 | **Theme of the phase** | **Make it correct.** |
@@ -744,12 +744,12 @@ Emit a `CompiledRule` with the strategy selected automatically:
   `npm run bench` step is exactly P0-I-4's gate, proven against a deliberate 30% slowdown in
   `tests/unit/bench-runner.spec.ts`.
 
-#### - [ ] P0-I-6 · Foundational documentation
-**Depends on:** all above · **Files:** `README.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `docs/ruleset-schema.md`
-**Implementation notes** README opens with the inception premise verbatim ("*A cellular automata simulator with absolutely too much time spent on what's essentially a toy. But this toy doesn't care, it wants to be fabulous!*"), then quick start, then the Phase 0 honest status. `ARCHITECTURE.md` renders the data-flow diagram and links every ADR.
+#### - [x] P0-I-6 · Foundational documentation — @cursor, started 2026-09-04, finished 2026-09-04
+**Depends on:** all above · **Files:** `README.md`, `docs/ARCHITECTURE.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `docs/ruleset-schema.md`, `docs/demo/phase-0.gif`
+**Implementation notes** README opens with the inception premise verbatim, then quick start (`npm ci && npm run dev` → `:5173`), then an honest Phase 0 table, then links into `docs/` and `.agents/`. Deeper architecture (data-flow diagram + ADR-001…010) lives in `docs/ARCHITECTURE.md`, not the root README. `CONTRIBUTING.md` is the human on-ramp to the dashboard, the work loop, and the phase-branch model. `docs/ruleset-schema.md` is unchanged from P0-D-1 aside from being linked. A real capture of the running gun is `docs/demo/phase-0.gif`.
 **Acceptance criteria**
-- [ ] A new engineer can clone, run `npm ci && npm run dev`, and see the gun moving using only the README.
-- [ ] `CHANGELOG.md` has a dated `[0.1.0]` section listing every workstream.
+- [x] A new engineer can clone, run `npm ci && npm run dev`, and see the gun moving using only the README — README leads with the premise, then those two commands, then `http://localhost:5173`. Docker compose is documented as the production-shaped alternative (`:8080`).
+- [x] `CHANGELOG.md` has a dated `[0.1.0]` section listing every workstream — 2026-09-04, workstreams A–I named in the preamble, then the existing Added/Changed/Fixed body.
 
 ---
 
@@ -786,12 +786,12 @@ Emit a `CompiledRule` with the strategy selected automatically:
 
 ## 6. Definition of Done — Phase 0
 
-- [ ] Every task above is `- [x]` or `- [-]` with a recorded reason.
-- [ ] All Phase 0 quality gates (§4) are green in CI on `main`.
-- [ ] `docker compose up` serves a Gosper gun running at 60 fps.
-- [ ] The headless canvas-bridge test passes and is wired into CI.
-- [ ] `src/engine` contains zero DOM, Node, or I/O references, proven by the boundary checker.
-- [ ] `CHANGELOG.md` has a dated `[0.1.0]` entry; the commit is tagged `v0.1.0`.
-- [ ] `bench-baseline.json` is committed and reflects a real machine run.
-- [ ] A short demo capture (GIF or MP4) of the gun is committed to `docs/demo/phase-0.*` — every phase leaves evidence.
-- [ ] An engineer who has never seen the repo can clone it and reach the running demo using only `README.md`.
+- [x] Every task above is `- [x]` or `- [-]` with a recorded reason — P0-H-2's dpr visual criterion is `- [-]` relocated to P1-H-2; every other Phase 0 task is `- [x]`.
+- [ ] All Phase 0 quality gates (§4) are green in CI on `main` — workflow is in `.github/workflows/ci.yml` (P0-I-5) and the jobs' commands are green locally. The first Actions run is the merge to `main`.
+- [x] `docker compose up` serves a Gosper gun running at 60 fps — proven on `docker/docker-compose.yml` (P0-I-3); published port `:8080`.
+- [x] The headless canvas-bridge test passes and is wired into CI — `tests/integration/canvas-bridge.spec.ts` is in `npm run test` / `coverage`, which the `verify` job runs.
+- [x] `src/engine` contains zero DOM, Node, or I/O references, proven by the boundary checker.
+- [x] `CHANGELOG.md` has a dated `[0.1.0]` entry; the commit is tagged `v0.1.0` — dated 2026-09-04. Annotated tag `v0.1.0` is cut on this close commit; push it when merging `phase/0-foundation` to `main`.
+- [x] `bench-baseline.json` is committed and reflects a real machine run.
+- [x] A short demo capture (GIF or MP4) of the gun is committed to `docs/demo/phase-0.*` — `docs/demo/phase-0.gif`, captured from the real Vite client (Playwright screenshots of `:5173`, stitched with ffmpeg).
+- [x] An engineer who has never seen the repo can clone it and reach the running demo using only `README.md`.

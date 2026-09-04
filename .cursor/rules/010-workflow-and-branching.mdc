@@ -7,9 +7,9 @@ alwaysApply: true
 
 ## Current state
 
-- `main` contains **planning artefacts only** — no implementation code yet.
-- Next task: **P0-A-1**. Confirm in `.agents/dashboard.html`.
-- **The `phase/0-foundation` branch does not exist yet. Create it before writing any code.**
+- Phase 0 is complete on `phase/0-foundation`. Merge to `main` and tag `v0.1.0`, then start
+  `phase/1-interaction`. Confirm the next task in `.agents/dashboard.html`.
+- **Do not commit implementation code to `main`.**
 
 ## Branch and release model
 
@@ -18,7 +18,7 @@ its own branch and merged back when every gate for that phase is green, then tag
 
 ```bash
 git checkout main && git pull
-git checkout -b phase/0-foundation      # before any Phase 0 code
+git checkout -b phase/1-interaction     # before any Phase 1 code
 ```
 
 | Phase | Branch | Tag on merge |

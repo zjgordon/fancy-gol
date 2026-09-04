@@ -219,18 +219,18 @@ main ──●──────────────────────
 | 5 | `phase/5-scale-and-perf` | `v0.6.0` |
 | 6 | `phase/6-launch` | `v1.0.0` |
 
-### ⚠️ ACTION REQUIRED BY THE NEXT AGENT
+### Next branch
 
-> **The `phase/0-foundation` branch has NOT been created yet.**
-> `main` currently contains planning artefacts only — no implementation code.
->
-> **Before writing a single line of Phase 0 code:**
-> ```bash
-> git checkout main && git pull
-> git checkout -b phase/0-foundation
-> ```
-> **Do not commit implementation code to `main`.** Merge back only when every Phase 0 gate in
-> `PHASE_0_FOUNDATION.md` §4 is green, then tag `v0.1.0`.
+Phase 0 lives on `phase/0-foundation`. After that branch merges to `main` and is tagged
+`v0.1.0`, start Phase 1 with:
+
+```bash
+git checkout main && git pull
+git checkout -b phase/1-interaction
+```
+
+**Do not commit implementation code to `main`.** Merge a phase only when its gates are green,
+then tag.
 
 Documentation-only fixes to `.agents/**` may land on `main` directly. Everything else branches.
 
