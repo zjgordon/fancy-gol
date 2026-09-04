@@ -78,6 +78,16 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   registers their `tool.select.<id>` commands with the exact default bindings (`B`/`E`/`L`/`U`/
   `O`/`G`/`S`/`M`) P1-C-2's table already names. `AppContext` is declared in `registry.ts`, not
   `app-context.ts` — `ui/` cannot import `client/` (ADR-009). (P1-C-1)
+- `Keymap` and the Phase 1 default-bindings table (`src/ui/input/keymap.ts`,
+  `src/ui/input/bindings.ts`): `Mod` normalises to `Cmd`/`Ctrl` per platform; chords (`g g`) with
+  a 1s timeout, injected timers for deterministic testing; bindings never fire while focus is in
+  a text input or `contentEditable` element; a duplicate (or canonicalisation-collision) binding
+  throws at registration. `PHASE_1_BINDINGS` lists every table entry as data even though most of
+  their commands (`sim.*`, `view.*`, `edit.*`, …) don't exist yet — `attachDefaultBindings` skips
+  what isn't registered, so each lands live the moment its command does, no file change needed.
+  `Shift+/` and `?` are the same physical key and were merged into one binding rather than left
+  to collide. Fixed a real parsing bug caught by the table's own tests: a bare `+` (zoom in) was
+  misparsed as an empty modifier, since `+` is also the modifier-separator character. (P1-C-2)
 
 ## [0.1.0] — 2026-09-04
 

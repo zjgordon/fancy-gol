@@ -262,10 +262,15 @@ simulation via `panBy`, not a tween, so it doesn't need it either. See the modul
 - [x] A test enumerates every registered command and asserts each has a `title`, a `category`, and either a `defaultBinding` or an explicit `noBinding: true`. **No orphan commands.** — enforced twice over: `CommandRegistry.register()` itself throws on a command missing both, *and* a test separately enumerates a populated registry (including `createAppContext()`'s real eight `tool.select.*` commands) to confirm the invariant holds in practice, not just in the constructor's own logic.
 - [x] Running a disabled command is a no-op with a debug warning, never a throw — `command.run` is asserted never called, `console.debug` is asserted called exactly once naming the command id, and the call resolves normally (no throw, no rejection).
 
-#### - [ ] P1-C-2 · Keybinding system
+#### - [x] P1-C-2 · Keybinding system
 **Depends on:** P1-C-1 · **Files:** `src/ui/input/keymap.ts`, `src/ui/input/bindings.ts`
 **Implementation notes** `Mod` normalises to `Cmd` on macOS / `Ctrl` elsewhere. Supports chords (`g` then `g`) with a 1 s timeout and a visible pending-chord indicator. Bindings never fire while focus is in a text input. Conflicts are detected at registration and reported.
 **Already done in P1-C-1:** the eight tool-select bindings below (`B`/`E`/`L`/`U`/`O`/`G`/`S`/`M`) are already set as `defaultBinding` on `createAppContext()`'s `tool.select.*` commands (`src/client/app-context.ts`) — this task wires the *keyboard listener* that reads `AppCommand.defaultBinding` and calls `bus.run(id)`, it doesn't invent those eight values.
+**Two deliberate departures from the table below**, both recorded, neither silent:
+- `,` "Step back" and `Mod+K` "Command palette" are marked *(Phase 4)* in the table itself — not registered; Phase 4 adds them.
+- `Shift+/` and `?` are the *same physical key* on a US layout (`?` **is** `Shift+/`), and this task's own canonicalisation rule (shift-agnostic for bare, unmodified keys) makes them collide — registering both would trip the conflict detection this very task requires. Treated as one action, one binding: `?` → `help.cheatsheet`.
+**Command ids used below (`sim.*`, `view.*`, `edit.*`, `session.save`, `brush.setSize`, `help.cheatsheet`) are a naming contract for the tasks that build those features, not commands that exist yet** — only the eight `tool.select.*` ids are real today. `bindings.ts` registers every table entry as data regardless; `attachDefaultBindings` silently skips any whose command isn't yet in the registry, so each future task's binding activates the moment it registers its command, with no change to `bindings.ts` needed. Verified concretely: only 8 of `PHASE_1_BINDINGS`' ~34 entries register against `createAppContext()`'s real registry today.
+**A real parsing bug found and fixed while building this:** `+` (zoom in) is both a valid *key* and the modifier-separator character `keymap.ts` itself uses — naively splitting the bare string `"+"` on `"+"` produces two empty strings, not a one-element key, and threw `unknown modifier ""`. Caught by the table's own "every entry parses" test, not by inspection; fixed with an explicit bare-`+` case ahead of the general split, with a dedicated regression test.
 **Default bindings (Phase 1 set):**
 | Key | Action | | Key | Action |
 |---|---|---|---|---|
@@ -282,9 +287,9 @@ simulation via `panBy`, not a tween, so it doesn't need it either. See the modul
 | `Mod+C/X/V` | Copy / cut / paste | | `?` | Help |
 | `Mod+S` | Save session | | `Mod+K` | Command palette *(Phase 4)* |
 **Acceptance criteria**
-- [ ] Every binding above is exercised by a Playwright spec.
-- [ ] A duplicate binding registration fails the test suite.
-- [ ] Typing `[` in the ruleset-name text field does not change the speed.
+- [-] Every binding above is exercised by a Playwright spec — cut here: `P1-H-1`'s Playwright harness doesn't exist yet (it depends on `P1-D-1`, also not started), so there is no browser session to run this against — the same treatment `P1-A-2`'s pinch-zoom criterion got. Relocated to `P1-H-1`'s spec list (2026-09-04); do not re-add here. Proven now at the unit level instead: every table entry parses and round-trips through the full dispatch pipeline (`tests/unit/ui/bindings.spec.ts`), including an end-to-end run through `createAppContext()`'s real registry and `CommandBus`.
+- [x] A duplicate binding registration fails the test suite — both a direct conflict (`Mod+Z` registered twice) and a canonicalisation-driven one (`B` then `b`, which collide by design) are proven to throw; `PHASE_1_BINDINGS` itself is proven collision-free when registered whole, on both platforms.
+- [x] Typing `[` in the ruleset-name text field does not change the speed — proven with a real `<input type="text">` in jsdom: the bound command does not fire with that element as the event target, and does fire for the identical key with `document.body` as the target. A `<textarea>`, a `contentEditable` element (stubbed — jsdom does not implement `isContentEditable`), and a non-text `<input type="checkbox">` are covered too, confirming only genuinely-editable targets are excluded.
 
 #### - [ ] P1-C-3 · Edit undo/redo stack
 **Depends on:** P1-C-1 · **Files:** `src/ui/commands/edit-stack.ts`
@@ -429,7 +434,7 @@ simulation via `panBy`, not a tween, so it doesn't need it either. See the modul
 **Depends on:** P1-D-1 · **Files:** `playwright.config.ts`, `tests/e2e/*.spec.ts`
 **Implementation notes** Chromium + Firefox + WebKit. Deterministic runs: seed the PRNG, freeze the clock, disable the intro choreography and inertia via a `?test=1` flag. Trace on first retry. Add the job to CI.
 **Acceptance criteria**
-- [ ] Specs covering: draw a glider and verify it moves; pan/zoom (**including P1-A-2's relocated criterion**: pinch-zoom on a touch-emulation session zooms about the pinch midpoint); every Phase 1 keybinding; undo/redo; ruleset switch; theme persistence across reload; share-link round trip; `/live` connect and receive.
+- [ ] Specs covering: draw a glider and verify it moves; pan/zoom (**including P1-A-2's relocated criterion**: pinch-zoom on a touch-emulation session zooms about the pinch midpoint); every Phase 1 keybinding (**including P1-C-2's relocated criterion**: every entry in `PHASE_1_BINDINGS` exercised in a real browser, not just unit-level dispatch); undo/redo; ruleset switch; theme persistence across reload; share-link round trip; `/live` connect and receive.
 - [ ] Suite completes in < 4 minutes and is non-flaky over 10 consecutive CI runs.
 
 #### - [ ] P1-H-2 · Visual regression baseline
