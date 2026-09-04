@@ -180,13 +180,16 @@ simulation via `panBy`, not a tween, so it doesn't need it either. See the modul
 
 ### Workstream B — Input pipeline & tools
 
-#### - [ ] P1-B-1 · Input router
+#### - [x] P1-B-1 · Input router
 **Depends on:** P1-A-1 · **Files:** `src/ui/input/router.ts`
 **Implementation notes** Pointer Events only (one code path for mouse/pen/touch). Owns pointer capture, coalesced events (`getCoalescedEvents()` — essential for smooth fast drags), modifier state, and world-coordinate conversion. Emits a normalised `ToolEvent`.
+- `attachInputRouter(camera, target, handlers)` — same factory-plus-controller shape as P1-A-2's `attachGestures`, and a sibling of it, not layered on top of it: this module and `gestures.ts` are two independent listener sets meant to both attach to the same canvas, gestures.ts owning the camera and this one owning tool strokes.
+- Only a *primary*-button pointerdown (`button === 0`, which touch also reports) starts a stroke, so gestures.ts's middle-mouse-drag pan is never mistaken for one; only one pointer is tracked as the active stroke at a time, so a second touch arriving mid-pinch is ignored, not merged into a second stroke.
+- **Known open seam, not solved here:** gestures.ts's *other* pan trigger, Space+left-drag, is not filtered — this module has no visibility into gestures.ts's Space-held state, and reaching into it would be scope creep for a task whose file list is one module. Whichever task first composes both listeners onto a real canvas (candidate: P1-D-1's layout shell) needs to share that state or gate which listener is live.
 **Acceptance criteria**
-- [ ] A fast drag across 1000 px produces a continuous, gap-free cell path (uses coalesced events — verified by test with synthesised event batches).
-- [ ] Losing pointer capture (alt-tab mid-drag) cleanly cancels the active tool with no partial edit committed.
-- [ ] Pen pressure is exposed for the brush even though nothing consumes it yet.
+- [x] A fast drag across 1000 px produces a continuous, gap-free cell path (uses coalesced events — verified by test with synthesised event batches) — a synthesised `pointermove` whose `getCoalescedEvents()` returns 20 sub-samples spanning the 1000px drag yields one `ToolEvent` whose `coalesced` array carries all 20 world-converted points in order, none dropped.
+- [x] Losing pointer capture (alt-tab mid-drag) cleanly cancels the active tool with no partial edit committed — the native `lostpointercapture` event is treated exactly like `pointercancel`: it fires `onCancel`, clears the active pointer, and any further (stray, late) event for that pointer is ignored rather than resuming the stroke.
+- [x] Pen pressure is exposed for the brush even though nothing consumes it yet — every `ToolPoint` (down, move, and each coalesced sample) carries the native event's `pressure`, unconsumed until P1-B-3.
 
 #### - [ ] P1-B-2 · Tool framework
 **Depends on:** P1-B-1 · **Files:** `src/ui/tools/tool.ts`, `src/ui/tools/registry.ts`

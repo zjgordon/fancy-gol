@@ -29,6 +29,12 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   600ms after the camera stops changing. The fade shape is an injectable `FadeCurve`, not a
   literal — a hand-written `SMOOTHSTEP` stands in for a real theme token until P1-E-1 exists.
   Colours are a required `{r,g,b}` palette; no hardcoded grey fallback. (P1-A-3)
+- `attachInputRouter` (`src/ui/input/router.ts`): the Pointer-Events-only entry point for tool
+  strokes — owns pointer capture, forwards every `getCoalescedEvents()` sub-sample from a fast
+  drag (not just the event's final position), and converts every point to world coordinates via
+  a `Camera`. A native `lostpointercapture` (alt-tab mid-drag) is treated exactly like a cancel,
+  so no partial edit can ever reach a consumer from a drag that never properly ended. Pen
+  pressure is carried on every point, unconsumed until P1-B-3. (P1-B-1)
 
 ## [0.1.0] — 2026-09-04
 
