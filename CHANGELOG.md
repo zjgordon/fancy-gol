@@ -56,6 +56,12 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   machine speed, not just in a fast environment; `ToolContext` gained an optional `grid?:
   GridView` for it — the extension point P1-B-2 left open, used for the first time here.
   (P1-B-4)
+- `SelectTool` and `SelectionOverlay` (`src/ui/tools/select.ts`, `src/ui/overlay/selection.ts`):
+  marquee select, copy/cut/paste/delete/move, rotate 90°/flip H/V on the clipboard buffer, and a
+  minimal hand-written RLE codec so a selection round-trips through the system clipboard.
+  Copy/cut/paste/rotate/flip are plain methods for a future keybinding layer to call, not pointer
+  gestures. The selection outline's marching-ants animation is driven by an injectable duration
+  and stops entirely under `prefers-reduced-motion`. (P1-B-5)
 
 ## [0.1.0] — 2026-09-04
 

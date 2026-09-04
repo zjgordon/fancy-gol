@@ -124,6 +124,7 @@ patterns/<ruleset>/*.rle  +  patterns/index.json
 
 #### - [ ] P2-A-1 · RLE decoder (full spec, multi-state)
 **Depends on:** Phase 1 · **Files:** `src/engine/patterns/rle.ts`
+**Supersedes, with a boundary snag to resolve:** P1-B-5 shipped a minimal, hand-written encode/decode pair in `src/ui/tools/select.ts` (states 0–24 only: `b`, `o`, `A`–`X`; no headers, no `pA`/`qA`-style extended states) just to round-trip a selection through the system clipboard in Phase 1. This task's codec is the real one, but note `ui/` cannot import `engine/` at all (ADR-009) — so `select.ts` cannot simply switch to importing `src/engine/patterns/rle.ts` once it exists. Either give this codec a home reachable from both layers (e.g. `shared/`, alongside `shared/types.ts`'s own precedent for pure logic multiple layers need) or accept `select.ts`'s copy as a permanent, documented boundary-forced duplicate (the same treatment `brush.ts`'s hand-written PRNG already gets for the identical reason). Don't leave it unexamined — pick one and record which.
 **Implementation notes**
 - Header: `x = 3, y = 3, rule = B3/S23`. Body tokens: run counts, `b` (dead), `o` (alive), `$` (end of row, with run counts), `!` (end).
 - **Multi-state (Generations/Golly) extension**: states 2–24 encode as `pA`…`pX`, `qA`…, `rA`… — implement it, because ADR-001 makes multi-state a first-class case and half our builtin rulesets need it.
