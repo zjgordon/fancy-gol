@@ -220,6 +220,62 @@
         outline: 2px solid var(--gol-color-accent);
         outline-offset: 2px;
       }
+      .controls button:disabled {
+        background: var(--gol-color-elevated);
+        color: var(--gol-color-muted);
+        cursor: not-allowed;
+      }
+      .controls button[aria-pressed='true'] {
+        background: var(--gol-color-accent-pressed);
+      }
+
+      /*
+       * The speed control (P1-D-2): a logarithmic slider plus an "unbounded" toggle, stacked
+       * under the transport buttons in the same `.chrome-panel`-shaped `#chrome-transport` mount
+       * point. `accent-color` is a one-line, zero-JS way to recolour the *native* range/checkbox
+       * rendering from a token — the cheap end of "Stay Fancy", not a bespoke slider skin.
+       */
+      .speed-control {
+        min-width: 220px;
+      }
+      .speed-readout {
+        font-variant-numeric: tabular-nums;
+      }
+      .speed-slider-row {
+        display: flex;
+        align-items: center;
+        gap: var(--gol-space-2);
+      }
+      .speed-slider {
+        flex: 1;
+        accent-color: var(--gol-color-accent);
+      }
+      .speed-slider:disabled {
+        accent-color: var(--gol-color-muted);
+        opacity: 0.5;
+      }
+      .speed-unbounded {
+        font: inherit;
+        color: var(--gol-color-text);
+        background: transparent;
+        border: 1px solid var(--gol-color-border);
+        border-radius: var(--gol-radius-sm);
+        padding: var(--gol-space-1) var(--gol-space-2);
+        cursor: pointer;
+        line-height: 1;
+      }
+      .speed-unbounded:hover {
+        border-color: var(--gol-color-accent);
+      }
+      .speed-unbounded[aria-pressed='true'] {
+        background: var(--gol-color-accent);
+        color: var(--gol-color-on-accent);
+        border-color: var(--gol-color-accent);
+      }
+      .speed-unbounded:focus-visible {
+        outline: 2px solid var(--gol-color-accent);
+        outline-offset: 2px;
+      }
 
       /*
        * Narrow-viewport reflow (phones, the 320px floor): `.chrome-status` moves out of the
@@ -246,12 +302,9 @@
       <canvas id="scene"></canvas>
       <div id="chrome">
         <div class="chrome-region chrome-toolbar" id="chrome-toolbar" role="toolbar" aria-label="Tools"></div>
-        <div class="chrome-region chrome-transport" id="chrome-transport">
-          <div class="chrome-panel controls">
-            <button id="btn-play-pause" type="button">Pause</button>
-            <button id="btn-reset" type="button">Reset</button>
-          </div>
-        </div>
+        <!-- Populated by ui/components/transport.ts and ui/components/speed.ts (P1-D-2); empty
+             until then, and `:empty { display: none }` above keeps that state visually inert. -->
+        <div class="chrome-region chrome-transport" id="chrome-transport"></div>
         <div class="chrome-region chrome-status" id="chrome-status">
           <div class="chrome-panel">
             <div class="row"><span class="label">tick</span><span id="stat-tick">0</span></div>

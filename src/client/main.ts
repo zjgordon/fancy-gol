@@ -10,8 +10,17 @@
  *  - `createAppContext`'s `onPaint` (P1-C-1) reaches a real `WorkerClient.paint()` for the first
  *    time;
  *  - the Phase 1 tool-select keybindings (P1-C-2) are attached to a real `CommandBus`;
- *  - `ui/components/shell.ts`'s floating chrome and cold-start choreography (this task) frame
- *    all of it.
+ *  - `ui/components/shell.ts`'s floating chrome and cold-start choreography (P1-D-1) frame all
+ *    of it.
+ *
+ * P1-D-2 adds the real transport bar and speed control: `AppContext.sim` (a `SimControl`, the
+ * seam `ui/commands/registry.ts`'s own doc comment left for "a live worker client") is a plain
+ * mutable-state object this file owns and mutates directly — `running`/`targetTps` as closure
+ * variables, `actualTps` read live off a `TpsMeter` fed one `(tick, now)` sample per delivered
+ * frame. `syncSimUI()` pushes that state into `transport.ts`/`speed.ts`'s `update()` both on
+ * every frame (so `actualTps` stays live while running) and immediately after every transport
+ * action (so the Play/Pause label flips the instant it's pressed, even though a paused sim then
+ * delivers no further frames to hang an update off of).
  *
  * Deliberately NOT done here, recorded rather than silently skipped:
  *  - `EditStack`/`CommandBus.onUndoableRun` stay unwired. No `AppCommand` is `undoable: true`
@@ -34,7 +43,11 @@ import { attachInputRouter, type ToolEvent, type ToolEventHandlers } from '@ui/i
 import { attachDefaultBindings } from '@ui/input/bindings';
 import { attachKeymap, Keymap } from '@ui/input/keymap';
 import { CommandBus } from '@ui/commands/bus';
+import type { AppContext, SimControl } from '@ui/commands/registry';
+import { SIM_COMMANDS } from '@ui/commands/builtin/sim';
 import { attachShell } from '@ui/components/shell';
+import { createTransportControls } from '@ui/components/transport';
+import { createSpeedControl, TpsMeter } from '@ui/components/speed';
 import { createAppContext } from './app-context';
 
 /**
@@ -145,8 +158,6 @@ function main(): void {
   const fpsEl = requireElement<HTMLSpanElement>('#stat-fps');
   const stepMsEl = requireElement<HTMLSpanElement>('#stat-step-ms');
   const renderMsEl = requireElement<HTMLSpanElement>('#stat-render-ms');
-  const playPauseBtn = requireElement<HTMLButtonElement>('#btn-play-pause');
-  const resetBtn = requireElement<HTMLButtonElement>('#btn-reset');
 
   const shell = attachShell({ root: document });
 
@@ -167,7 +178,6 @@ function main(): void {
     return { originX: scratch.originX, originY: scratch.originY, cellSize: scratch.cellSize };
   })();
 
-  let running = true;
   let hasFrame = false;
   let lastTick = 0;
   let fps = 0;
@@ -211,12 +221,14 @@ function main(): void {
     if (window.__fancyGolFirstFrameMs === undefined) {
       window.__fancyGolFirstFrameMs = now - bootStart;
     }
+    tpsMeter.sample(frame.tick, now);
 
     tickEl.textContent = String(frame.tick);
     populationEl.textContent = String(frame.stats.population);
     fpsEl.textContent = fps.toFixed(0);
     stepMsEl.textContent = `${(frame.stats.stepMicros / 1000).toFixed(2)} ms`;
     renderMsEl.textContent = `${renderer.readStats().frameMs.toFixed(2)} ms`;
+    syncSimUI();
   }
 
   // A continuous rAF loop redraws whenever the camera moves (pan/zoom/the intro tween) even
@@ -231,11 +243,66 @@ function main(): void {
     requestAnimationFrame(cameraRedrawLoop);
   }
 
-  const { context, registry } = createAppContext({
+  const { context: toolContext, registry } = createAppContext({
     onPaint: (ops) => {
       void client.send({ cmd: 'paint', ops });
     },
   });
+  for (const cmd of SIM_COMMANDS) registry.register(cmd);
+
+  const tpsMeter = new TpsMeter();
+  let simRunning = true;
+  let targetTps = RUN_TPS;
+  const simControl: SimControl = {
+    get running() {
+      return simRunning;
+    },
+    get targetTps() {
+      return targetTps;
+    },
+    get actualTps() {
+      return tpsMeter.actualTps;
+    },
+    toggleRun() {
+      simRunning = !simRunning;
+      tpsMeter.reset();
+      void client.send(simRunning ? { cmd: 'run', tps: targetTps } : { cmd: 'pause' });
+      syncSimUI();
+    },
+    step() {
+      void client.send({ cmd: 'step', n: 1 });
+    },
+    reset() {
+      void (async () => {
+        await client.send({ cmd: 'clear' });
+        mirror.reset();
+        // `clear`'s frame reports an *empty* dirty list (nothing changed, from the worker's point
+        // of view an empty world has nothing to describe) — not `null` ("repaint everything"), so
+        // nothing here would otherwise erase the previous frame's now-stale pixels
+        // (`FrameGridMirror`'s documented known limitation, manifesting concretely here). Force
+        // one now.
+        if (hasFrame) renderer.draw({ cells: mirror.view(), dirty: null, tick: lastTick });
+        await client.send({ cmd: 'paint', ops: gunOps(20, 20) });
+      })();
+    },
+    clear() {
+      void (async () => {
+        await client.send({ cmd: 'clear' });
+        mirror.reset();
+        if (hasFrame) renderer.draw({ cells: mirror.view(), dirty: null, tick: lastTick });
+      })();
+    },
+    randomSoup() {
+      void client.send({ cmd: 'seedRandom', density: 0.3, seed: Math.floor(Math.random() * 0xffffffff) >>> 0 });
+    },
+    setSpeed(tps: number) {
+      targetTps = tps;
+      tpsMeter.reset();
+      if (simRunning) void client.send({ cmd: 'run', tps: targetTps });
+      syncSimUI();
+    },
+  };
+  const context: AppContext = { ...toolContext, sim: simControl };
 
   const gestures = attachGestures(camera, canvas, { reducedMotion: () => reducedMotion() });
 
@@ -283,6 +350,20 @@ function main(): void {
   attachKeymap(keymap, window, bus);
   canvas.style.cursor = context.toolRegistry.active?.cursor ?? 'default';
 
+  const transport = createTransportControls(bus);
+  const speed = createSpeedControl((tps) => simControl.setSpeed(tps));
+  shell.transport.append(transport.root, speed.root);
+
+  /** Pushes `simControl`'s current state into the transport/speed components — called on every
+   * delivered frame (so `actualTps` stays live while running) and immediately after every
+   * transport action (so e.g. the Play/Pause label flips the instant it's pressed, since a
+   * paused sim then delivers no further frames to hang an update off of). */
+  function syncSimUI(): void {
+    transport.update({ running: simControl.running });
+    speed.update({ targetTps: simControl.targetTps, actualTps: simControl.actualTps });
+  }
+  syncSimUI();
+
   async function boot(): Promise<void> {
     await renderer.init(canvas);
     renderer.setTheme(THEME);
@@ -325,25 +406,6 @@ function main(): void {
     camera.animateTo(framedTarget, INTRO_CAMERA_MS, EASE_OUT_CUBIC);
     void shell.playIntro();
   }
-
-  playPauseBtn.addEventListener('click', () => {
-    running = !running;
-    playPauseBtn.textContent = running ? 'Pause' : 'Play';
-    void client.send(running ? { cmd: 'run', tps: RUN_TPS } : { cmd: 'pause' });
-  });
-
-  resetBtn.addEventListener('click', () => {
-    void (async () => {
-      await client.send({ cmd: 'clear' });
-      mirror.reset();
-      // `clear`'s frame reports an *empty* dirty list (nothing changed, from the worker's point
-      // of view an empty world has nothing to describe) — not `null` ("repaint everything"), so
-      // nothing here would otherwise erase the previous frame's now-stale pixels (FrameGridMirror's
-      // documented known limitation, manifesting concretely here). Force one now.
-      if (hasFrame) renderer.draw({ cells: mirror.view(), dirty: null, tick: lastTick });
-      await client.send({ cmd: 'paint', ops: gunOps(20, 20) });
-    })();
-  });
 
   window.addEventListener('resize', () => {
     camera.resize(window.innerWidth, window.innerHeight);
