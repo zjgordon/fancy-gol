@@ -252,17 +252,20 @@ simulation via `panBy`, not a tween, so it doesn't need it either. See the modul
 
 ### Workstream C — Commands, keybindings, undo
 
-#### - [ ] P1-C-1 · Command registry & bus
+#### - [x] P1-C-1 · Command registry & bus
 **Depends on:** Phase 0 · **Files:** `src/ui/commands/registry.ts`, `src/ui/commands/bus.ts`, `src/client/app-context.ts`
 **Implementation notes** Registration is duplicate-checked at startup and throws loudly. `bus.run(id, arg)` resolves `isEnabled` first, dispatches, records to the edit stack when `undoable`, and emits telemetry-free events that Phase 4's palette will show as "recent".
-**Follow-up from P1-B-2:** wire `ToolRegistry.onCommit` (P1-B-2) to this bus so a tool's finalised `PaintOp[]` actually reaches `WorkerClient.paint()`, and register one `tool.select.<id>` command per `ToolRegistry` entry (`Tool.id` was chosen to already match that naming). Neither is a change to `tool.ts`/`registry.ts` — both are additions here.
+- **A real boundary constraint, resolved, not routed around:** `AppCommand`'s methods are typed against `AppContext`, and `ui/` cannot import `client/` (ADR-009) — so `AppContext` is declared in `src/ui/commands/registry.ts`, not `src/client/app-context.ts` as §2.6's file tree might suggest at a glance. `app-context.ts`'s actual job is narrower: build a *real value* of that interface (`createAppContext()`), wiring in what already exists.
+- **Follow-up from P1-B-2, done:** `ToolRegistry.onCommit` is wired to an injectable `onPaint` callback, and one `tool.select.<id>` command is registered per Phase 1 tool, each carrying the exact default binding P1-C-2's own table already names (`B`/`E`/`L`/`U`/`O`/`G`/`S`/`M`) — assigned now, at definition time, not left for P1-C-2 to invent, the same way `Tool.id` was chosen in P1-B-2 to already match this naming. Neither required a change to `tools/*.ts` or `registry.ts`.
+- **Not solved here, flagged for whoever boots the app:** `onPaint` has no real `WorkerClient.paint()` on the other end yet — there is no live worker/simulation composition root for it to reach. It defaults to a no-op so every tool stays fully exercisable and testable without one; wiring the real connection is P1-D-1's (or whichever task first assembles the full client) to do.
 **Acceptance criteria**
-- [ ] A test enumerates every registered command and asserts each has a `title`, a `category`, and either a `defaultBinding` or an explicit `noBinding: true`. **No orphan commands.**
-- [ ] Running a disabled command is a no-op with a debug warning, never a throw.
+- [x] A test enumerates every registered command and asserts each has a `title`, a `category`, and either a `defaultBinding` or an explicit `noBinding: true`. **No orphan commands.** — enforced twice over: `CommandRegistry.register()` itself throws on a command missing both, *and* a test separately enumerates a populated registry (including `createAppContext()`'s real eight `tool.select.*` commands) to confirm the invariant holds in practice, not just in the constructor's own logic.
+- [x] Running a disabled command is a no-op with a debug warning, never a throw — `command.run` is asserted never called, `console.debug` is asserted called exactly once naming the command id, and the call resolves normally (no throw, no rejection).
 
 #### - [ ] P1-C-2 · Keybinding system
 **Depends on:** P1-C-1 · **Files:** `src/ui/input/keymap.ts`, `src/ui/input/bindings.ts`
 **Implementation notes** `Mod` normalises to `Cmd` on macOS / `Ctrl` elsewhere. Supports chords (`g` then `g`) with a 1 s timeout and a visible pending-chord indicator. Bindings never fire while focus is in a text input. Conflicts are detected at registration and reported.
+**Already done in P1-C-1:** the eight tool-select bindings below (`B`/`E`/`L`/`U`/`O`/`G`/`S`/`M`) are already set as `defaultBinding` on `createAppContext()`'s `tool.select.*` commands (`src/client/app-context.ts`) — this task wires the *keyboard listener* that reads `AppCommand.defaultBinding` and calls `bus.run(id)`, it doesn't invent those eight values.
 **Default bindings (Phase 1 set):**
 | Key | Action | | Key | Action |
 |---|---|---|---|---|
@@ -286,6 +289,7 @@ simulation via `panBy`, not a tween, so it doesn't need it either. See the modul
 #### - [ ] P1-C-3 · Edit undo/redo stack
 **Depends on:** P1-C-1 · **Files:** `src/ui/commands/edit-stack.ts`
 **Implementation notes** Stores inverse `PaintOp[]` per edit (cheap — we already have `from` values in the `ChangeSet`). Depth-capped (default 200) and byte-capped. **Explicitly separate from the Phase 4 time machine**: undo reverses *your edits*, the timeline reverses *the simulation*. The UI must never blur these — Phase 4 adds a one-line explainer in the timeline.
+**Follow-up from P1-C-1:** `CommandBus`'s `onUndoableRun` (`src/ui/commands/bus.ts`) is a no-op by default — wire it to this stack's real recording method. Not a change to `bus.ts`'s shape, just supplying a real callback where `createAppContext`/the composition root constructs the `CommandBus`.
 **Acceptance criteria**
 - [ ] 200 random edits fully undone restores a byte-identical grid.
 - [ ] Undo after a step undoes only the edit, leaving the generation count alone.

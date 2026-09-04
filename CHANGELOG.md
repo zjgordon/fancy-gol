@@ -70,6 +70,14 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   glider emission) rather than trusted from memory. Placement is sparse (only a stamp's own live
   cells become ops, unlike paste's dense selection-bounding-box overwrite); Shift-click keeps the
   same stamp selected for repeated placement. (P1-B-6)
+- `CommandRegistry`, `CommandBus`, and `createAppContext` (`src/ui/commands/{registry,bus}.ts`,
+  `src/client/app-context.ts`): every user-triggerable action is a registered `AppCommand` —
+  registration throws loudly on a duplicate id or on neither a `defaultBinding` nor an explicit
+  `noBinding: true`. `bus.run()` resolves `isEnabled` first; a disabled command is a no-op with a
+  debug-level log, never a throw. `createAppContext()` wires up all eight Phase 1 tools and
+  registers their `tool.select.<id>` commands with the exact default bindings (`B`/`E`/`L`/`U`/
+  `O`/`G`/`S`/`M`) P1-C-2's table already names. `AppContext` is declared in `registry.ts`, not
+  `app-context.ts` — `ui/` cannot import `client/` (ADR-009). (P1-C-1)
 
 ## [0.1.0] — 2026-09-04
 
