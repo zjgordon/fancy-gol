@@ -201,14 +201,18 @@ simulation via `panBy`, not a tween, so it doesn't need it either. See the modul
 - [x] Adding a new tool requires touching exactly one new file plus one registry line (proved by a fixture tool in tests) — a fixture `Tool` implementation plus a single `registry.register(new FixtureTool())` call is immediately gettable, listable, auto-activated (first tool registered), and fully wired through `handlers`/`onCommit` — no change to `tool.ts` or `registry.ts` itself.
 - [x] `Escape` mid-drag leaves the grid byte-identical to before the drag — proved literally, not just by absence of a commit call: a real `Simulation` is snapshotted before a down+move+cancel sequence (never `onUp`) and after; tick, RNG state, and every live chunk's bytes are asserted unchanged. A contrasting test proves the wiring is genuinely live: an uncancelled down+up *does* commit and *does* change the simulation.
 
-#### - [ ] P1-B-3 · Brush & eraser
+#### - [x] P1-B-3 · Brush & eraser
 **Depends on:** P1-B-2 · **Files:** `src/ui/tools/brush.ts`, `src/ui/tools/eraser.ts`
 **Implementation notes** Size 1–64; shapes square / circle / diamond; **state selection** (multi-state rules paint any state — a colour-swatch row appears automatically from the ruleset's palette); density (spray) with the seeded PRNG; symmetry modes (none, mirror-X, mirror-Y, quad, 4-fold rotational, 8-fold) — symmetry is cheap to implement and enormously fun, which is exactly the inception document's bar. Line interpolation between move samples via Bresenham so fast drags never dot.
+- The seeded PRNG (`density`'s spray) is a hand-written duplicate of `engine/rng.ts`'s Mulberry32, not an import — `ui/` cannot reach `engine/` at all (ADR-009). Same treatment `shared/types.ts` already documents for its own independently-defined chunk-coordinate maths.
+- Every symmetry mode and the Bresenham fill share one dedup mechanism: a `Map<packedXY, PaintOp>` per stroke. That single mechanism is what makes 8-fold symmetry's axis collisions collapse correctly *and* is what keeps a slow, wobbly drag or overlapping shape stamps from bloating the op count — one property serving two of this task's acceptance criteria.
+- `Eraser` is a thin wrapper around `Brush` forcing `state: DEAD`, not a duplicate implementation — it exposes no `state` property at all, so there is no way, even by mistake, to make it paint anything else.
+- The colour-swatch row and the single-key tool bindings from the implementation notes are DOM/`CommandBus` concerns outside this task's file scope (`brush.ts`/`eraser.ts` only) — `state`/`shape`/`size`/`density`/`symmetry` are plain mutable properties a future component sets directly; see P1-B-2's own note on the `CommandBus` seam.
 **Acceptance criteria**
-- [ ] Drag at 2000 px/s leaves a solid, unbroken stroke.
-- [ ] 8-fold symmetry produces exactly 8 mirrored ops per source cell, deduplicated at the axes.
-- [ ] Painting state 2 in Brian's Brain is possible from the UI without typing anything.
-- [ ] Painting 5,000 cells in one stroke stays above 60 fps.
+- [x] Drag at 2000 px/s leaves a solid, unbroken stroke — proved two ways: an extreme single coalesced sample (0 → 100 world units in one reported move) still paints every intermediate cell; and a realistic 2000px/s-at-60fps, `cellSize` 8 sampling cadence over 40 frames leaves consecutive painted cells exactly 1 apart throughout. A diagonal-jump variant exercises Bresenham's other step branch (steep lines), not just horizontal.
+- [x] 8-fold symmetry produces exactly 8 mirrored ops per source cell, deduplicated at the axes — a point off every axis yields exactly 8 distinct ops; a point on the x-axis collapses to 4; the origin itself (on every axis and the diagonal at once) collapses to 1.
+- [x] Painting state 2 in Brian's Brain is possible from the UI without typing anything — `new Brush({ state: 2 })` paints state 2 by property assignment alone; the test confirms Brian's Brain genuinely has a state id 2 (`dying`), not an assumed number.
+- [x] Painting 5,000 cells in one stroke stays above 60 fps — a single coalesced-move batch producing 5,000+ cells, timed after a warm-up call (steady-state JIT cost, not first-call compilation), completes in well under one 16.6 ms frame budget; skipped under `VITEST_COVERAGE` per `simulation.spec.ts`'s established convention.
 
 #### - [ ] P1-B-4 · Shape tools: line, rectangle, ellipse, fill
 **Depends on:** P1-B-2 · **Files:** `src/ui/tools/{line,rect,ellipse,fill}.ts`

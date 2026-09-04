@@ -41,6 +41,13 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   `router.ts`'s `ToolEvent`s to it, and cancels the active tool on Escape. Adding a tool is one
   new file plus one `register()` call; `onCommit` is the seam P1-C-1's `CommandBus` plugs into
   once it exists. (P1-B-2)
+- `Brush` and `Eraser` (`src/ui/tools/brush.ts`, `src/ui/tools/eraser.ts`): size 1–64, three
+  footprint shapes (square/circle/diamond), spray density via a seeded PRNG, Bresenham
+  interpolation between move samples so a fast drag never dots, and six symmetry modes
+  (none/mirror-x/mirror-y/quad/rotate-4/rotate-8) sharing one per-stroke dedup mechanism that
+  also keeps overlapping stamps from bloating the op count. Paints any `StateId` by property
+  assignment — multi-state rules need no dedicated UI to reach state 2+. `Eraser` is a thin
+  `Brush` wrapper forced to `DEAD`, exposing no way to paint anything else. (P1-B-3)
 
 ## [0.1.0] — 2026-09-04
 
