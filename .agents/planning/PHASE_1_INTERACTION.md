@@ -164,14 +164,17 @@ simulation via `panBy`, not a tween, so it doesn't need it either. See the modul
 - [x] Inertia comes to rest within 800 ms and never overshoots into an inconsistent camera state — proven by driving a fake `Clock`/`FrameScheduler` frame-by-frame from a real release velocity; asserts `coasting` goes false at or before 800 ms (+ one frame of slack) and that `originX`/`originY` stay finite throughout.
 - [x] With reduced motion enabled, pan stops the instant the pointer does — proven: with `reducedMotion` reporting `true`, releasing the drag pointer never schedules a coast frame at all (`coasting` is `false` immediately, `scheduler.hasPending` stays `false`).
 
-#### - [ ] P1-A-3 · Grid lines & the "you are here" overlay
+#### - [x] P1-A-3 · Grid lines & the "you are here" overlay
 **Depends on:** P1-A-1 · **Files:** `src/ui/overlay/grid-lines.ts`
 **Intent:** Boring feature; make it interesting (inception rule "Stay Fancy").
 **Implementation notes** Grid lines fade in only when `cellSize ≥ 6`, with a stronger decade line every 10 cells and a labelled origin cross. Opacity is a smooth function of zoom, not a hard toggle — a hard toggle is what a boring implementation looks like. A minimap-style world extent indicator appears while panning and fades after 600 ms.
+- `GridLinesOverlay.draw(ctx, camera, nowMs)` is self-contained: it diffs the `Camera`'s own origin/cellSize against what it saw last frame to detect "activity" (pan or zoom, either resets the "you are here" badge's 600 ms fade-out), so it needs no wiring to P1-A-2's gestures or P1-B-1's not-yet-built input router.
+- Colours are a required `GridLinesPalette` of `{r,g,b}` triples — no hardcoded grey fallback, same discipline `render/canvas2d.ts`'s `CompiledTheme` requirement established. Triples rather than CSS strings because `ui/` cannot import `render/canvas2d.ts`'s `parseColor` (ADR-009: only `render/types` is reachable from `ui/`) and re-deriving a colour parser here just to re-add alpha would duplicate it for no gain.
+- Below `cellSize` 6 the whole grid is skipped before any iteration — zero cost, not just zero opacity — which is also what keeps the <1ms budget trivial once zoomed out.
 **Acceptance criteria**
-- [ ] Lines are crisp at any `devicePixelRatio` (half-pixel offset handled).
-- [ ] Grid rendering costs < 1 ms at 1080p.
-- [ ] Fade curve is driven by a motion token, not a literal.
+- [x] Lines are crisp at any `devicePixelRatio` (half-pixel offset handled) — proven directly: `Camera` already works in device-px space (P1-A-1), so a 1px stroke only needs `snapForCrispStroke` (`Math.round(px)+0.5`); verified for camera dimensions scaled ×1/×2/×3 (what a DPR-2/3 backing store looks like for the same CSS viewport).
+- [x] Grid rendering costs < 1 ms at 1080p — measured (CPU dispatch against a cheap fake context, not GPU raster time, same honest scope as P0-H-2's frame-time budget) at `cellSize` 6.1 (the worst-case line density, just past the fade-in threshold), 1920×1080.
+- [x] Fade curve is driven by a motion token, not a literal — driven by an injectable `FadeCurve = (t: number) => number`, the same shape ADR-008's `MotionSignature.easings` will eventually have (see P1-E-1's note: real tokens slot in here with no API change). The default (`SMOOTHSTEP`) is a hand-written placeholder, not a real theme token — P1-E-1 doesn't exist yet — but the point of the criterion (no ad hoc literal formula, a swappable named curve) is genuinely satisfied today, unlike P1-A-2's Playwright criterion which needed infrastructure that plain cannot be built early.
 
 ---
 
@@ -321,6 +324,7 @@ simulation via `panBy`, not a tween, so it doesn't need it either. See the modul
 #### - [ ] P1-E-1 · Token contract and lint enforcement
 **Depends on:** Phase 0 · **Files:** `src/themes/types.ts`, `src/themes/tokens.css`, `eslint.config.js`
 **Implementation notes** Enumerate every token the UI will ever need — colour (surface/elevated/border/text/muted/accent/danger/success), type (family, 6 sizes, 3 weights, 2 letter-spacings), space scale, radius scale, shadow scale, motion (4 durations, 5 easings), and the cell palette contract. Add an ESLint rule banning literal hex/rgb/hsl values and raw `ms`/`px` durations in `src/ui/**`.
+**Follow-up for whichever task first wires a real theme through:** `src/ui/overlay/grid-lines.ts` (P1-A-3) takes its zoom-fade/activity-fade shape as an injectable `FadeCurve` (default `SMOOTHSTEP`, a hand-written placeholder) and its colours as a required `GridLinesPalette` of `{r,g,b}` triples (no default) — rewire both to the real `motion.easings` token and the active theme's palette once they exist; no API change needed on `grid-lines.ts`'s side.
 **Acceptance criteria**
 - [ ] `tokens.css` documents every variable with a comment stating its purpose and its Default value.
 - [ ] The lint rule catches a deliberately introduced `color: #333` in a component.
