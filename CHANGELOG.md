@@ -15,8 +15,14 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   (§2.3). Fractional `cellSize` clamped to `[0.02, 128]` (ADR-005's density-LOD floor),
   `screenToWorld`/`worldToScreen`, cursor-anchored `zoomAt`, `panBy`, and `fitTo` for framing a
   pattern's bounding box with padding. Exposes a `dirty` flag so the render loop repaints only
-  when the transform actually changed. `animateTo` from the full §2.3 contract is deferred to
-  P1-A-2, its first real consumer. (P1-A-1)
+  when the transform actually changed. `animateTo` from the full §2.3 contract stays deferred
+  until a task adds a genuine fixed-target eased transition. (P1-A-1)
+- `attachGestures` (`src/ui/input/gestures.ts`): wheel-zoom-at-cursor, Shift+wheel and trackpad
+  two-finger pan, pinch-zoom (via Pointer Events, not `TouchEvent`), middle-drag/Space-drag pan,
+  and an inertial coast on release — exponential friction, hard-capped at 800 ms, cancelled by
+  any new input. Respects `prefers-reduced-motion` by skipping the coast entirely. `Clock`,
+  `FrameScheduler`, and the reduced-motion query are all injected, so the physics are
+  deterministic under test. (P1-A-2)
 
 ## [0.1.0] — 2026-09-04
 

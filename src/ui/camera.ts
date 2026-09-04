@@ -6,9 +6,11 @@
  * 1 px/cell the renderer's density-LOD path takes over (ADR-005).
  *
  * `animateTo` — part of Phase 1 §2.3's full `Camera` contract — is deliberately not here yet.
- * Its first consumer is P1-A-2 (inertial pan/zoom, which also needs to cancel an in-flight
- * animation on new input and to respect `prefers-reduced-motion`); that task owns the tween
- * and `Easing` contract it needs, rather than this one guessing at a shape nothing exercises.
+ * P1-A-2's inertia turned out not to need it either: a friction coast is a continuous physics
+ * simulation driven by repeated `panBy` calls, not a fixed-duration eased tween. `animateTo`
+ * stays deferred until a task adds a genuine fixed-target transition (a "fit to content" button,
+ * double-click-to-zoom) — that task can define the `Easing` contract it actually needs, rather
+ * than this one guessing at a shape nothing exercises yet.
  */
 import type { Rect } from '@shared/types';
 

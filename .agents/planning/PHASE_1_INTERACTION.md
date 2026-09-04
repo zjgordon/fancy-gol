@@ -147,16 +147,22 @@ tests/e2e/                      playwright specs + fixtures
 - [x] Property test: `screenToWorld(worldToScreen(p))` round-trips within 1e-9 across 10k random cameras.
 - [x] `zoomAt` keeps the world point under the cursor fixed to sub-pixel accuracy across 100 successive zooms.
 - [x] `fitTo` frames a pattern's bounding box with the requested padding, for both wide and tall aspect ratios.
-**Note** `animateTo` from §2.3's full `Camera` contract is intentionally deferred to P1-A-2, its
-first consumer — see the module doc in `src/ui/camera.ts`.
+**Note** `animateTo` from §2.3's full `Camera` contract is intentionally deferred until a task
+adds a genuine fixed-target eased transition — P1-A-2's inertia is a continuous friction
+simulation via `panBy`, not a tween, so it doesn't need it either. See the module doc in
+`src/ui/camera.ts`.
 
-#### - [ ] P1-A-2 · Pan, zoom, and inertia
+#### - [x] P1-A-2 · Pan, zoom, and inertia — pinch-zoom E2E criterion relocated to P1-H-1 on 2026-09-04
 **Depends on:** P1-A-1 · **Files:** `src/ui/input/gestures.ts`
 **Implementation notes** Wheel = zoom at cursor; `Shift`+wheel = horizontal pan; trackpad two-finger pan detected via `deltaMode` and lack of `ctrlKey`; pinch-zoom on touch; middle-drag and `Space`-drag to pan. Inertia: velocity from the last 100 ms of movement, exponential friction, cancelled by any new input. Respect `prefers-reduced-motion` by disabling inertia and camera animation.
+- All gesture state (drag tracking, pinch tracking, Space-held, in-flight inertia) lives in one `attachGestures(camera, pointerTarget, options)` closure, returned as a small `GestureController` (`panning`, `coasting`, `dispose()`). `Clock`, `FrameScheduler`, and the `prefers-reduced-motion` query are all injected — same discipline as `worker/client.ts`'s `FrameScheduler`/`sim.worker.ts`'s `REAL_CLOCK` — so inertia's physics are exercised deterministically under test instead of against real timers.
+- Wheel-driven panning (the trackpad two-finger case, `deltaMode === 0` with no `ctrlKey`) deliberately gets no inertia of its own: the platform already sends decaying `wheel` events on its own (native momentum). This module's friction model only ever applies to a released pointer-drag.
+- Pinch-zoom is built on Pointer Events (tracking up to two `pointerType: 'touch'` ids), not `TouchEvent` — consistent with the project's "Pointer Events only" preference (P1-B-1) and, incidentally, what makes it unit-testable without a real touch-capable browser.
+- Inertia decays exponentially (`FRICTION_PER_MS`) and is additionally hard-capped at `MAX_INERTIA_MS = 800`, so the 800 ms acceptance criterion holds regardless of tuning, not just in the common case.
 **Acceptance criteria**
-- [ ] E2E: pinch-zoom on a touch emulation session zooms about the pinch midpoint.
-- [ ] Inertia comes to rest within 800 ms and never overshoots into an inconsistent camera state.
-- [ ] With reduced motion enabled, pan stops the instant the pointer does.
+- [-] E2E: pinch-zoom on a touch emulation session zooms about the pinch midpoint — cut here: `P1-H-1`'s Playwright harness does not exist yet (it depends on `P1-D-1`, also not started), so there is no browser touch-emulation session to run this against. Relocated to `P1-H-1`'s "pan/zoom" spec (2026-09-04); do not re-add here. The pinch-anchoring math itself is proven now at the unit level (`tests/unit/ui/gestures.spec.ts`, "zooms about the pinch midpoint": a symmetric two-finger pinch leaves the world point under the midpoint fixed to within 1e-6) — the same class of interim substitution P0-H-2 used for its dpr criterion.
+- [x] Inertia comes to rest within 800 ms and never overshoots into an inconsistent camera state — proven by driving a fake `Clock`/`FrameScheduler` frame-by-frame from a real release velocity; asserts `coasting` goes false at or before 800 ms (+ one frame of slack) and that `originX`/`originY` stay finite throughout.
+- [x] With reduced motion enabled, pan stops the instant the pointer does — proven: with `reducedMotion` reporting `true`, releasing the drag pointer never schedules a coast frame at all (`coasting` is `false` immediately, `scheduler.hasPending` stays `false`).
 
 #### - [ ] P1-A-3 · Grid lines & the "you are here" overlay
 **Depends on:** P1-A-1 · **Files:** `src/ui/overlay/grid-lines.ts`
@@ -393,7 +399,7 @@ first consumer — see the module doc in `src/ui/camera.ts`.
 **Depends on:** P1-D-1 · **Files:** `playwright.config.ts`, `tests/e2e/*.spec.ts`
 **Implementation notes** Chromium + Firefox + WebKit. Deterministic runs: seed the PRNG, freeze the clock, disable the intro choreography and inertia via a `?test=1` flag. Trace on first retry. Add the job to CI.
 **Acceptance criteria**
-- [ ] Specs covering: draw a glider and verify it moves; pan/zoom; every Phase 1 keybinding; undo/redo; ruleset switch; theme persistence across reload; share-link round trip; `/live` connect and receive.
+- [ ] Specs covering: draw a glider and verify it moves; pan/zoom (**including P1-A-2's relocated criterion**: pinch-zoom on a touch-emulation session zooms about the pinch midpoint); every Phase 1 keybinding; undo/redo; ruleset switch; theme persistence across reload; share-link round trip; `/live` connect and receive.
 - [ ] Suite completes in < 4 minutes and is non-flaky over 10 consecutive CI runs.
 
 #### - [ ] P1-H-2 · Visual regression baseline
