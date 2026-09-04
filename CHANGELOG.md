@@ -218,10 +218,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `setViewport` are required before `draw()` — no fallback theme, no hardcoded grey. Tested
   against a hand-written, functionally real 2D-context double (`fillRect`/`putImageData` write
   into an actual RGBA buffer, not just a call log) driving a real `Simulation`/`GridView`. The
-  frame-time budget and the dpr pixel-identity criteria aren't provable here — `jsdom` has no
-  real canvas rasteriser and no bloat forbids adding one — and are deferred to the real bench
-  harness (P0-I-4) and Phase 1's E2E suite respectively; recorded as `[!]` blocked rather than
-  silently marked done. (P0-H-2)
+  frame-time budget is gated by P0-I-4 as labelled CPU/recorder time. The dpr 1-vs-2
+  pixel-identity criterion is a Playwright visual, not a jsdom claim: relocated to P1-H-2
+  (2026-09-03) so Phase 0 can close without silently ticking it or pulling E2E into
+  Foundation. `resize()` backing-store vs CSS size stays unit-tested here. (P0-H-2)
 - `src/render/recorder.ts` — `CanvasRecorder`, a `CanvasRenderingContext2D`-shaped double that
   logs every `fillStyle`/`fillRect`/`createImageData`/`putImageData` call while painting into a
   real `Uint8ClampedArray` backing buffer, so a test can assert on both the call log and actual
@@ -296,6 +296,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   in-repo by P0-A-5's and P0-I-4's own fixtures — CI only wires them in. The `docker` job's
   build-run-healthcheck sequence was hand-verified end-to-end against this sandbox's remote
   dind daemon before being committed. (P0-I-5)
+
+### Changed
+
+- P0-H-2's leftover dpr 1-vs-2 pixel-identity criterion is cut from Phase 0 and owned by
+  P1-H-2 (Playwright `deviceScaleFactor`, HUD masked). The Phase 0 task is closed: frame
+  time, draw-call bounds, and `resize()` CSS-vs-backing-store maths stay here; the visual
+  claim was never a jsdom test. (P0-H-2 → P1-H-2)
 
 ### Fixed
 

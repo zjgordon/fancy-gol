@@ -607,7 +607,7 @@ Emit a `CompiledRule` with the strategy selected automatically:
 - [x] Merge correctness property test: the merged rect list covers exactly the same cell set as the input, for 10k random inputs — verified by rasterising both sides onto a grid and comparing exactly (manual comparison, not `toEqual`, in the hot loop — 10,000 deep-equal calls otherwise dominated the test's runtime, ~9s down to under 1s).
 - [x] The full-repaint fallback triggers at the documented ~60% threshold, verified by test (59% merges, 61% returns `null`; also tested independently of area via the 4,096-rect cap, and that `giveUpFraction` is itself configurable).
 
-#### - [!] P0-H-2 · Canvas2D renderer — blocked on Phase 1 E2E for the dpr visual criterion
+#### - [x] P0-H-2 · Canvas2D renderer — dpr visual criterion relocated to P1-H-2 on 2026-09-03
 **Depends on:** P0-H-1, P0-C-2 · **Files:** `src/render/canvas2d.ts`
 **Implementation notes**
 - Every dirty rect (or the whole visible viewport, on `dirty: null`) is intersected with the viewport first, then walked chunk-by-chunk via `GridView.forEachChunkInRect` — nothing outside what's actually visible is touched, even if it's in the dirty list.
@@ -616,10 +616,11 @@ Emit a `CompiledRule` with the strategy selected automatically:
 - `resize(widthPx, heightPx, dpr)` sets the canvas's actual backing-store size directly (already device-pixel dimensions, matching `Viewport.cellSize`'s own "device px per cell" units — no separate `ctx.scale(dpr,dpr)`) and, for a real `HTMLCanvasElement` (duck-typed via `'style' in canvas`, not `instanceof` — `OffscreenCanvas` has no `style`, and a structural test double can opt in without a real DOM), sets the CSS display size to `widthPx/dpr` × `heightPx/dpr` so a high-DPR canvas isn't upscaled-blurry.
 - `setTheme`/`setViewport` are both required before the first `draw()` (a clear thrown error, not a silent default) — matching "do not hardcode grey": there is no fallback theme.
 - Tested against a hand-written, *functionally real* `CanvasRenderingContext2D` double (`fillRect`/`putImageData` write into an actual RGBA backing buffer, not just a call log) driving a real `Simulation`/`GridView` — not the permanent "Canvas Bridge" recorder, which is P0-H-3's own module.
+- `resize(800, 600, 2)` is unit-tested: backing store 800×600, CSS display 400×300. That is Phase 0's dpr *plumbing*. The leftover AC asked for a **browser visual** (pixel-identical at `dpr` 1 and 2 modulo scale). Playwright does not exist until P1-H-1, Phase 0 DoD forbids leftover `[!]`, and P1-H-2 did not previously name the claim — so on 2026-09-03 the criterion was cut here and given to P1-H-2 rather than silently ticked or pulling E2E into Foundation.
 **Acceptance criteria**
 - [x] 1080p viewport, 100k visible cells, steady state: frame time ≤ 16.6 ms (bench) — P0-I-4 case `render-frame-cpu`: `Canvas2DRenderer.draw` against `CanvasRecorder` at 1920×1080 / ~100k visible cells, **CPU / recorder time ~10–12 ms**, labelled as such (not GPU raster). Absolute 16.6 ms budget is the gate; 10% baseline-regression skipped because recorder fill time is noisy.
 - [x] Repainting a single changed cell issues a bounded, asserted number of draw calls (regression guard against accidental full repaints) — asserted exactly (2: one background fill, one single-cell run), not just "small"; also proven for multi-cell runs (still 2, not N) and multi-state batches (one draw call per distinct state, not per cell).
-- [ ] Rendering is pixel-identical at `dpr` 1 and 2 modulo scale (visual test in Phase 1 once E2E exists) — the task's own note already defers this; no judgement call needed here.
+- [-] Rendering is pixel-identical at `dpr` 1 and 2 modulo scale — cut from Phase 0: this is a Playwright visual, not a jsdom/`CanvasRecorder` claim. Relocated verbatim to P1-H-2 (2026-09-03). Do not re-add here.
 
 #### - [x] P0-H-3 · Headless draw-call recorder — *the "Canvas Bridge" from the inception doc* — @claude, started 2026-09-02, finished 2026-09-02
 **Depends on:** P0-H-2 · **Files:** `src/render/recorder.ts`, `src/worker/frame-view.ts`, `tests/integration/canvas-bridge.spec.ts`, `tests/unit/render/recorder.spec.ts`, `tests/unit/worker/frame-view.spec.ts`

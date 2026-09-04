@@ -397,9 +397,11 @@ tests/e2e/                      playwright specs + fixtures
 #### - [ ] P1-H-2 · Visual regression baseline
 **Depends on:** P1-H-1, P1-E-3 · **Files:** `tests/visual/*.spec.ts`
 **Implementation notes** Screenshot the shell, toolbar, transport, status bar, dialog and a rendered grid at three zoom levels, in Default light and dark. Mask the fps/ms readouts. Tolerance ≤ 0.1% pixels. This is the baseline Phase 3 will extend to six themes — establish the discipline now while there is one theme to fix.
+- Also owns P0-H-2's relocated dpr claim: Chromium at `deviceScaleFactor` 1 and 2, same CSS viewport, HUD masked, compare screenshots (or a downsampled buffer) so the rendered grid is pixel-identical modulo scale. That is a real browser raster, not `CanvasRecorder` CPU fills. Phase 0 already proves `resize()` backing-store vs CSS size; this task proves the pixels.
 **Acceptance criteria**
 - [ ] Baselines committed and stable across three consecutive CI runs.
 - [ ] A deliberate 2 px padding change is caught.
+- [ ] Rendering is pixel-identical at `dpr` 1 and 2 modulo scale — relocated from P0-H-2 (2026-09-03). Chromium `deviceScaleFactor` 1 vs 2, HUD masked, same CSS viewport; do not treat a Node recorder buffer as this box.
 
 #### - [ ] P1-H-3 · Interaction performance budgets
 **Depends on:** P1-B-3, P0-I-4 (bench harness) · **Files:** `tests/bench/interaction.bench.ts`
