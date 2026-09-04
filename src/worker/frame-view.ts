@@ -92,6 +92,14 @@ export class FrameGridMirror {
     return this.gridView;
   }
 
+  /** How many chunk pages the mirror currently holds — `* CHUNK_AREA` is a caller's cheapest
+   * honest memory estimate for what it has mirrored client-side (P1-D-3's status bar), not a
+   * measurement of the worker's own `Simulation` memory, which lives on the other side of the
+   * wire and can differ (e.g. after chunk reclamation this mirror hasn't been told about yet). */
+  get pageCount(): number {
+    return this.pages.size;
+  }
+
   /** Discards every chunk the mirror currently holds — see the class doc's "known limitation" for when a caller needs this. */
   reset(): void {
     this.pages.clear();

@@ -52,6 +52,25 @@ describe('FrameGridMirror', () => {
     expect(view.bounds()).toEqual({ x: 0, y: 0, width: 32, height: 32 });
   });
 
+  describe('pageCount', () => {
+    it('starts at zero and counts distinct chunk pages (P1-D-3\'s memory-estimate basis)', () => {
+      const mirror = new FrameGridMirror();
+      expect(mirror.pageCount).toBe(0);
+
+      mirror.applyChunks(onePageChunks(0, 0, [[1, 1, 1]]));
+      expect(mirror.pageCount).toBe(1);
+
+      mirror.applyChunks(onePageChunks(1, 0, [[33, 1, 2]]));
+      expect(mirror.pageCount).toBe(2);
+
+      mirror.applyChunks(onePageChunks(0, 0, [[1, 1, 3]])); // same key again — not a new page
+      expect(mirror.pageCount).toBe(2);
+
+      mirror.reset();
+      expect(mirror.pageCount).toBe(0);
+    });
+  });
+
   it('a later applyChunks() for the same key replaces that chunk, leaving others untouched', () => {
     const mirror = new FrameGridMirror();
     mirror.applyChunks(onePageChunks(0, 0, [[1, 1, 1]]));
