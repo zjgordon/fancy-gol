@@ -23,8 +23,36 @@ export type CommandCategory = 'Simulation' | 'Tools' | 'View' | 'Edit' | 'Rulese
  */
 export type KeyBinding = string;
 
+/**
+ * Transport/speed state and actions (P1-D-2) — everything `sim.*`'s `AppCommand`s and the
+ * `transport.ts`/`speed.ts` components need. Live state (`running`/`targetTps`/`actualTps`), not
+ * a snapshot: a real implementation's getters read whatever a composition root's `WorkerClient`
+ * and frame loop currently know, so an `isActive`/`isEnabled` check or a component's `update()`
+ * call always sees the current value, not a stale one captured at registration time.
+ * `targetTps === Infinity` is the "unbounded" mode the phase doc's implementation notes ask for.
+ */
+export interface SimControl {
+  readonly running: boolean;
+  readonly targetTps: number;
+  readonly actualTps: number;
+  toggleRun(): void;
+  step(): void;
+  reset(): void;
+  clear(): void;
+  randomSoup(): void;
+  setSpeed(tps: number): void;
+}
+
 export interface AppContext {
   readonly toolRegistry: ToolRegistry;
+  /**
+   * Absent until a composition root with a live `WorkerClient` constructs one (P1-D-2) — a pure
+   * addition to this interface, per this file's own module doc, rather than a required field
+   * that would force every existing `AppContext` construction (`createAppContext()`'s
+   * tools-only context included) to change. `sim.ts`'s `requireSim` is what every `sim.*`
+   * `AppCommand` uses to turn a missing one into a legible error instead of a silent no-op.
+   */
+  readonly sim?: SimControl;
 }
 
 export interface AppCommand<A = void> {
