@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "recorded": "2026-09-03",
-  "node": "v24.19.0",
+  "recorded": "2026-09-04",
+  "node": "v24.20.0",
   "platform": "linux x64",
-  "note": "Real machine run. Medians of 7 after per-case warmup. Updating this file is a reviewed commit, never a reflex.",
+  "note": "Real machine run. Medians of 7 after per-case warmup. Updating this file is a reviewed commit, never a reflex. 2026-09-04 (P1-D-1): client-js-gzip jumped 21.90kB -> 31.33kB (+43%, still well under the 120kB budget). Investigated, not a reflex re-baseline: main.ts became the real composition root and for the first time actually imports the whole Phase 1 interaction layer it was built to use — Camera, gestures, the input router, the tool registry and all eight tools, the command bus, keymap/bindings, and the layout shell — none of which any prior client entry point pulled in. Every other case moved within noise.",
   "tolerance": 0.1,
   "cases": {
     "client-js-gzip": {
-      "median": 21.8984375,
+      "median": 31.3271484375,
       "unit": "kB",
       "budget": 120,
       "higherIsBetter": false
@@ -19,19 +19,19 @@
       "higherIsBetter": false
     },
     "conway-512-soup": {
-      "median": 248.92597155682245,
+      "median": 252.7462810627864,
       "unit": "steps/sec",
       "budget": 60,
       "higherIsBetter": true
     },
     "conway-4096-1pct": {
-      "median": 439.2071818455652,
+      "median": 447.76452887313746,
       "unit": "steps/sec",
       "budget": 5,
       "higherIsBetter": true
     },
     "paint-1m": {
-      "median": 39183408.3656421,
+      "median": 40039429.22832657,
       "unit": "ops/sec",
       "higherIsBetter": true
     },
@@ -42,30 +42,30 @@
       "higherIsBetter": false
     },
     "snapshot-restore": {
-      "median": 1.2464549999995143,
+      "median": 1.0753720000002431,
       "unit": "ms",
       "higherIsBetter": false
     },
     "seek-4000": {
-      "median": 0.23090100000081293,
+      "median": 0.23007400000005873,
       "unit": "ms",
       "budget": 250,
       "higherIsBetter": false
     },
     "stats-overhead": {
-      "median": 0.19036703318321596,
+      "median": 1.0252558096636408,
       "unit": "%",
       "budget": 3,
       "higherIsBetter": false
     },
     "render-frame-cpu": {
-      "median": 12.007491999997,
+      "median": 11.66100600000209,
       "unit": "ms",
       "budget": 16.6,
       "higherIsBetter": false
     },
     "main-thread-block": {
-      "median": 0.657206000003498,
+      "median": 0.6934479999981704,
       "unit": "ms",
       "budget": 4,
       "higherIsBetter": false

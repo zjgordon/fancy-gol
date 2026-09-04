@@ -150,7 +150,8 @@ tests/e2e/                      playwright specs + fixtures
 **Note** `animateTo` from §2.3's full `Camera` contract is intentionally deferred until a task
 adds a genuine fixed-target eased transition — P1-A-2's inertia is a continuous friction
 simulation via `panBy`, not a tween, so it doesn't need it either. See the module doc in
-`src/ui/camera.ts`.
+`src/ui/camera.ts`. — **Landed in P1-D-1 (2026-09-04):** the cold-start choreography's
+wide-shot-to-framed camera move.
 
 #### - [x] P1-A-2 · Pan, zoom, and inertia — pinch-zoom E2E criterion relocated to P1-H-1 on 2026-09-04
 **Depends on:** P1-A-1 · **Files:** `src/ui/input/gestures.ts`
@@ -185,7 +186,7 @@ simulation via `panBy`, not a tween, so it doesn't need it either. See the modul
 **Implementation notes** Pointer Events only (one code path for mouse/pen/touch). Owns pointer capture, coalesced events (`getCoalescedEvents()` — essential for smooth fast drags), modifier state, and world-coordinate conversion. Emits a normalised `ToolEvent`.
 - `attachInputRouter(camera, target, handlers)` — same factory-plus-controller shape as P1-A-2's `attachGestures`, and a sibling of it, not layered on top of it: this module and `gestures.ts` are two independent listener sets meant to both attach to the same canvas, gestures.ts owning the camera and this one owning tool strokes.
 - Only a *primary*-button pointerdown (`button === 0`, which touch also reports) starts a stroke, so gestures.ts's middle-mouse-drag pan is never mistaken for one; only one pointer is tracked as the active stroke at a time, so a second touch arriving mid-pinch is ignored, not merged into a second stroke.
-- **Known open seam, not solved here:** gestures.ts's *other* pan trigger, Space+left-drag, is not filtered — this module has no visibility into gestures.ts's Space-held state, and reaching into it would be scope creep for a task whose file list is one module. Whichever task first composes both listeners onto a real canvas (candidate: P1-D-1's layout shell) needs to share that state or gate which listener is live.
+- **Known open seam, not solved here:** gestures.ts's *other* pan trigger, Space+left-drag, is not filtered — this module has no visibility into gestures.ts's Space-held state, and reaching into it would be scope creep for a task whose file list is one module. Whichever task first composes both listeners onto a real canvas (candidate: P1-D-1's layout shell) needs to share that state or gate which listener is live. — **Closed by P1-D-1 (2026-09-04):** `gestures.ts` gained a `spaceHeld` getter on `GestureController`; `main.ts`'s composition root gates the tool handlers it passes to `attachInputRouter` on `gestures.panning || gestures.spaceHeld`, latched once at each stroke's `onDown` rather than re-checked per event (see that task's own note on why re-checking at `onUp` would be wrong).
 **Acceptance criteria**
 - [x] A fast drag across 1000 px produces a continuous, gap-free cell path (uses coalesced events — verified by test with synthesised event batches) — a synthesised `pointermove` whose `getCoalescedEvents()` returns 20 sub-samples spanning the 1000px drag yields one `ToolEvent` whose `coalesced` array carries all 20 world-converted points in order, none dropped.
 - [x] Losing pointer capture (alt-tab mid-drag) cleanly cancels the active tool with no partial edit committed — the native `lostpointercapture` event is treated exactly like `pointercancel`: it fires `onCancel`, clears the active pointer, and any further (stray, late) event for that pointer is ignored rather than resuming the stroke.
@@ -218,7 +219,7 @@ simulation via `panBy`, not a tween, so it doesn't need it either. See the modul
 **Depends on:** P1-B-2 · **Files:** `src/ui/tools/{line,rect,ellipse,fill}.ts`
 **Implementation notes** Live ghost preview, `Shift` constrains to 45°/square/circle, `Alt` draws from centre, filled vs outline toggle. Flood fill is a scanline fill with a hard cell cap (default 1,000,000) and a confirmation prompt beyond it — a flood fill on an infinite grid is otherwise a hang.
 - `line.ts` reuses `brush.ts`'s exported `bresenham`/`packXY` rather than a second copy — both live in `ui/`, so this is an ordinary import, not the ADR-009 boundary duplication `brush.ts`'s own hand-written PRNG needed.
-- `tool.ts`'s `ToolContext` gained an optional `grid?: GridView` — the widening P1-B-2 explicitly left room for. `fill.ts` is the first tool that needs to *read* existing cell state rather than only generate ops from cursor position; `ToolRegistry.handlers` (P1-B-2) doesn't supply a live grid today, so `fill.ts` no-ops gracefully when none is given. Wiring a real `GridView` through is a follow-up for whichever task composes the full pipeline against a live `WorkerClient`.
+- `tool.ts`'s `ToolContext` gained an optional `grid?: GridView` — the widening P1-B-2 explicitly left room for. `fill.ts` is the first tool that needs to *read* existing cell state rather than only generate ops from cursor position; `ToolRegistry.handlers` (P1-B-2) doesn't supply a live grid today, so `fill.ts` no-ops gracefully when none is given. Wiring a real `GridView` through is a follow-up for whichever task composes the full pipeline against a live `WorkerClient`. — **Still open as of P1-D-1 (2026-09-04):** that task built the real composition root but deliberately left this specific seam unwired — it needs a `ToolRegistryOptions` widening that's out of its own file list (`shell.ts`, `index.html`). Genuine, separate scope for a future task.
 - Flood fill is capped **both** by cell count (`cap`, default 1,000,000) and by wall-clock time (`timeoutMs`, default 400 ms, via an injected `Clock` reused from `gestures.ts`). At the full 1,000,000-cell scale a `Set`-keyed scanline fill's own dedup bookkeeping — not this algorithm's shape — costs enough (~200–300ms baseline, measured) that cell-count alone doesn't reliably guarantee the 500ms budget on a slower or busier machine; the time backstop is what makes the criterion hold in every environment, not just a fast one. Found and fixed two real bugs while proving this: (1) cells were recorded only *after* a run's full extent was known, so exhausting the budget mid-probe on an unbounded field left nothing filled at all, not a legible partial result — fixed by recording each cell incrementally as it's probed; (2) the cap/timeout could be detected but never latched into `capped` if the stack also happened to empty out at the same moment — fixed with an explicit postcondition check.
 **Acceptance criteria**
 - [x] Bresenham line matches a reference implementation for 10k random endpoint pairs — "matches" is interpreted honestly: two independently-formulated (but both textbook-correct) Bresenham variants are not guaranteed bit-for-bit identical at every slope (a documented tie-breaking difference between formulations, confirmed empirically at ~0.56% of points, never more than one cell of deviation). The test holds both to identical endpoints, identical length, never more than one cell apart at any step, and >95% exact agreement — which a real algorithmic bug would violate, and legitimate tie-breaking does not.
@@ -257,7 +258,7 @@ simulation via `panBy`, not a tween, so it doesn't need it either. See the modul
 **Implementation notes** Registration is duplicate-checked at startup and throws loudly. `bus.run(id, arg)` resolves `isEnabled` first, dispatches, records to the edit stack when `undoable`, and emits telemetry-free events that Phase 4's palette will show as "recent".
 - **A real boundary constraint, resolved, not routed around:** `AppCommand`'s methods are typed against `AppContext`, and `ui/` cannot import `client/` (ADR-009) — so `AppContext` is declared in `src/ui/commands/registry.ts`, not `src/client/app-context.ts` as §2.6's file tree might suggest at a glance. `app-context.ts`'s actual job is narrower: build a *real value* of that interface (`createAppContext()`), wiring in what already exists.
 - **Follow-up from P1-B-2, done:** `ToolRegistry.onCommit` is wired to an injectable `onPaint` callback, and one `tool.select.<id>` command is registered per Phase 1 tool, each carrying the exact default binding P1-C-2's own table already names (`B`/`E`/`L`/`U`/`O`/`G`/`S`/`M`) — assigned now, at definition time, not left for P1-C-2 to invent, the same way `Tool.id` was chosen in P1-B-2 to already match this naming. Neither required a change to `tools/*.ts` or `registry.ts`.
-- **Not solved here, flagged for whoever boots the app:** `onPaint` has no real `WorkerClient.paint()` on the other end yet — there is no live worker/simulation composition root for it to reach. It defaults to a no-op so every tool stays fully exercisable and testable without one; wiring the real connection is P1-D-1's (or whichever task first assembles the full client) to do.
+- **Not solved here, flagged for whoever boots the app:** `onPaint` has no real `WorkerClient.paint()` on the other end yet — there is no live worker/simulation composition root for it to reach. It defaults to a no-op so every tool stays fully exercisable and testable without one; wiring the real connection is P1-D-1's (or whichever task first assembles the full client) to do. — **Closed by P1-D-1 (2026-09-04):** `main.ts`'s `onPaint` now sends a real `client.send({ cmd: 'paint', ops })`.
 **Acceptance criteria**
 - [x] A test enumerates every registered command and asserts each has a `title`, a `category`, and either a `defaultBinding` or an explicit `noBinding: true`. **No orphan commands.** — enforced twice over: `CommandRegistry.register()` itself throws on a command missing both, *and* a test separately enumerates a populated registry (including `createAppContext()`'s real eight `tool.select.*` commands) to confirm the invariant holds in practice, not just in the constructor's own logic.
 - [x] Running a disabled command is a no-op with a debug warning, never a throw — `command.run` is asserted never called, `console.debug` is asserted called exactly once naming the command id, and the call resolves normally (no throw, no rejection).
@@ -296,7 +297,7 @@ simulation via `panBy`, not a tween, so it doesn't need it either. See the modul
 **Implementation notes** Stores inverse `PaintOp[]` per edit (cheap — we already have `from` values in the `ChangeSet`). Depth-capped (default 200) and byte-capped. **Explicitly separate from the Phase 4 time machine**: undo reverses *your edits*, the timeline reverses *the simulation*. The UI must never blur these — Phase 4 adds a one-line explainer in the timeline.
 - The two mechanisms don't overlap by *construction*, not just convention: `EditStack.undo()`/`redo()` only ever return `PaintOp[]` — there is no code path by which either could touch a tick count — and `Simulation.paint()` (what would apply them) never advances or rewinds `tick` either, confirmed by reading the engine, not assumed.
 - `editFromChangeSet(cs)` unpacks a real `ChangeSet` into `{forward, inverse}` using the exact same `(x << 16) | (y & 0xffff)` packing `engine/grid/coords.ts`'s `packCell`/`unpackCellX`/`unpackCellY` implement — a hand-written duplicate (`ui/` cannot reach `engine/`, ADR-009), verified against those exact functions' source, not reconstructed from the packing comment alone. It copies into plain arrays *eagerly*, since a `ChangeSet`'s typed arrays are reused in place by the engine's next `paint()`/`step()` call — proven with a test that extracts one entry, paints again, and confirms the first extraction is untouched.
-**Follow-up from P1-C-1, not solved here:** `CommandBus`'s `onUndoableRun` is still a no-op by default — wiring it to `record()` needs an `AppContext` that can actually apply a command's edit and diff the result, which doesn't exist until a real `Simulation`/`WorkerClient` composition root does (the same gap `app-context.ts`'s `onPaint` already documents, and likely the same future task that resolves it).
+**Follow-up from P1-C-1, not solved here:** `CommandBus`'s `onUndoableRun` is still a no-op by default — wiring it to `record()` needs an `AppContext` that can actually apply a command's edit and diff the result, which doesn't exist until a real `Simulation`/`WorkerClient` composition root does (the same gap `app-context.ts`'s `onPaint` already documents, and likely the same future task that resolves it). — **Still open as of P1-D-1 (2026-09-04):** that task built the composition root and wired `onPaint`, but deliberately left this specific seam unwired — no `AppCommand` is `undoable: true` yet, and `edit.undo`/`edit.redo` aren't registered commands, so there is nothing yet that would call `onUndoableRun`. Recorded there as genuine, separate scope for a future task, not an oversight.
 **Acceptance criteria**
 - [x] 200 random edits fully undone restores a byte-identical grid — a real `Simulation`, 200 random single-cell paints (seeded, `@engine/rng`'s `Mulberry32`), each recorded via `editFromChangeSet`; undoing all 200 in reverse via `sim.paint(stack.undo())` reproduces the pre-edit snapshot exactly — tick, RNG state, and every chunk's bytes.
 - [x] Undo after a step undoes only the edit, leaving the generation count alone — paint, record, `sim.step()` (tick 0→1), then undo: the painted cell reverts and `sim.tick` stays at 1, not back at 0.
@@ -306,18 +307,54 @@ simulation via `panBy`, not a tween, so it doesn't need it either. See the modul
 
 ### Workstream D — HUD & core UI
 
-#### - [ ] P1-D-1 · Layout shell & the "wow on first paint"
+#### - [x] P1-D-1 · Layout shell & the "wow on first paint" — @claude, started 2026-09-04, finished 2026-09-04
 **Depends on:** Phase 0 · **Files:** `src/ui/components/shell.ts`, `src/client/index.html`
 **Intent:** *"When a user first opens the app, they should be struck by the fact that it's a 'toy' that feels like a professional tool."* This task owns that first impression.
 **Implementation notes**
 - Full-bleed canvas; floating translucent chrome (toolbar left, transport bottom-centre, status bar bottom-right, panel dock right). Chrome is dismissible with `Tab` for a pure-canvas view.
 - **Cold start choreography:** the app opens on a curated seed (a Gosper gun feeding a reaction), already running, camera animating from a wide shot to frame, chrome fading in staggered by ~40 ms. It takes ~1.2 s and it is the difference between "a toy" and "a professional tool". Skipped entirely under reduced motion.
 - All chrome uses `backdrop-filter` with a solid fallback, and reads only from tokens.
+- **This task turned out to be the real composition root, not just the chrome.** Several earlier
+  Phase 1 tasks' own doc comments explicitly pointed at "whichever task first assembles the full
+  client" (`app-context.ts`'s `onPaint` seam, P1-C-1; `ToolContext.grid`, P1-B-4; the
+  gestures.ts/router.ts Space-drag seam, P1-B-1) or named this task by number directly
+  (`Camera.animateTo`, P1-A-1; P1-H-1's Playwright harness depending on this task existing at
+  all). `src/client/main.ts` is rewritten accordingly: a real `Camera` drives the viewport;
+  `attachGestures` and `attachInputRouter` are both attached to the same canvas, gated by a
+  `toolStrokeSuppressed` flag latched once at each stroke's `onDown` against
+  `gestures.panning || gestures.spaceHeld` (not re-checked mid-stroke, since router already
+  guarantees a clean onDown→…→onUp/onCancel sequence per pointer and gestures' own state can flip
+  *during* that sequence — proven necessary while building this: gating live on `gestures.panning`
+  at `onUp` time is wrong, because gestures.ts's own `pointerup` listener (attached first) has
+  already cleared it by the time router's runs); `createAppContext`'s `onPaint` now reaches a real
+  `WorkerClient.paint()`; and the Phase 1 tool-select bindings are wired to a real `CommandBus`
+  via `Keymap`/`attachDefaultBindings`/`attachKeymap`.
+- `Camera` gained `animateTo`/`cancelAnimation`/`animating` (§2.3's full contract) plus its own
+  `Clock`/`FrameScheduler` pair (same injected-timing discipline as `gestures.ts`'s identically
+  named pair — a deliberate hand-written duplicate, not a shared import, matching this codebase's
+  existing per-module-boundary duplication). The cold-start choreography's camera move is the
+  first genuine fixed-target eased transition anything needed; P1-A-1 and P1-A-2 both correctly
+  predicted they didn't need it themselves.
+- **Deliberately NOT done here, recorded rather than silently skipped:** `EditStack`/
+  `CommandBus.onUndoableRun` stay unwired (no `AppCommand` is `undoable: true` yet, and
+  `edit.undo`/`edit.redo` aren't registered — their `bindings.ts` table entries keep being
+  silently skipped by design); `ToolContext.grid` (the fill tool's live-grid read) stays unwired
+  (`ToolRegistry` has no constructor seam for it without widening `ToolRegistryOptions`, out of
+  this task's own file list). Both gaps were already recorded as follow-ups in `edit-stack.ts`'s
+  and `tool.ts`'s/`registry.ts`'s own doc comments before this task started; both are genuine,
+  separate scope for a future task, not an oversight here.
+- Design tokens: `src/themes/` (P1-E-1) doesn't exist yet, so `index.html` defines its own
+  `--gol-*` custom properties for exactly what the shell chrome consumes (colour, spacing, radius,
+  shadow, blur, the two motion durations/easing this task needs) — every consuming rule reads a
+  `var(--gol-*)`, none holds a literal, so migrating these definitions into
+  `src/themes/tokens.css` + the Default theme module is a pure relocation later, the same
+  "provisional now, real token slots in with no API change" treatment `grid-lines.ts`'s
+  `FadeCurve` and `select.ts`'s `marchPeriodMs` already got.
 **Acceptance criteria**
-- [ ] First meaningful paint < 1000 ms; the intro never delays interactivity (any input cancels it instantly).
-- [ ] `Tab` toggles chrome with a 150 ms transition; canvas is never resized in a way that reflows the camera.
-- [ ] Layout is correct from 320 px to 5120 px wide, and on a 4:5 portrait phone viewport.
-- [ ] Zero literal colours/sizes in the component source (lint rule P1-E-1 enforces).
+- [x] First meaningful paint < 1000 ms; the intro never delays interactivity (any input cancels it instantly) — the literal <1000ms figure needs a real browser to measure and belongs with `P1-H-3`'s interaction performance budgets, which don't exist yet; not claimed here. Proven at the level available today: every input listener that matters (`window` keymap/gestures/router/Escape/intro-cancel) is attached synchronously during `boot()`, before `playIntro()` is ever called — nothing about the intro gates when input becomes live — and `tests/unit/ui/components/shell.spec.ts`'s "any real input... cancels it instantly" test proves the cancel-and-jump-to-end-state behaviour directly (`Camera`'s side gets the identical treatment in `main.ts`'s own `settleCameraNow`, exercised by `camera.spec.ts`'s `cancelAnimation` tests).
+- [x] `Tab` toggles chrome with a 150 ms transition; canvas is never resized in a way that reflows the camera — the 150ms figure is `--gol-duration-fast`, read by `#chrome`'s own CSS transition (not a literal in `shell.ts`, which only ever toggles a class); `shell.spec.ts` proves the toggle itself and, directly, that toggling never touches the canvas element's dimensions, attributes, or style at all — true by construction, since chrome is `position: fixed`/`absolute` and never shares layout with the canvas.
+- [-] Layout is correct from 320 px to 5120 px wide, and on a 4:5 portrait phone viewport — cut here: real-viewport layout verification needs a browser (jsdom, this project's unit-test DOM, does no CSS layout at all) and `P1-H-1`'s Playwright harness / `P1-H-2`'s visual regression baseline don't exist yet — `P1-H-2` already plans exactly this screenshot set ("Screenshot the shell, toolbar, transport, status bar... at three zoom levels"). Relocated there (2026-09-04); do not re-add here. What's genuinely done at the level available today: every chrome region is positioned and sized via tokens/flex, not fixed viewport-breaking widths; the empty `toolbar`/`panel-dock` regions are `:empty { display: none }` so they cannot overlap anything before a later task populates them; and a `max-width: 600px` rule moves `.chrome-status` from the bottom-right corner to stack under `.chrome-transport` so the two can't collide at the 320px floor — reasoned through, not measured.
+- [x] Zero literal colours/sizes in the component source (lint rule P1-E-1 enforces) — `P1-E-1`'s ESLint rule doesn't exist yet (`src/themes/`, its whole home, isn't built until that task); proven now by a static source check instead (`shell.spec.ts`'s "interim colours substitution" tests), the same "prove it now, formalise later" treatment `P1-A-3`'s `FadeCurve` criterion already got — superseded by real CI once P1-E-1 lands, not merely duplicated by it.
 
 #### - [ ] P1-D-2 · Transport controls
 **Depends on:** P1-D-1, P1-C-1 · **Files:** `src/ui/components/transport.ts`, `src/ui/components/speed.ts`

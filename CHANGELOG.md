@@ -15,8 +15,9 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   (§2.3). Fractional `cellSize` clamped to `[0.02, 128]` (ADR-005's density-LOD floor),
   `screenToWorld`/`worldToScreen`, cursor-anchored `zoomAt`, `panBy`, and `fitTo` for framing a
   pattern's bounding box with padding. Exposes a `dirty` flag so the render loop repaints only
-  when the transform actually changed. `animateTo` from the full §2.3 contract stays deferred
-  until a task adds a genuine fixed-target eased transition. (P1-A-1)
+  when the transform actually changed. `animateTo` from the full §2.3 contract landed later, in
+  P1-D-1, once the cold-start choreography gave it a genuine fixed-target transition to drive.
+  (P1-A-1)
 - `attachGestures` (`src/ui/input/gestures.ts`): wheel-zoom-at-cursor, Shift+wheel and trackpad
   two-finger pan, pinch-zoom (via Pointer Events, not `TouchEvent`), middle-drag/Space-drag pan,
   and an inertial coast on release — exponential friction, hard-capped at 800 ms, cancelled by
@@ -97,6 +98,26 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   `ChangeSet`'s typed arrays on the next `paint()`/`step()`. Explicitly separate from the Phase 4
   time machine by construction: neither this stack nor `Simulation.paint()` ever touches `tick`.
   (P1-C-3)
+- Layout shell and cold-start choreography (`src/ui/components/shell.ts`, `src/client/index.html`
+  — rewritten, `src/client/main.ts` — rewritten as the real composition root): full-bleed canvas
+  with floating translucent chrome (toolbar left, transport bottom-centre, status bar
+  bottom-right, panel dock right), `backdrop-filter` with a solid `@supports not` fallback,
+  `Tab`-dismissible with a 150ms transition that never touches canvas size. On boot the app opens
+  already running on the curated Gosper-gun world, the camera animating from a wide shot to a
+  framed view (`Camera.animateTo`, ~1.2s, `EASE_OUT_CUBIC`) while chrome fades in staggered ~40ms
+  per region — skipped entirely under `prefers-reduced-motion`, and cancelled instantly (jumping
+  straight to the end state) by any real pointer/keyboard/wheel input, so the intro never delays
+  interactivity. `main.ts` also closes three seams earlier tasks left open for "whichever task
+  first assembles the full client": `createAppContext`'s `onPaint` now reaches a real
+  `WorkerClient.paint()`; `attachGestures` and `attachInputRouter` are composed on the same
+  canvas, gated so a Space+drag pans instead of also starting a paint stroke (`GestureController`
+  gained a `spaceHeld` getter for this); and the Phase 1 tool-select keybindings are wired to a
+  real `CommandBus`. Interim design tokens (`--gol-*` custom properties) live in `index.html`
+  pending P1-E-1's real token contract in `src/themes/` — every consumer rule reads a token, none
+  holds a literal colour, proven by a static source check standing in for P1-E-1's eventual lint
+  rule. `EditStack`/undo-redo and the fill tool's live-grid read stay deliberately unwired — both
+  already recorded as follow-ups in their owning modules' doc comments, and out of this task's
+  scope. (P1-D-1)
 
 ## [0.1.0] — 2026-09-04
 
