@@ -5,14 +5,52 @@
  * instead of smooth. It is clamped to [{@link MIN_CELL_SIZE}, {@link MAX_CELL_SIZE}]; below
  * 1 px/cell the renderer's density-LOD path takes over (ADR-005).
  *
- * `animateTo` — part of Phase 1 §2.3's full `Camera` contract — is deliberately not here yet.
- * P1-A-2's inertia turned out not to need it either: a friction coast is a continuous physics
- * simulation driven by repeated `panBy` calls, not a fixed-duration eased tween. `animateTo`
- * stays deferred until a task adds a genuine fixed-target transition (a "fit to content" button,
- * double-click-to-zoom) — that task can define the `Easing` contract it actually needs, rather
- * than this one guessing at a shape nothing exercises yet.
+ * `animateTo` (Phase 1 §2.3's full `Camera` contract) lands here in P1-D-1: the cold-start
+ * choreography's wide-shot-to-framed camera move is the first genuine fixed-target eased
+ * transition anything needs — P1-A-1 and P1-A-2 both left it out because neither had one.
+ * `Clock`/`FrameScheduler` are injected, same discipline as `ui/input/gestures.ts`'s identically
+ * named pair, so the tween is exercisable frame-by-frame under test without real timers; each
+ * module defines its own copy rather than sharing one, matching this codebase's established
+ * per-module-boundary duplication (`brush.ts`'s PRNG, `edit-stack.ts`'s coord packing, …).
  */
 import type { Rect } from '@shared/types';
+
+/** Wall-clock time source, injected so a test can drive `animateTo` without real timers. */
+export interface Clock {
+  now(): number;
+}
+
+export const REAL_CLOCK: Clock = { now: () => performance.now() };
+
+/** Drives `animateTo` one frame at a time. Injected so a test can step frames explicitly. */
+export interface FrameScheduler {
+  request(fn: () => void): number;
+  cancel(handle: number): void;
+}
+
+export const RAF_FRAME_SCHEDULER: FrameScheduler = {
+  request: (fn) => requestAnimationFrame(fn),
+  cancel: (handle) => cancelAnimationFrame(handle),
+};
+
+/** `t` in `[0, 1]` in, eased `[0, 1]` out. A provisional hand-written default — P1-E-1/P3-A-1's
+ * real `MotionSignature.easings` token will eventually replace call sites that want it, the same
+ * "swappable named curve, not an ad hoc literal" treatment `ui/overlay/grid-lines.ts`'s
+ * `FadeCurve` already established. */
+export type Easing = (t: number) => number;
+
+export const EASE_OUT_CUBIC: Easing = (t) => 1 - (1 - t) ** 3;
+
+export interface CameraAnimateTarget {
+  readonly originX?: number;
+  readonly originY?: number;
+  readonly cellSize?: number;
+}
+
+export interface CameraAnimateOptions {
+  readonly clock?: Clock;
+  readonly scheduler?: FrameScheduler;
+}
 
 /** Below this, a cell is sub-pixel; the renderer's density-LOD path takes over (ADR-005). */
 export const MIN_CELL_SIZE = 0.02;
@@ -40,6 +78,8 @@ export class Camera {
   private _widthPx: number;
   private _heightPx: number;
   private _dirty = true;
+  private animHandle: number | null = null;
+  private animScheduler: FrameScheduler | null = null;
 
   constructor(options: CameraOptions) {
     this._widthPx = options.widthPx;
@@ -156,5 +196,57 @@ export class Camera {
     this._originX = rect.x + rect.width / 2 - this._widthPx / 2 / this._cellSize;
     this._originY = rect.y + rect.height / 2 - this._heightPx / 2 / this._cellSize;
     this._dirty = true;
+  }
+
+  /** True while an `animateTo` tween is in flight. */
+  get animating(): boolean {
+    return this.animHandle !== null;
+  }
+
+  /** Stops any in-flight `animateTo` tween where it currently stands — never snaps to the target. */
+  cancelAnimation(): void {
+    if (this.animHandle !== null && this.animScheduler) {
+      this.animScheduler.cancel(this.animHandle);
+    }
+    this.animHandle = null;
+    this.animScheduler = null;
+  }
+
+  /**
+   * Tweens whichever of `originX`/`originY`/`cellSize` are present in `target` over `ms`,
+   * through `easing`. A field omitted from `target` is left untouched throughout. Cancels any
+   * animation already in flight (the new one wins, it does not queue). `ms <= 0` jumps straight
+   * to the target on the next frame's callback, so a caller can always await the same completion
+   * signal regardless of duration.
+   */
+  animateTo(target: CameraAnimateTarget, ms: number, easing: Easing, options: CameraAnimateOptions = {}): void {
+    this.cancelAnimation();
+    const clock = options.clock ?? REAL_CLOCK;
+    const scheduler = options.scheduler ?? RAF_FRAME_SCHEDULER;
+    this.animScheduler = scheduler;
+
+    const startOriginX = this._originX;
+    const startOriginY = this._originY;
+    const startCellSize = this._cellSize;
+    const duration = Math.max(0, ms);
+    const startedAt = clock.now();
+
+    const step = (): void => {
+      const elapsed = clock.now() - startedAt;
+      const t = duration === 0 ? 1 : Math.min(1, elapsed / duration);
+      const eased = easing(t);
+
+      if (target.originX !== undefined) this.originX = startOriginX + (target.originX - startOriginX) * eased;
+      if (target.originY !== undefined) this.originY = startOriginY + (target.originY - startOriginY) * eased;
+      if (target.cellSize !== undefined) this.cellSize = startCellSize + (target.cellSize - startCellSize) * eased;
+
+      if (t >= 1) {
+        this.animHandle = null;
+        this.animScheduler = null;
+        return;
+      }
+      this.animHandle = scheduler.request(step);
+    };
+    this.animHandle = scheduler.request(step);
   }
 }

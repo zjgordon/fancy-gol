@@ -245,6 +245,26 @@ describe('attachGestures', () => {
       expect(controller.panning).toBe(false);
     });
 
+    it('spaceHeld tracks Space independent of whether a drag is in progress', () => {
+      const camera = new Camera({ widthPx: 800, heightPx: 600 });
+      const surface = new FakeSurface();
+      const controller = attachGestures(camera, surface, { reducedMotion: () => true });
+
+      expect(controller.spaceHeld).toBe(false);
+
+      surface.dispatch('keydown', { code: 'Space', preventDefault: () => {} });
+      expect(controller.spaceHeld).toBe(true); // true before any pointer is even down
+
+      surface.dispatch('pointerdown', { ...noPreventDefault(), pointerType: 'mouse', button: 0, pointerId: 5, clientX: 50, clientY: 50 });
+      expect(controller.spaceHeld).toBe(true); // stays true through the resulting drag
+
+      surface.dispatch('pointerup', { pointerId: 5 });
+      expect(controller.spaceHeld).toBe(true); // releasing the pointer alone doesn't clear it
+
+      surface.dispatch('keyup', { code: 'Space' });
+      expect(controller.spaceHeld).toBe(false);
+    });
+
     it('coasts after release and comes to rest within 800ms, never producing a non-finite camera state', () => {
       const clock = new FakeClock();
       const scheduler = new FakeScheduler();

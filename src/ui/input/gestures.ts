@@ -78,6 +78,15 @@ export interface GestureController {
   readonly panning: boolean;
   /** True while an inertia coast is in flight. */
   readonly coasting: boolean;
+  /**
+   * True while Space is held down, independent of whether a drag is currently in progress.
+   * P1-B-1's own module doc flags the seam this closes: `router.ts` starts a tool stroke on any
+   * primary-button pointerdown and has no visibility into this module's Space-held state, so
+   * whichever task composes both listeners onto one real canvas (this one) needs a way to gate
+   * the router while Space is held for panning instead. Exposed rather than solved inside
+   * `router.ts` itself — that module's file scope is deliberately just the one listener.
+   */
+  readonly spaceHeld: boolean;
   /** Remove every listener and cancel any in-flight inertia. */
   dispose(): void;
 }
@@ -322,6 +331,9 @@ export function attachGestures(
     },
     get coasting() {
       return inertiaHandle !== null;
+    },
+    get spaceHeld() {
+      return spaceHeld;
     },
     dispose(): void {
       cancelInertia();

@@ -1,7 +1,42 @@
 import { describe, expect, it } from 'vitest';
-import { Camera, MAX_CELL_SIZE, MIN_CELL_SIZE } from '@ui/camera';
+import { Camera, EASE_OUT_CUBIC, MAX_CELL_SIZE, MIN_CELL_SIZE, type Clock, type FrameScheduler } from '@ui/camera';
 import { Mulberry32 } from '@engine/rng';
 import type { Rect } from '@shared/types';
+
+class FakeClock implements Clock {
+  private t = 0;
+  now(): number {
+    return this.t;
+  }
+  advance(ms: number): void {
+    this.t += ms;
+  }
+}
+
+class FakeScheduler implements FrameScheduler {
+  private pending: (() => void) | null = null;
+  private nextHandle = 1;
+
+  request(fn: () => void): number {
+    this.pending = fn;
+    return this.nextHandle++;
+  }
+
+  cancel(handle: number): void {
+    void handle;
+    this.pending = null;
+  }
+
+  get hasPending(): boolean {
+    return this.pending !== null;
+  }
+
+  flushOne(): void {
+    const fn = this.pending;
+    this.pending = null;
+    fn?.();
+  }
+}
 
 describe('Camera', () => {
   describe('screenToWorld / worldToScreen', () => {
@@ -198,6 +233,92 @@ describe('Camera', () => {
       camera.panBy(80, -40);
       expect(camera.originX).toBeCloseTo(-10, 9);
       expect(camera.originY).toBeCloseTo(5, 9);
+    });
+  });
+
+  describe('animateTo', () => {
+    it('tweens the requested fields from their current value to the target over the given duration', () => {
+      const clock = new FakeClock();
+      const scheduler = new FakeScheduler();
+      const camera = new Camera({ widthPx: 800, heightPx: 600, originX: 0, originY: 0, cellSize: 4 });
+
+      camera.animateTo({ originX: 100, cellSize: 8 }, 1000, EASE_OUT_CUBIC, { clock, scheduler });
+      expect(camera.animating).toBe(true);
+      expect(scheduler.hasPending).toBe(true);
+
+      clock.advance(500);
+      scheduler.flushOne();
+      // Halfway through with EASE_OUT_CUBIC (front-loaded), more than half the distance is covered.
+      expect(camera.originX).toBeGreaterThan(50);
+      expect(camera.originX).toBeLessThan(100);
+      expect(camera.animating).toBe(true);
+
+      clock.advance(600); // past the full duration
+      scheduler.flushOne();
+      expect(camera.originX).toBe(100);
+      expect(camera.cellSize).toBe(8);
+      expect(camera.animating).toBe(false);
+      expect(scheduler.hasPending).toBe(false);
+    });
+
+    it('leaves a field out of `target` untouched throughout', () => {
+      const clock = new FakeClock();
+      const scheduler = new FakeScheduler();
+      const camera = new Camera({ widthPx: 800, heightPx: 600, originX: 3, originY: 7, cellSize: 4 });
+
+      camera.animateTo({ cellSize: 16 }, 200, EASE_OUT_CUBIC, { clock, scheduler });
+      clock.advance(200);
+      scheduler.flushOne();
+
+      expect(camera.originX).toBe(3);
+      expect(camera.originY).toBe(7);
+      expect(camera.cellSize).toBe(16);
+    });
+
+    it('a new animateTo cancels one already in flight — the new target wins, not a blend', () => {
+      const clock = new FakeClock();
+      const scheduler = new FakeScheduler();
+      const camera = new Camera({ widthPx: 800, heightPx: 600, originX: 0, originY: 0, cellSize: 4 });
+
+      camera.animateTo({ originX: 1000 }, 1000, EASE_OUT_CUBIC, { clock, scheduler });
+      clock.advance(100);
+      scheduler.flushOne();
+      const midway = camera.originX;
+      expect(midway).toBeGreaterThan(0);
+
+      camera.animateTo({ originX: 0 }, 200, EASE_OUT_CUBIC, { clock, scheduler });
+      clock.advance(200);
+      scheduler.flushOne();
+      expect(camera.originX).toBe(0);
+    });
+
+    it('cancelAnimation stops the tween exactly where it stands, never snapping to the target', () => {
+      const clock = new FakeClock();
+      const scheduler = new FakeScheduler();
+      const camera = new Camera({ widthPx: 800, heightPx: 600, originX: 0, originY: 0, cellSize: 4 });
+
+      camera.animateTo({ originX: 1000 }, 1000, EASE_OUT_CUBIC, { clock, scheduler });
+      clock.advance(100);
+      scheduler.flushOne();
+      const midway = camera.originX;
+      expect(midway).toBeGreaterThan(0);
+      expect(midway).toBeLessThan(1000);
+
+      camera.cancelAnimation();
+      expect(camera.animating).toBe(false);
+      expect(scheduler.hasPending).toBe(false);
+      expect(camera.originX).toBe(midway);
+    });
+
+    it('a non-positive duration resolves to the target on the very next scheduled frame', () => {
+      const clock = new FakeClock();
+      const scheduler = new FakeScheduler();
+      const camera = new Camera({ widthPx: 800, heightPx: 600, originX: 0, originY: 0, cellSize: 4 });
+
+      camera.animateTo({ originX: 42 }, 0, EASE_OUT_CUBIC, { clock, scheduler });
+      scheduler.flushOne();
+      expect(camera.originX).toBe(42);
+      expect(camera.animating).toBe(false);
     });
   });
 });
