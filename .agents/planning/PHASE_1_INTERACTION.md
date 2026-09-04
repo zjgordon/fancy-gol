@@ -238,12 +238,15 @@ simulation via `panBy`, not a tween, so it doesn't need it either. See the modul
 - [x] `Ctrl/Cmd+C` puts valid RLE on the system clipboard; pasting that RLE back reproduces the pattern — proved against an injected fake `SystemClipboard` (real `navigator.clipboard` is unavailable in jsdom and irrelevant to what's being tested); the written text is decoded and re-placed, reproducing all three original live cells at their correct relative positions.
 - [x] Selection marching-ants animation is driven by a motion token and stops under reduced motion — the march speed is an injectable duration (`marchPeriodMs`, provisional until P1-E-1 supplies a real one, same treatment P1-A-3's `FadeCurve` got), and `reducedMotion` (reused directly from `gestures.ts`) locks the dash offset to 0 regardless of elapsed time.
 
-#### - [ ] P1-B-6 · Stamp tool
+#### - [x] P1-B-6 · Stamp tool
 **Depends on:** P1-B-5 · **Files:** `src/ui/tools/stamp.ts`
 **Implementation notes** Phase 1 ships a small hardcoded stamp set (glider, LWSS, blinker, toad, beacon, pulsar, R-pentomino, acorn, Gosper gun, block) decoded from bundled RLE. Ghost preview with rotate (`R`) and flip (`F`) before placing; `Shift`-click places repeatedly. Phase 2 swaps the hardcoded set for the full catalogue behind the same interface — design for that now.
+- Every `BUILTIN_STAMPS` cell coordinate set was verified against a real `Simulation` before being committed, not transcribed from memory and trusted: still lifes checked for a stable period-1 fixed point, oscillators for `state(t) === state(t+period)`, the glider/LWSS for the correct translation vector (LWSS turned out to move `(+2, 0)`, not `(-2, 0)` as first assumed — shape was right, direction wasn't), R-pentomino for the well-known population-116-after-1103-ticks fact, and the Gosper gun for genuine glider emission (population growing by exactly 5 every 30-tick period, live cells confirmed outside its footprint). The stored RLE text was then generated from those verified coordinates via `select.ts`'s own `encodeRLE`/`decodeRLE` and round-tripped, so the bundled strings are guaranteed self-consistent, not just plausible-looking.
+- Unlike P1-B-5's paste (dense: clears a selection's full bounding box, dead gaps included, to replace what was there), a stamp placement is sparse — only its own live cells become ops. You stamp a glider onto a mostly-empty area; you don't cut a rectangular clearing out of whatever's already there.
+- `library` is a constructor option (default `BUILTIN_STAMPS`), which is what makes "Phase 2 substitutes a data source with no tool changes" concretely true rather than aspirational — proven with a wholly different fixture library in the test, not just asserted.
 **Acceptance criteria**
-- [ ] The stamp source is an array of RLE strings, not code, so Phase 2 substitutes a data source with no tool changes.
-- [ ] A placed Gosper gun immediately produces gliders when run (integration test).
+- [x] The stamp source is an array of RLE strings, not code, so Phase 2 substitutes a data source with no tool changes — `StampDefinition.rle` is plain text; a test constructs `new StampTool({ library: <a different array> })` and confirms selection/placement work identically, with `select()` correctly rejecting an id from the *default* library that isn't in the custom one.
+- [x] A placed Gosper gun immediately produces gliders when run (integration test) — the tool's own placement ops are painted into a real `Simulation` (Conway); population is asserted to grow by exactly 5 (one glider) every 30-tick period, and a live cell is confirmed to exist outside the gun's original 36×9 footprint after 150 ticks.
 
 ---
 

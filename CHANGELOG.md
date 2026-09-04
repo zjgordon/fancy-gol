@@ -62,6 +62,14 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   Copy/cut/paste/rotate/flip are plain methods for a future keybinding layer to call, not pointer
   gestures. The selection outline's marching-ants animation is driven by an injectable duration
   and stops entirely under `prefers-reduced-motion`. (P1-B-5)
+- `StampTool` (`src/ui/tools/stamp.ts`): a data-driven stamp library — glider, LWSS, blinker,
+  toad, beacon, pulsar, R-pentomino, acorn, Gosper glider gun, block — as plain RLE text, not
+  code, with a swappable `library` constructor option Phase 2 will use for the full catalogue.
+  Every pattern's cell coordinates were checked against a real `Simulation` before being bundled
+  (correct oscillator period, correct spaceship translation, and — for the Gosper gun — genuine
+  glider emission) rather than trusted from memory. Placement is sparse (only a stamp's own live
+  cells become ops, unlike paste's dense selection-bounding-box overwrite); Shift-click keeps the
+  same stamp selected for repeated placement. (P1-B-6)
 
 ## [0.1.0] — 2026-09-04
 
