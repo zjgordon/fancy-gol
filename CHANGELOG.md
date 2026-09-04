@@ -7,6 +7,17 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+Phase 1 — Interaction (*Make it usable.*), in progress.
+
+### Added
+
+- `Camera` (`src/ui/camera.ts`): the world/screen transform for Phase 1's interaction layer
+  (§2.3). Fractional `cellSize` clamped to `[0.02, 128]` (ADR-005's density-LOD floor),
+  `screenToWorld`/`worldToScreen`, cursor-anchored `zoomAt`, `panBy`, and `fitTo` for framing a
+  pattern's bounding box with padding. Exposes a `dirty` flag so the render loop repaints only
+  when the transform actually changed. `animateTo` from the full §2.3 contract is deferred to
+  P1-A-2, its first real consumer. (P1-A-1)
+
 ## [0.1.0] — 2026-09-04
 
 Phase 0 — Foundation (*Make it correct.*). Workstreams **A–I**: toolchain (A), core types /

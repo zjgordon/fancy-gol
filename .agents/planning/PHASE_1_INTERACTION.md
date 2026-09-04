@@ -140,13 +140,15 @@ tests/e2e/                      playwright specs + fixtures
 
 ### Workstream A — Camera & viewport
 
-#### - [ ] P1-A-1 · Camera transform
+#### - [x] P1-A-1 · Camera transform
 **Depends on:** Phase 0 · **Files:** `src/ui/camera.ts`
 **Implementation notes** Fractional `cellSize` throughout — snapping to integers makes zoom feel notchy. Clamp to `[0.02, 128]`; below 1 the renderer's tile/LOD paths take over (ADR-005). Track a `dirty` flag so the render loop knows when a full repaint is required.
 **Acceptance criteria**
-- [ ] Property test: `screenToWorld(worldToScreen(p))` round-trips within 1e-9 across 10k random cameras.
-- [ ] `zoomAt` keeps the world point under the cursor fixed to sub-pixel accuracy across 100 successive zooms.
-- [ ] `fitTo` frames a pattern's bounding box with the requested padding, for both wide and tall aspect ratios.
+- [x] Property test: `screenToWorld(worldToScreen(p))` round-trips within 1e-9 across 10k random cameras.
+- [x] `zoomAt` keeps the world point under the cursor fixed to sub-pixel accuracy across 100 successive zooms.
+- [x] `fitTo` frames a pattern's bounding box with the requested padding, for both wide and tall aspect ratios.
+**Note** `animateTo` from §2.3's full `Camera` contract is intentionally deferred to P1-A-2, its
+first consumer — see the module doc in `src/ui/camera.ts`.
 
 #### - [ ] P1-A-2 · Pan, zoom, and inertia
 **Depends on:** P1-A-1 · **Files:** `src/ui/input/gestures.ts`
