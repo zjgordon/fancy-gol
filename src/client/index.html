@@ -2,13 +2,58 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>fancy-gol</title>
     <link rel="icon" href="data:," />
     <style>
+      /*
+       * P1-D-1's interim design tokens. `src/themes/` (P1-E-1) does not exist yet, so these live
+       * here for now, scoped to exactly what the shell chrome consumes — not the full ADR-008
+       * token contract (colour ramps, 6 type sizes, shadow scale, …), which is P1-E-1's own job
+       * to enumerate. Every rule below this block reads a `var(--gol-*)`, never a literal colour
+       * or size, so migrating these definitions into `src/themes/tokens.css` + the Default theme
+       * module is a pure relocation with no consumer changes — the same "provisional now, real
+       * token slots in with no API change" treatment `ui/overlay/grid-lines.ts`'s `FadeCurve` and
+       * `ui/tools/select.ts`'s `marchPeriodMs` already got.
+       */
       :root {
         color-scheme: dark;
+        --gol-color-bg: #05070a;
+        --gol-color-surface: rgba(5, 8, 11, 0.72);
+        --gol-color-elevated: rgba(10, 15, 19, 0.85);
+        --gol-color-border: rgba(124, 249, 208, 0.25);
+        --gol-color-text: #d7f5e8;
+        --gol-color-muted: #7ba396;
+        --gol-color-accent: #7cf9d0;
+        --gol-color-accent-strong: #9dfbdd;
+        --gol-color-accent-pressed: #5ed6ae;
+        --gol-color-on-accent: #05070a;
+
+        --gol-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        --gol-font-size-sm: 13px;
+        --gol-font-weight-regular: 400;
+        --gol-font-weight-medium: 600;
+
+        --gol-space-1: 4px;
+        --gol-space-2: 8px;
+        --gol-space-3: 12px;
+        --gol-space-4: 16px;
+
+        --gol-radius-sm: 6px;
+        --gol-radius-md: 8px;
+
+        --gol-shadow-chrome: 0 8px 24px rgba(0, 0, 0, 0.35);
+        --gol-blur-chrome: blur(4px);
+
+        /* Motion durations: provisional literals pending P1-E-1's real 4-duration scale. */
+        --gol-duration-fast: 150ms;
+        --gol-duration-slow: 600ms;
+        --gol-ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+        /* Set per-region by `ui/components/shell.ts`'s `playIntro`; 0 the rest of the time. */
+        --gol-intro-delay: 0ms;
       }
+
       html,
       body {
         margin: 0;
@@ -16,78 +61,207 @@
         width: 100%;
         height: 100%;
         overflow: hidden;
-        background: #05070a;
+        background: var(--gol-color-bg);
       }
+
       #app {
         position: fixed;
         inset: 0;
       }
+
       canvas {
         position: fixed;
         inset: 0;
         display: block;
       }
-      #hud {
+
+      /*
+       * The chrome layer: full-viewport but pointer-transparent, so empty space between the
+       * floating panels never steals a click/drag meant for the canvas underneath. Each region
+       * re-enables pointer events for itself once it actually has content — `:empty` keeps an
+       * unpopulated region (toolbar/panel-dock today; every future D-workstream task mounts into
+       * one of these) invisible and inert instead of an awkward blank chip.
+       */
+      #chrome {
         position: fixed;
-        top: 0;
-        left: 0;
-        margin: 12px;
-        padding: 10px 14px;
+        inset: 0;
+        pointer-events: none;
+        transition: opacity var(--gol-duration-fast) var(--gol-ease-standard);
+      }
+
+      #chrome.chrome-hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      /* Belt-and-braces: a region under an opacity-0 ancestor is still hit-testable by default
+       * in some engines' accessibility trees; explicitly disabling pointer events on every region
+       * too is what actually guarantees "canvas is never blocked by hidden chrome". */
+      #chrome.chrome-hidden .chrome-region {
+        pointer-events: none;
+      }
+
+      .chrome-region {
+        position: absolute;
+        pointer-events: auto;
         display: flex;
         flex-direction: column;
-        gap: 6px;
-        font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        color: #d7f5e8;
-        background: rgba(5, 8, 11, 0.72);
-        border: 1px solid rgba(124, 249, 208, 0.25);
-        border-radius: 8px;
-        backdrop-filter: blur(4px);
+        gap: var(--gol-space-2);
+        font: var(--gol-font-weight-regular) var(--gol-font-size-sm) / 1.4 var(--gol-font-mono);
+        color: var(--gol-color-text);
+        opacity: 1;
+        transition:
+          opacity var(--gol-duration-slow) var(--gol-ease-standard),
+          transform var(--gol-duration-slow) var(--gol-ease-standard);
+        transition-delay: var(--gol-intro-delay);
+      }
+
+      .chrome-region:empty {
+        display: none;
+      }
+
+      #chrome.chrome-intro #chrome-toolbar,
+      #chrome.chrome-intro #chrome-transport,
+      #chrome.chrome-intro #chrome-status,
+      #chrome.chrome-intro #chrome-panel-dock {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      #chrome.chrome-intro:not(.chrome-hidden) #chrome-toolbar,
+      #chrome.chrome-intro:not(.chrome-hidden) #chrome-transport,
+      #chrome.chrome-intro:not(.chrome-hidden) #chrome-status,
+      #chrome.chrome-intro:not(.chrome-hidden) #chrome-panel-dock {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .chrome-panel {
+        padding: var(--gol-space-2) var(--gol-space-3);
+        display: flex;
+        flex-direction: column;
+        gap: var(--gol-space-2);
+        background: var(--gol-color-surface);
+        border: 1px solid var(--gol-color-border);
+        border-radius: var(--gol-radius-md);
+        box-shadow: var(--gol-shadow-chrome);
+        -webkit-backdrop-filter: var(--gol-blur-chrome);
+        backdrop-filter: var(--gol-blur-chrome);
         user-select: none;
       }
-      #hud .row {
+
+      /* Solid fallback where `backdrop-filter` isn't supported (per-task requirement). */
+      @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+        .chrome-panel {
+          background: var(--gol-color-elevated);
+        }
+      }
+
+      #chrome-toolbar {
+        left: var(--gol-space-3);
+        top: 50%;
+        transform: translateY(-50%);
+      }
+      #chrome.chrome-intro #chrome-toolbar {
+        transform: translateY(calc(-50% + 6px));
+      }
+      #chrome.chrome-intro:not(.chrome-hidden) #chrome-toolbar {
+        transform: translateY(-50%);
+      }
+
+      #chrome-transport {
+        left: 50%;
+        bottom: var(--gol-space-3);
+        transform: translateX(-50%);
+        align-items: center;
+      }
+
+      #chrome-status {
+        right: var(--gol-space-3);
+        bottom: var(--gol-space-3);
+      }
+
+      #chrome-panel-dock {
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: auto;
+      }
+
+      .row {
         display: flex;
         justify-content: space-between;
-        gap: 18px;
+        gap: var(--gol-space-4);
+        font-variant-numeric: tabular-nums;
       }
-      #hud .row .label {
-        color: #7ba396;
+      .row .label {
+        color: var(--gol-color-muted);
       }
-      #hud .controls {
+
+      .controls {
         display: flex;
-        gap: 8px;
-        margin-top: 4px;
+        gap: var(--gol-space-2);
       }
-      #hud button {
+      .controls button {
         flex: 1;
         font: inherit;
-        color: #05070a;
-        background: #7cf9d0;
+        color: var(--gol-color-on-accent);
+        background: var(--gol-color-accent);
         border: none;
-        border-radius: 6px;
-        padding: 6px 10px;
+        border-radius: var(--gol-radius-sm);
+        padding: var(--gol-space-2) var(--gol-space-3);
         cursor: pointer;
       }
-      #hud button:hover {
-        background: #9dfbdd;
+      .controls button:hover {
+        background: var(--gol-color-accent-strong);
       }
-      #hud button:active {
-        background: #5ed6ae;
+      .controls button:active {
+        background: var(--gol-color-accent-pressed);
+      }
+      .controls button:focus-visible {
+        outline: 2px solid var(--gol-color-accent);
+        outline-offset: 2px;
+      }
+
+      /*
+       * Narrow-viewport reflow (phones, the 320px floor): `.chrome-status` moves out of the
+       * bottom-right corner — at that width it would otherwise overlap `.chrome-transport`'s
+       * centred dock — and stacks below it instead, both still bottom-anchored and centred.
+       * `.chrome-toolbar`/`.chrome-panel-dock` need no rule here: they render nothing yet
+       * (`:empty` above already keeps them out of flow entirely).
+       */
+      @media (max-width: 600px) {
+        #chrome-transport {
+          bottom: calc(var(--gol-space-3) + 3.6em);
+        }
+        #chrome-status {
+          left: 50%;
+          right: auto;
+          bottom: var(--gol-space-3);
+          transform: translateX(-50%);
+        }
       }
     </style>
   </head>
   <body>
     <div id="app">
       <canvas id="scene"></canvas>
-      <div id="hud">
-        <div class="row"><span class="label">tick</span><span id="stat-tick">0</span></div>
-        <div class="row"><span class="label">population</span><span id="stat-population">0</span></div>
-        <div class="row"><span class="label">fps</span><span id="stat-fps">0</span></div>
-        <div class="row"><span class="label">step</span><span id="stat-step-ms">0.0 ms</span></div>
-        <div class="row"><span class="label">render</span><span id="stat-render-ms">0.0 ms</span></div>
-        <div class="controls">
-          <button id="btn-play-pause" type="button">Pause</button>
-          <button id="btn-reset" type="button">Reset</button>
+      <div id="chrome">
+        <div class="chrome-region chrome-toolbar" id="chrome-toolbar" role="toolbar" aria-label="Tools"></div>
+        <div class="chrome-region chrome-transport" id="chrome-transport">
+          <div class="chrome-panel controls">
+            <button id="btn-play-pause" type="button">Pause</button>
+            <button id="btn-reset" type="button">Reset</button>
+          </div>
         </div>
+        <div class="chrome-region chrome-status" id="chrome-status">
+          <div class="chrome-panel">
+            <div class="row"><span class="label">tick</span><span id="stat-tick">0</span></div>
+            <div class="row"><span class="label">population</span><span id="stat-population">0</span></div>
+            <div class="row"><span class="label">fps</span><span id="stat-fps">0</span></div>
+            <div class="row"><span class="label">step</span><span id="stat-step-ms">0.0 ms</span></div>
+            <div class="row"><span class="label">render</span><span id="stat-render-ms">0.0 ms</span></div>
+          </div>
+        </div>
+        <div class="chrome-region chrome-panel-dock" id="chrome-panel-dock" aria-label="Panels"></div>
       </div>
     </div>
     <script type="module" src="./main.ts"></script>
