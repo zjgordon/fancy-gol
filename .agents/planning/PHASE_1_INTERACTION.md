@@ -291,14 +291,16 @@ simulation via `panBy`, not a tween, so it doesn't need it either. See the modul
 - [x] A duplicate binding registration fails the test suite — both a direct conflict (`Mod+Z` registered twice) and a canonicalisation-driven one (`B` then `b`, which collide by design) are proven to throw; `PHASE_1_BINDINGS` itself is proven collision-free when registered whole, on both platforms.
 - [x] Typing `[` in the ruleset-name text field does not change the speed — proven with a real `<input type="text">` in jsdom: the bound command does not fire with that element as the event target, and does fire for the identical key with `document.body` as the target. A `<textarea>`, a `contentEditable` element (stubbed — jsdom does not implement `isContentEditable`), and a non-text `<input type="checkbox">` are covered too, confirming only genuinely-editable targets are excluded.
 
-#### - [ ] P1-C-3 · Edit undo/redo stack
+#### - [x] P1-C-3 · Edit undo/redo stack
 **Depends on:** P1-C-1 · **Files:** `src/ui/commands/edit-stack.ts`
 **Implementation notes** Stores inverse `PaintOp[]` per edit (cheap — we already have `from` values in the `ChangeSet`). Depth-capped (default 200) and byte-capped. **Explicitly separate from the Phase 4 time machine**: undo reverses *your edits*, the timeline reverses *the simulation*. The UI must never blur these — Phase 4 adds a one-line explainer in the timeline.
-**Follow-up from P1-C-1:** `CommandBus`'s `onUndoableRun` (`src/ui/commands/bus.ts`) is a no-op by default — wire it to this stack's real recording method. Not a change to `bus.ts`'s shape, just supplying a real callback where `createAppContext`/the composition root constructs the `CommandBus`.
+- The two mechanisms don't overlap by *construction*, not just convention: `EditStack.undo()`/`redo()` only ever return `PaintOp[]` — there is no code path by which either could touch a tick count — and `Simulation.paint()` (what would apply them) never advances or rewinds `tick` either, confirmed by reading the engine, not assumed.
+- `editFromChangeSet(cs)` unpacks a real `ChangeSet` into `{forward, inverse}` using the exact same `(x << 16) | (y & 0xffff)` packing `engine/grid/coords.ts`'s `packCell`/`unpackCellX`/`unpackCellY` implement — a hand-written duplicate (`ui/` cannot reach `engine/`, ADR-009), verified against those exact functions' source, not reconstructed from the packing comment alone. It copies into plain arrays *eagerly*, since a `ChangeSet`'s typed arrays are reused in place by the engine's next `paint()`/`step()` call — proven with a test that extracts one entry, paints again, and confirms the first extraction is untouched.
+**Follow-up from P1-C-1, not solved here:** `CommandBus`'s `onUndoableRun` is still a no-op by default — wiring it to `record()` needs an `AppContext` that can actually apply a command's edit and diff the result, which doesn't exist until a real `Simulation`/`WorkerClient` composition root does (the same gap `app-context.ts`'s `onPaint` already documents, and likely the same future task that resolves it).
 **Acceptance criteria**
-- [ ] 200 random edits fully undone restores a byte-identical grid.
-- [ ] Undo after a step undoes only the edit, leaving the generation count alone.
-- [ ] Redo is invalidated by a new edit, and the UI reflects that immediately.
+- [x] 200 random edits fully undone restores a byte-identical grid — a real `Simulation`, 200 random single-cell paints (seeded, `@engine/rng`'s `Mulberry32`), each recorded via `editFromChangeSet`; undoing all 200 in reverse via `sim.paint(stack.undo())` reproduces the pre-edit snapshot exactly — tick, RNG state, and every chunk's bytes.
+- [x] Undo after a step undoes only the edit, leaving the generation count alone — paint, record, `sim.step()` (tick 0→1), then undo: the painted cell reverts and `sim.tick` stays at 1, not back at 0.
+- [x] Redo is invalidated by a new edit, and the UI reflects that immediately — `canRedo` (the property a future undo/redo-button component would bind to) is asserted `true` right after an undo, then `false` the instant a new `record()` call lands, before any redo was ever attempted.
 
 ---
 

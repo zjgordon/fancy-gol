@@ -88,6 +88,15 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   `Shift+/` and `?` are the same physical key and were merged into one binding rather than left
   to collide. Fixed a real parsing bug caught by the table's own tests: a bare `+` (zoom in) was
   misparsed as an empty modifier, since `+` is also the modifier-separator character. (P1-C-2)
+- `EditStack` and `editFromChangeSet` (`src/ui/commands/edit-stack.ts`): records each committed
+  edit as a `{forward, inverse}` `PaintOp[]` pair; `undo()`/`redo()` only ever return ops to
+  apply, never touching a grid themselves. Depth-capped (default 200) and byte-capped, both
+  configurable. A new edit always invalidates pending redo. `editFromChangeSet` unpacks a real
+  `ChangeSet` using the exact packing `engine/grid/coords.ts` implements (a hand-written
+  duplicate — `ui/` cannot reach `engine/`), copying eagerly since the engine reuses a
+  `ChangeSet`'s typed arrays on the next `paint()`/`step()`. Explicitly separate from the Phase 4
+  time machine by construction: neither this stack nor `Simulation.paint()` ever touches `tick`.
+  (P1-C-3)
 
 ## [0.1.0] — 2026-09-04
 
