@@ -118,6 +118,24 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   rule. `EditStack`/undo-redo and the fill tool's live-grid read stay deliberately unwired — both
   already recorded as follow-ups in their owning modules' doc comments, and out of this task's
   scope. (P1-D-1)
+- Transport bar and speed control (`src/ui/components/transport.ts`, `src/ui/components/speed.ts`):
+  play/pause, single step (disabled while running), reset, clear, random soup, and a visible but
+  disabled step-back button ("Coming in Phase 4" — never a silent gap). Every button is a
+  registered `sim.*` `AppCommand` (`src/ui/commands/builtin/sim.ts`, new — the first task to use
+  the `ui/commands/builtin/*.ts` path Phase 1's own architecture doc already anticipated), which
+  is what gives all seven `sim.*` keybindings (`Space`/`.`/`[`/`]`/`R`/`C`/`N`) a live keyboard
+  equivalent for free — they were already sitting unregistered in `bindings.ts`'s table since
+  P1-C-2. Speed is a logarithmic slider from 0.5–1000 TPS plus an "unbounded" toggle that runs as
+  fast as the scheduler allows; the readout always shows target *and* actual TPS from independent
+  sources, so a rate the machine can't keep up with reads honestly (e.g. "target 1000 / actual
+  340") instead of silently reporting the target. `TpsMeter` measures actual TPS from delivered
+  tick deltas over wall-clock time, immune to `WorkerClient`'s `requestAnimationFrame` coalescing.
+  `AppContext` gained an optional `sim: SimControl` field — optional so `createAppContext()`'s
+  existing tools-only construction needed no change at all; a `requireSim` guard turns a command
+  run without one into a thrown error, never a silent no-op. `shared/protocol.ts`'s `run.tps` now
+  accepts `+Infinity` (a real, structured-clone-safe value, not a sentinel string) for "unbounded"
+  — `worker/handler.ts` needed no other change, since `1000 / Infinity === 0` already schedules at
+  the shortest interval the platform allows. (P1-D-2)
 
 ## [0.1.0] — 2026-09-04
 

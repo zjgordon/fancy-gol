@@ -356,13 +356,52 @@ wide-shot-to-framed camera move.
 - [-] Layout is correct from 320 px to 5120 px wide, and on a 4:5 portrait phone viewport — cut here: real-viewport layout verification needs a browser (jsdom, this project's unit-test DOM, does no CSS layout at all) and `P1-H-1`'s Playwright harness / `P1-H-2`'s visual regression baseline don't exist yet — `P1-H-2` already plans exactly this screenshot set ("Screenshot the shell, toolbar, transport, status bar... at three zoom levels"). Relocated there (2026-09-04); do not re-add here. What's genuinely done at the level available today: every chrome region is positioned and sized via tokens/flex, not fixed viewport-breaking widths; the empty `toolbar`/`panel-dock` regions are `:empty { display: none }` so they cannot overlap anything before a later task populates them; and a `max-width: 600px` rule moves `.chrome-status` from the bottom-right corner to stack under `.chrome-transport` so the two can't collide at the 320px floor — reasoned through, not measured.
 - [x] Zero literal colours/sizes in the component source (lint rule P1-E-1 enforces) — `P1-E-1`'s ESLint rule doesn't exist yet (`src/themes/`, its whole home, isn't built until that task); proven now by a static source check instead (`shell.spec.ts`'s "interim colours substitution" tests), the same "prove it now, formalise later" treatment `P1-A-3`'s `FadeCurve` criterion already got — superseded by real CI once P1-E-1 lands, not merely duplicated by it.
 
-#### - [ ] P1-D-2 · Transport controls
+#### - [x] P1-D-2 · Transport controls — @claude, started 2026-09-04, finished 2026-09-04
 **Depends on:** P1-D-1, P1-C-1 · **Files:** `src/ui/components/transport.ts`, `src/ui/components/speed.ts`
 **Implementation notes** Play/pause, single-step, step-back (present but disabled with a "Phase 4" tooltip — never ship a mystery), reset, clear, random soup. Speed control is a **logarithmic** slider from 0.5 to 1000 TPS plus an "unbounded" mode that runs as fast as the worker allows and reports actual achieved TPS. Show target *and* actual TPS — a researcher needs to know when the sim is the bottleneck.
+- **Every button is a registered `sim.*` `AppCommand`, not a handler touching state directly**
+  (`src/ui/commands/builtin/sim.ts`, new — `ui/commands/builtin/*.ts` was already anticipated in
+  Phase 1 §2.6's file tree, this is the first task to use it). This is what makes "every control
+  has ... a keyboard equivalent" true for free: the seven `sim.*` bindings (`Space`, `.`, `[`, `]`,
+  `R`, `C`, `N`) were already sitting as unregistered data in `bindings.ts`'s `PHASE_1_BINDINGS`
+  table since P1-C-2 — registering the commands here is what makes `attachDefaultBindings` stop
+  silently skipping them, exactly the mechanism that table's own doc comment promised. `,`
+  (step-back) stays unregistered — it's marked *(Phase 4)* in the table and never will be
+  registered by this task; the transport still ships a visible, disabled step-back button so the
+  control isn't a silent gap.
+- **`AppContext.sim` (`SimControl`)** is the seam `ui/commands/registry.ts`'s own doc comment left
+  open for "a live worker client" — added as an *optional* field (not required) so
+  `createAppContext()`'s existing tools-only `AppContext` construction needs no change at all; a
+  `requireSim()` guard in `sim.ts` turns a command run without one into a legible thrown error,
+  never a silent no-op. `client/main.ts` builds the real one: a plain mutable-state object it owns
+  directly (`running`/`targetTps` as closure variables, `actualTps` read live off a `TpsMeter`),
+  not a new observable store — `src/client/store.ts` from §2.6's file tree isn't built by any task
+  yet, and inventing a second, inconsistent state-propagation mechanism ahead of it would be worse
+  than the plain imperative `update()` push this task uses (the same shape `main.ts`'s own stat
+  readouts already use).
+- **"Unbounded" needed a real protocol change**, not just a client-side trick: `run.tps` didn't
+  accept `Infinity` (`shared/protocol.ts`'s `isFiniteNumber` check rejected it, and there was no
+  other way to say "as fast as possible" on the wire). Widened to a dedicated
+  `isFiniteOrPositiveInfinity` check for `run.tps` only — everything else about the command is
+  unchanged, `Infinity` is a real, structured-clone-safe `number`, not a sentinel string.
+  `worker/handler.ts` needed no change at all: `1000 / Infinity === 0`, so `run`'s existing
+  `setInterval(fn, 1000 / tps)` already schedules at the shortest interval the platform allows —
+  genuinely "as fast as the scheduler allows", not a bespoke tight-loop stepper. Known, accepted
+  limitation, not silently hidden: for a cheap step (a small/sparse grid), the browser's own
+  minimum-timer-interval clamp (not this codebase) may cap real throughput below what the engine
+  could otherwise do — `TpsMeter` reports whatever the true achieved rate is regardless, so the UI
+  never overstates it; a tight-loop/batched-stepping worker scheduler would be genuine, separate,
+  future scope (arguably Phase 5's, alongside the bitboard kernel and chunk-skipping) if a real
+  workload ever needs it.
+- **`TpsMeter` (`speed.ts`)** measures *delivered tick deltas* over wall-clock time, not frame
+  arrival cadence — `WorkerClient.onFrame` coalesces onto `requestAnimationFrame` (P0-G-3), so a
+  free-running worker far above ~60 Hz still only delivers one frame per paint, but the *tick* on
+  that frame is still exactly right, so `Δtick / Δtime` stays an honest measurement of what the
+  worker actually achieved regardless of coalescing.
 **Acceptance criteria**
-- [ ] Achieved TPS is within 5% of target for targets up to the machine's capability, verified by test.
-- [ ] Above capability the UI clearly shows "target 1000 / actual 340" rather than silently lying.
-- [ ] Every control has an accessible name and a keyboard equivalent.
+- [x] Achieved TPS is within 5% of target for targets up to the machine's capability, verified by test — proven at the two levels this codebase actually controls, since "up to the machine's capability" is itself a real-hardware claim no unit test can honestly assert on: (1) `worker/handler.ts`'s `run` scheduling interval math, driven through the *real* `setInterval`/`clearInterval` `REAL_SCHEDULER` wraps under `vi.useFakeTimers()` (not `FakeScheduler`, whose `tick(n)` fires immediately regardless of `ms` and proves nothing about real timing) — exact and deterministic for targets 1/20/250 tps over a simulated 5s window (`tests/integration/worker-protocol.spec.ts`); (2) `TpsMeter`'s EMA measurement is proven accurate against synthetic tick streams at both an achievable rate (20 tps) and a rate well below a much higher target (340 of 1000), converging within 5% each time (`speed.spec.ts`).
+- [x] Above capability the UI clearly shows "target 1000 / actual 340" rather than silently lying — `speed.ts`'s readout renders both numbers unconditionally from independent sources (the requested `targetTps`, the measured `actualTps`), never one derived from the other; proven with exactly that scenario (`speed.spec.ts`, "honestly reflects a rate below target rather than reporting the target"), and the literal string format proven too (`speed.spec.ts`, "renders both target and actual TPS").
+- [x] Every control has an accessible name and a keyboard equivalent — every transport button has visible text (an accessible name by construction) plus a `title` naming its keybinding, and is a registered `sim.*` command so `[`/`]`/`Space`/`.`/`R`/`C`/`N` all reach it for real through the same `CommandBus`/`Keymap` P1-C-1/P1-C-2 built; the speed slider and unbounded toggle carry explicit `aria-label`s and are natively keyboard-operable HTML controls (arrow keys / Tab+Enter) without needing a bespoke global shortcut of their own — proven in `transport.spec.ts`/`speed.spec.ts`.
 
 #### - [ ] P1-D-3 · Status bar & readouts
 **Depends on:** P1-D-1
