@@ -278,6 +278,47 @@
       }
 
       /*
+       * The status bar (P1-D-3). `.status-value` reserves a minimum column width so a digit
+       * count changing (population climbing from 9 to 10, say) doesn't nudge the label beside it
+       * — "no layout shift as digit counts change" — `.row` already sets tabular-nums for every
+       * digit's own width to match; this is the column-width half of that guarantee.
+       */
+      .status-bar {
+        min-width: 200px;
+      }
+      .status-value {
+        display: inline-block;
+        min-width: 7ch;
+        text-align: right;
+      }
+      .status-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--gol-space-1);
+      }
+      .status-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--gol-space-1);
+        padding: 0 var(--gol-space-1);
+        border-radius: var(--gol-radius-sm);
+        border: 1px solid var(--gol-color-border);
+      }
+      .status-chip-swatch {
+        width: 0.7em;
+        height: 0.7em;
+        border-radius: 50%;
+        background: var(--gol-chip-color, var(--gol-color-muted));
+        flex: none;
+      }
+      .status-chip-name {
+        color: var(--gol-color-muted);
+      }
+      .status-chip .status-value {
+        min-width: 2ch;
+      }
+
+      /*
        * Narrow-viewport reflow (phones, the 320px floor): `.chrome-status` moves out of the
        * bottom-right corner — at that width it would otherwise overlap `.chrome-transport`'s
        * centred dock — and stacks below it instead, both still bottom-anchored and centred.
@@ -305,15 +346,8 @@
         <!-- Populated by ui/components/transport.ts and ui/components/speed.ts (P1-D-2); empty
              until then, and `:empty { display: none }` above keeps that state visually inert. -->
         <div class="chrome-region chrome-transport" id="chrome-transport"></div>
-        <div class="chrome-region chrome-status" id="chrome-status">
-          <div class="chrome-panel">
-            <div class="row"><span class="label">tick</span><span id="stat-tick">0</span></div>
-            <div class="row"><span class="label">population</span><span id="stat-population">0</span></div>
-            <div class="row"><span class="label">fps</span><span id="stat-fps">0</span></div>
-            <div class="row"><span class="label">step</span><span id="stat-step-ms">0.0 ms</span></div>
-            <div class="row"><span class="label">render</span><span id="stat-render-ms">0.0 ms</span></div>
-          </div>
-        </div>
+        <!-- Populated by ui/components/statusbar.ts (P1-D-3); empty until then. -->
+        <div class="chrome-region chrome-status" id="chrome-status"></div>
         <div class="chrome-region chrome-panel-dock" id="chrome-panel-dock" aria-label="Panels"></div>
       </div>
     </div>

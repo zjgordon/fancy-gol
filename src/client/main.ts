@@ -22,6 +22,14 @@
  * action (so the Play/Pause label flips the instant it's pressed, even though a paused sim then
  * delivers no further frames to hang an update off of).
  *
+ * P1-D-3 adds the status bar, driven by its own `setInterval(STATUS_THROTTLE_MS)` — deliberately
+ * *not* tied to `renderFrame`'s frame-delivery cadence, both because that would blow well past
+ * the documented "10 Hz, not 60 Hz" budget while running, and because the cursor/zoom readouts
+ * must keep updating even while paused, when no frames arrive at all. A lightweight
+ * `pointermove`/`pointerleave` pair on the canvas (independent of `attachInputRouter`, which only
+ * forwards moves *during* an active stroke — P1-B-1's own documented limitation) tracks the
+ * latest cursor position cheaply; the throttled tick is what turns that into a render.
+ *
  * Deliberately NOT done here, recorded rather than silently skipped:
  *  - `EditStack`/`CommandBus.onUndoableRun` stay unwired. No `AppCommand` is `undoable: true`
  *    yet, and `edit.undo`/`edit.redo` aren't registered commands (their `bindings.ts` table
@@ -34,7 +42,7 @@
 import { CONWAY } from '@engine/rules/builtin';
 import { Canvas2DRenderer } from '@render/canvas2d';
 import type { CompiledTheme, Viewport as RenderViewport } from '@render/types';
-import type { PaintOp } from '@shared/types';
+import { CHUNK_AREA, type PaintOp } from '@shared/types';
 import { WorkerClient, type FrameEvent, type WorkerLike } from '@worker/client';
 import { FrameGridMirror } from '@worker/frame-view';
 import { Camera, EASE_OUT_CUBIC } from '@ui/camera';
@@ -48,6 +56,7 @@ import { SIM_COMMANDS } from '@ui/commands/builtin/sim';
 import { attachShell } from '@ui/components/shell';
 import { createTransportControls } from '@ui/components/transport';
 import { createSpeedControl, TpsMeter } from '@ui/components/speed';
+import { createStatusBar, STATUS_THROTTLE_MS, zoomPercent } from '@ui/components/statusbar';
 import { createAppContext } from './app-context';
 
 /**
@@ -153,11 +162,6 @@ function reducedMotion(): boolean {
 
 function main(): void {
   const canvas = requireElement<HTMLCanvasElement>('#scene');
-  const tickEl = requireElement<HTMLSpanElement>('#stat-tick');
-  const populationEl = requireElement<HTMLSpanElement>('#stat-population');
-  const fpsEl = requireElement<HTMLSpanElement>('#stat-fps');
-  const stepMsEl = requireElement<HTMLSpanElement>('#stat-step-ms');
-  const renderMsEl = requireElement<HTMLSpanElement>('#stat-render-ms');
 
   const shell = attachShell({ root: document });
 
@@ -180,8 +184,12 @@ function main(): void {
 
   let hasFrame = false;
   let lastTick = 0;
+  let lastPopulation = 0;
+  let lastStepMicros = 0;
+  let lastPerState: Uint32Array = new Uint32Array(CONWAY.states.length);
   let fps = 0;
   let lastFrameAt: number | null = null;
+  let cursorWorld: { x: number; y: number } | null = null;
 
   function toRenderViewport(): RenderViewport {
     const dpr = window.devicePixelRatio || 1;
@@ -211,6 +219,9 @@ function main(): void {
     renderer.draw({ cells: mirror.view(), dirty: frame.dirty, tick: frame.tick });
     hasFrame = true;
     lastTick = frame.tick;
+    lastPopulation = frame.stats.population;
+    lastStepMicros = frame.stats.stepMicros;
+    lastPerState = frame.stats.perState;
 
     const now = performance.now();
     if (lastFrameAt !== null) {
@@ -222,12 +233,6 @@ function main(): void {
       window.__fancyGolFirstFrameMs = now - bootStart;
     }
     tpsMeter.sample(frame.tick, now);
-
-    tickEl.textContent = String(frame.tick);
-    populationEl.textContent = String(frame.stats.population);
-    fpsEl.textContent = fps.toFixed(0);
-    stepMsEl.textContent = `${(frame.stats.stepMicros / 1000).toFixed(2)} ms`;
-    renderMsEl.textContent = `${renderer.readStats().frameMs.toFixed(2)} ms`;
     syncSimUI();
   }
 
@@ -364,11 +369,59 @@ function main(): void {
   }
   syncSimUI();
 
+  const statusBar = createStatusBar();
+  shell.status.appendChild(statusBar.root);
+
+  // A lightweight, independent pointer listener for cursor world coords — `attachInputRouter`
+  // only forwards moves *during* an active stroke, no bare-hover stream (P1-B-1's own documented
+  // limitation), which the status bar genuinely needs. Snapped to the cell a paint would target,
+  // matching every tool's own `Math.round` convention (`brush.ts`/`fill.ts`).
+  canvas.addEventListener('pointermove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const world = camera.screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+    cursorWorld = { x: Math.round(world.x), y: Math.round(world.y) };
+  });
+  canvas.addEventListener('pointerleave', () => {
+    cursorWorld = null;
+  });
+
+  /** Renders the status bar from whatever's currently known — called on its own throttled timer
+   * (`STATUS_THROTTLE_MS`, the phase doc's own "10 Hz, not 60 Hz" figure), never from the frame
+   * or render loop directly, so it keeps updating (cursor, zoom) even while paused and never
+   * exceeds its own budget while running fast. */
+  function syncStatusBar(): void {
+    const cellUnderCursor = cursorWorld
+      ? (() => {
+          const id = mirror.view().get(cursorWorld.x, cursorWorld.y);
+          const def = CONWAY.states.find((s) => s.id === id);
+          return { id, name: def?.name ?? String(id) };
+        })()
+      : null;
+    statusBar.update({
+      generation: lastTick,
+      population: lastPopulation,
+      chips: CONWAY.states.map((s) => ({
+        id: s.id,
+        name: s.name,
+        count: lastPerState[s.id] ?? 0,
+        color: THEME.palette(s.id, 0),
+      })),
+      cursor: cursorWorld,
+      cellUnderCursor,
+      zoomPercent: zoomPercent(camera.cellSize),
+      fps,
+      stepMs: lastStepMicros / 1000,
+      renderMs: renderer.readStats().frameMs,
+      memoryBytes: mirror.pageCount * CHUNK_AREA,
+    });
+  }
+
   async function boot(): Promise<void> {
     await renderer.init(canvas);
     renderer.setTheme(THEME);
     applyViewport();
     requestAnimationFrame(cameraRedrawLoop);
+    setInterval(syncStatusBar, STATUS_THROTTLE_MS);
 
     client.onFrame(renderFrame);
 
