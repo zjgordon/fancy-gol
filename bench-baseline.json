@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "recorded": "2026-09-04",
+  "recorded": "2026-09-05",
   "node": "v24.20.0",
   "platform": "linux x64",
-  "note": "Real machine run. Medians of 7 after per-case warmup. Updating this file is a reviewed commit, never a reflex. 2026-09-04 (P1-D-1): client-js-gzip jumped 21.90kB -> 31.33kB (+43%, still well under the 120kB budget). Investigated, not a reflex re-baseline: main.ts became the real composition root and for the first time actually imports the whole Phase 1 interaction layer it was built to use — Camera, gestures, the input router, the tool registry and all eight tools, the command bus, keymap/bindings, and the layout shell — none of which any prior client entry point pulled in. Every other case moved within noise.",
+  "note": "Real machine run. Medians of 7 after per-case warmup. Updating this file is a reviewed commit, never a reflex. 2026-09-04 (P1-D-1): client-js-gzip jumped 21.90kB -> 31.33kB (+43%, still well under the 120kB budget) now that main.ts genuinely imports the whole Phase 1 interaction layer it was built to use -- Camera, gestures, the input router, the tool registry and all eight tools, the command bus, keymap/bindings, and the layout shell -- none of which any prior client entry point pulled in. Every other case moved within noise. 2026-09-05 (P1-D-4): client-js-gzip jumped again, 31.33kB -> 44.35kB (+42%, still well under the 120kB budget, now 37% of it): main.ts imports engine/simulation.ts's Simulation class directly for the first time (previously bundled only into the worker chunk, now duplicated into the main chunk too, since Vite doesn't share modules across separate entry bundles) plus the full BUILTIN_RULESETS catalogue (all 14 rulesets' definitions, including WireWorld's generated-at-load transition table's own source code) for the ruleset picker's live thumbnails and entry list. Every other case moved within noise.",
   "tolerance": 0.1,
   "cases": {
     "client-js-gzip": {
-      "median": 31.3271484375,
+      "median": 44.34765625,
       "unit": "kB",
       "budget": 120,
       "higherIsBetter": false
@@ -19,19 +19,19 @@
       "higherIsBetter": false
     },
     "conway-512-soup": {
-      "median": 252.7462810627864,
+      "median": 246.15973176991474,
       "unit": "steps/sec",
       "budget": 60,
       "higherIsBetter": true
     },
     "conway-4096-1pct": {
-      "median": 447.76452887313746,
+      "median": 438.72812890920795,
       "unit": "steps/sec",
       "budget": 5,
       "higherIsBetter": true
     },
     "paint-1m": {
-      "median": 40039429.22832657,
+      "median": 38408701.38375502,
       "unit": "ops/sec",
       "higherIsBetter": true
     },
@@ -42,30 +42,30 @@
       "higherIsBetter": false
     },
     "snapshot-restore": {
-      "median": 1.0753720000002431,
+      "median": 1.1617299999998068,
       "unit": "ms",
       "higherIsBetter": false
     },
     "seek-4000": {
-      "median": 0.23007400000005873,
+      "median": 0.2826490000006743,
       "unit": "ms",
       "budget": 250,
       "higherIsBetter": false
     },
     "stats-overhead": {
-      "median": 1.0252558096636408,
+      "median": 0.9122637250418663,
       "unit": "%",
       "budget": 3,
       "higherIsBetter": false
     },
     "render-frame-cpu": {
-      "median": 11.66100600000209,
+      "median": 11.812847000001057,
       "unit": "ms",
       "budget": 16.6,
       "higherIsBetter": false
     },
     "main-thread-block": {
-      "median": 0.6934479999981704,
+      "median": 0.7385490000015125,
       "unit": "ms",
       "budget": 4,
       "higherIsBetter": false

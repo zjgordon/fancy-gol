@@ -150,6 +150,32 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   limitation) — snapped to the cell a paint would target, the same `Math.round` convention
   `brush.ts`/`fill.ts` already use. `FrameGridMirror` gained a `pageCount` getter for the memory
   estimate's basis. (P1-D-3)
+- Ruleset picker (`src/ui/components/ruleset-picker.ts`): a toolbar toggle opening a
+  keyboard-navigable, type-ahead searchable catalogue listbox grouped by tag, each entry showing
+  name, notation (when it has one), state count, description, and a live animated 32×32 thumbnail.
+  Switching to a ruleset with a matching palette applies immediately; an incompatible one opens a
+  migration dialog with a "sensible default" mapping preselected (same-`kind` state, e.g. Conway's
+  `alive` → WireWorld's `electron-head`), editable per state before confirming. `ui/` cannot reach
+  `engine/`/`render/canvas2d` (ADR-009), so the component only creates each entry's `<canvas>` and
+  reports open/close; `client/main.ts` owns a real `{Simulation, Canvas2DRenderer}` per entry,
+  created fresh on open and disposed on close — measured, not assumed, that stepping all 14 at
+  once costs ~2.9 ms combined (a tiny grid's fixed per-step overhead dominates its cell count), so
+  only a rotating batch of 4 steps per throttled tick. `BuiltinRuleSet` gained an optional
+  `notation` field (the B/S string `fromNotation()` parsed but never kept — the same catalogue-only
+  treatment `tags`/`year` already got). `shared/protocol.ts`'s `setRuleset` gained an optional
+  `migration?: readonly StateId[]` (a `StateMigration` as data — functions aren't
+  structured-clone-safe) and now posts a full frame afterward, since a migration can change every
+  live cell's byte with no `ChangeSet` to describe it. Found and fixed three bugs only a real
+  browser could catch (jsdom never lays out CSS cascade/`transform`/`[hidden]`): the UA's
+  `[hidden]` losing to any author `display` rule kept the popover and dialog permanently visible
+  (fixed with one global `[hidden] { display: none !important; }`); a blanket `canvas { position:
+  fixed; inset: 0 }` rule (written for the one-and-only scene canvas) was stretching all 14 new
+  thumbnails to fill the viewport (scoped to `#scene`); and the migration dialog's `position:
+  fixed` needed to portal to `document.body` to escape the chrome's own `transform`s, which then
+  required teaching the picker's outside-pointerdown-closes-me listener about that portal too (a
+  pointerdown inside the dialog was reading as "outside", silently no-oping Apply). Also fixed:
+  the status bar's per-state chips (P1-D-3) only ever set a chip's name on first creation, so
+  reusing the same small `StateId`s across a ruleset switch left stale names on screen. (P1-D-4)
 
 ## [0.1.0] — 2026-09-04
 

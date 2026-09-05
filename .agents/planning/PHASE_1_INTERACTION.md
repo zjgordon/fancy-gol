@@ -444,13 +444,65 @@ wide-shot-to-framed camera move.
 - [x] Readout updates cost < 0.3 ms/frame (measured) — measured as CPU dispatch against a real (jsdom) DOM, not browser paint/composite time, the same honest scope `P0-H-2`'s and `P1-A-3`'s own frame-time budgets already use: 2,000 warmed-up `update()` calls against a realistic worst-case state (both chips, cursor and cell populated, large numbers) average well under 0.3 ms each (`statusbar.spec.ts`, skipped under coverage instrumentation, which skews timing).
 - [x] Population matches an engine recount exactly at 100 random ticks — proven directly against a real `Simulation`: `sim.stats.population` (exactly what `frame.stats.population` carries, unmodified, across `worker/handler.ts`'s `copyStats` and into the status bar) equals a brute-force recount of every cell after each of 100 random ticks on a seeded random soup, with zero divergence (`statusbar.spec.ts`). This duplicates the *shape* of `P0-F-2`'s own considerably stronger (2,000-generation) cross-check deliberately — that test proves the engine's invariant; this one is this task's own literal, self-contained evidence.
 
-#### - [ ] P1-D-4 · Ruleset picker
+#### - [x] P1-D-4 · Ruleset picker — @claude, started 2026-09-04, finished 2026-09-05
 **Depends on:** P1-D-1, P0-D-5 · **Files:** `src/ui/components/ruleset-picker.ts`
 **Implementation notes** Grouped by tag, each entry showing name, notation, state count and a one-line description. Live **animated thumbnail** per ruleset (a tiny 32×32 simulation running in the picker) — this is the "Stay Fancy" answer to what would otherwise be a `<select>`. Switching a ruleset with an incompatible palette prompts for a state mapping (P0-E-3) rather than failing.
+- **`ui/` cannot run a thumbnail's `Simulation`/`Canvas2DRenderer` itself** (ADR-009: only
+  `render/types` is reachable). `ruleset-picker.ts` only creates each entry's `<canvas>` and
+  reports open/close via `onThumbnailCreated`/`onOpenChange`; `client/main.ts` owns a real
+  `{Simulation, Canvas2DRenderer}` pair per entry, created fresh (a new random soup) on open and
+  disposed on close — "thumbnails run only while the picker is open" is a genuine resource
+  lifecycle, not a paused timer.
+- **`BuiltinRuleSet` gained an optional `notation` field** (`engine/rules/builtin/types.ts`,
+  `from-notation.ts`) — `fromNotation()` parsed the B/S string but never kept it, so there was
+  nothing for the picker to show. The exact same "catalogue metadata on the wrapper, not ADR-001's
+  `RuleSet`" treatment `tags`/`year` already got. A state-table/weighted-threshold rule (WireWorld,
+  Highlands/Liquid) has no such notation and leaves it undefined rather than fabricate one.
+- **The wire protocol needed a real extension for the migration**: `StateMigration` is a function,
+  and functions aren't structured-clone-safe. `setRuleset` gained an optional `migration?:
+  readonly StateId[]` (index = old state id, value = new), and `worker/handler.ts` reconstructs
+  the callback `Simulation.setRuleset` wants from it. `setRuleset` also now posts a full frame
+  afterward (it didn't before) — a migration can change every live cell's byte at once, and
+  `Simulation.setRuleset` returns no `ChangeSet` at all, so nothing would otherwise tell the
+  client's mirror the new state values exist.
+- **`defaultMigration`'s "sensible default"**: every `dead`-kind old state maps to the new dead
+  state; every other old state maps to a new state of the same `kind` if one exists (Conway's
+  `alive`, kind `live` → WireWorld's `electron-head`, also kind `live`), else the new ruleset's
+  primary live state, else dead. Always overridable per state in the dialog before confirming.
+- **The migration dialog is a small, self-contained modal built directly in this file** —
+  P1-D-5 ("Toasts, dialogs, tooltips") doesn't exist yet. Real focus trap and `Escape`-to-close,
+  `role="dialog"`/`aria-modal`, provisional like every other piece of infrastructure this phase
+  has built ahead of its own dedicated task.
+- **Three real bugs found only by actually running this in a browser** (`npm run dev` +
+  Playwright, not just `npm run verify` — jsdom, this project's unit-test DOM, never lays out real
+  CSS cascade/`transform`/`[hidden]` behaviour, so none of these could have failed a unit test):
+  1. A CSS cascade rule: the browser's own `[hidden] { display: none }` loses to *any* author
+     rule that sets `display` on the same element, regardless of specificity — `.chrome-panel`'s
+     `display: flex` was silently keeping the popover and migration dialog permanently visible.
+     Fixed with one global `[hidden] { display: none !important; }` rule, protecting every current
+     and future use of `hidden` in this document.
+  2. A pre-existing blanket `canvas { position: fixed; inset: 0 }` rule (written when `#scene` was
+     the only canvas on the page) was pulling all 14 new thumbnail canvases out of their flex
+     layout and stretching them to fill the viewport. Scoped to `#scene` specifically.
+  3. The migration dialog had to become a portal (appended to `document.body`, not a descendant of
+     the picker's own root) because `position: fixed` is contained by *any* ancestor with a
+     `transform` — every `.chrome-region` sets one — which pinned the dialog to the toolbar
+     instead of centring it in the viewport. That portal then broke the picker's
+     outside-pointerdown-closes-me listener (a pointerdown *inside* the now-external dialog read
+     as "outside", closing everything — including nulling the pending migration target — before
+     the button's own `click` handler ran, so Apply silently no-opped). Fixed by teaching that
+     listener about the portal too, with a regression test that dispatches a real
+     `pointerdown`-then-`click` sequence (`element.click()` alone skips `pointerdown` entirely,
+     which is exactly how this slipped past every other test in the file).
+  A fourth bug (not a browser-only one, but also only visible with a real ruleset switch): the
+  status bar's chip DOM reuse (P1-D-3) only ever set a chip's *name* on first creation — reusing
+  the same small `StateId`s across rulesets (WireWorld's id 1 is `electron-head`, not Conway's
+  `alive`) left old names on screen with the right new colours/counts. Fixed in `statusbar.ts`
+  to refresh every field on every call, with a regression test.
 **Acceptance criteria**
-- [ ] Thumbnails run only while the picker is open and cost < 2 ms/frame combined.
-- [ ] Keyboard navigable; type-ahead search works.
-- [ ] Switching Conway → WireWorld surfaces the migration prompt with sensible defaults preselected.
+- [x] Thumbnails run only while the picker is open and cost < 2 ms/frame combined — the "only while open" half is `client/main.ts`'s resource lifecycle (`client/**` is excluded from coverage/unit testing by this project's own convention, same as every prior P1-D task's composition-root wiring), verified live in a browser (screenshots show thumbnails animating while open, none while closed). The budget itself is measured directly, not assumed — an earlier version of this task discovered stepping all 14 catalogue entries in one frame costs ~2.9 ms combined (a tiny grid's *fixed* per-step overhead dominates over its cell count), which is why `client/main.ts` steps only a rotating batch of `THUMBNAIL_BATCH_SIZE` (4) per throttled tick; `ruleset-picker.spec.ts` holds that same batch size, using the catalogue's four structurally heaviest rulesets (WireWorld, Highlands/Liquid, Star Wars, Brian's Brain — never a cheaper real-world case), to the same budget with real margin.
+- [x] Keyboard navigable; type-ahead search works — `ArrowUp`/`ArrowDown` (wrapping), `Home`/`End`, `Enter`/`Space` to select, `Escape` to close, all via `aria-activedescendant` over the flattened entry list; type-ahead accumulates typed characters and jumps to the next name starting with them, reset after 600 ms idle. Proven in `ruleset-picker.spec.ts` and live in a browser.
+- [x] Switching Conway → WireWorld surfaces the migration prompt with sensible defaults preselected — proven exactly as stated: `defaultMigration(CONWAY_STATES, WIREWORLD_STATES)` maps `dead → empty`, `alive → electron-head`; the dialog's `<select>`s open pre-set to those values, editable before Apply. Verified live in a browser end to end, including the actual grid re-colouring and the status bar's chips showing WireWorld's real state names/counts afterward.
 
 #### - [ ] P1-D-5 · Toasts, dialogs, tooltips
 **Depends on:** P1-D-1
