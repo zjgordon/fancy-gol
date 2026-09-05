@@ -29,6 +29,8 @@
         --gol-color-accent-pressed: #5ed6ae;
         --gol-color-on-accent: #05070a;
         --gol-color-scrim: rgba(0, 0, 0, 0.5);
+        --gol-color-danger: #ff6b6b;
+        --gol-color-danger-strong: #ff8a8a;
 
         --gol-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
         --gol-font-size-sm: 13px;
@@ -335,12 +337,12 @@
       }
 
       /*
-       * The ruleset picker (P1-D-4): a toolbar toggle button opening a popover listbox, plus a
-       * migration dialog for an incompatible palette switch. `.ruleset-popover`/
-       * `.ruleset-migration-overlay` get explicit z-index because they're descendants of the
-       * *first* chrome region in DOM order (`#chrome-toolbar`) and must still paint above the
-       * later regions (transport, status, panel dock) that would otherwise stack on top per
-       * plain DOM order.
+       * The ruleset picker (P1-D-4): a toolbar toggle button opening a popover listbox, plus
+       * (P1-D-5) a migration dialog for an incompatible palette switch, built on the shared
+       * `.dialog-*` classes below. `.ruleset-popover` gets an explicit z-index because it's a
+       * descendant of the *first* chrome region in DOM order (`#chrome-toolbar`) and must still
+       * paint above the later regions (transport, status, panel dock) that would otherwise stack
+       * on top per plain DOM order.
        */
       .ruleset-picker {
         position: relative;
@@ -432,26 +434,6 @@
         text-overflow: ellipsis;
         white-space: nowrap;
       }
-      .ruleset-migration-overlay {
-        position: fixed;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--gol-color-scrim);
-        z-index: 30;
-      }
-      .ruleset-migration {
-        width: min(90vw, 360px);
-        max-height: 80vh;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: var(--gol-space-2);
-      }
-      .ruleset-migration h3 {
-        margin: 0;
-      }
       .ruleset-migration-hint {
         margin: 0;
         color: var(--gol-color-muted);
@@ -470,6 +452,111 @@
         border: 1px solid var(--gol-color-border);
         border-radius: var(--gol-radius-sm);
         padding: var(--gol-space-1) var(--gol-space-2);
+      }
+
+      /*
+       * The shared dialog primitive (P1-D-5, `dialog.ts`) — every blocking prompt in the app
+       * (a destructive-action confirmation, the ruleset picker's migration prompt) is built on
+       * this. A portal (see `dialog.ts`'s own doc for why) with the same z-index-above-chrome
+       * reasoning `.ruleset-popover`'s own note already covers.
+       */
+      .dialog-overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--gol-color-scrim);
+        z-index: 30;
+      }
+      .dialog-panel {
+        width: min(90vw, 360px);
+        max-height: 80vh;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: var(--gol-space-2);
+      }
+      .dialog-panel:focus-visible {
+        outline: 2px solid var(--gol-color-accent);
+        outline-offset: 2px;
+      }
+      .dialog-panel h3 {
+        margin: 0;
+      }
+      .dialog-message {
+        margin: 0;
+        color: var(--gol-color-muted);
+      }
+      .dialog-controls {
+        display: flex;
+        gap: var(--gol-space-2);
+      }
+      .dialog-controls button {
+        flex: 1;
+        font: inherit;
+        color: var(--gol-color-on-accent);
+        background: var(--gol-color-accent);
+        border: none;
+        border-radius: var(--gol-radius-sm);
+        padding: var(--gol-space-2) var(--gol-space-3);
+        cursor: pointer;
+      }
+      .dialog-controls button:hover {
+        background: var(--gol-color-accent-strong);
+      }
+      .dialog-controls button:focus-visible {
+        outline: 2px solid var(--gol-color-accent);
+        outline-offset: 2px;
+      }
+      .dialog-controls button.dialog-destructive {
+        background: var(--gol-color-danger);
+      }
+      .dialog-controls button.dialog-destructive:hover {
+        background: var(--gol-color-danger-strong);
+      }
+
+      /* The shared toast primitive (P1-D-5, `toast.ts`) — a portal, stacked bottom-centre, above
+       * the transport dock. */
+      .toast-region {
+        position: fixed;
+        left: 50%;
+        bottom: calc(var(--gol-space-3) + 25vh);
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: column-reverse;
+        gap: var(--gol-space-2);
+        align-items: center;
+        z-index: 25;
+        pointer-events: none;
+      }
+      .toast {
+        pointer-events: auto;
+        display: flex;
+        align-items: center;
+        gap: var(--gol-space-2);
+        padding: var(--gol-space-2) var(--gol-space-3);
+        max-width: min(90vw, 420px);
+      }
+      .toast-message {
+        flex: 1;
+      }
+      .toast-dismiss {
+        flex: none;
+        font: inherit;
+        line-height: 1;
+        color: var(--gol-color-muted);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0 var(--gol-space-1);
+      }
+      .toast-dismiss:hover {
+        color: var(--gol-color-text);
+      }
+      .toast-dismiss:focus-visible {
+        outline: 2px solid var(--gol-color-accent);
+        outline-offset: 2px;
       }
 
       /*
