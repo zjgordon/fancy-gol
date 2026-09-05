@@ -197,6 +197,11 @@ describe('attachRulesetPicker', () => {
   });
 
   describe('the migration prompt', () => {
+    // The generic focus-trap/Escape/portal *mechanics* are dialog.ts's own responsibility and
+    // are proven there (dialog.spec.ts) — these tests cover only what's specific to this
+    // component: building the right content into the shared dialog, and wiring its Apply/Cancel/
+    // onClose into onConfirm and the picker's own open/close state correctly.
+
     it('opens instead of confirming when the target palette is incompatible, with sensible defaults preselected', () => {
       const { picker, onConfirm } = setup();
       cleanup = () => picker.dispose();
@@ -204,12 +209,9 @@ describe('attachRulesetPicker', () => {
       picker.root.querySelector<HTMLElement>('#ruleset-option-wireworld')!.click();
 
       expect(onConfirm).not.toHaveBeenCalled();
-      // The migration dialog is a portal appended to document.body, not a descendant of
-      // picker.root — see ruleset-picker.ts's own note on why (transformed chrome ancestors
-      // break position:fixed centring).
-      const overlay = document.querySelector<HTMLElement>('.ruleset-migration-overlay')!;
-      expect(overlay.hidden).toBe(false);
-      expect(document.querySelector('.ruleset-migration h3')!.textContent).toContain('WireWorld');
+      // The migration dialog is a portal (dialog.ts's openDialog, appended to document.body),
+      // not a descendant of picker.root.
+      expect(document.querySelector('.dialog-panel h3')!.textContent).toContain('WireWorld');
 
       const selects = [...document.querySelectorAll<HTMLSelectElement>('.ruleset-migration-row select')];
       expect(selects).toHaveLength(2); // Conway has two states
@@ -227,7 +229,7 @@ describe('attachRulesetPicker', () => {
       const aliveSelect = document.querySelectorAll<HTMLSelectElement>('.ruleset-migration-row select')[1]!;
       aliveSelect.value = '3';
 
-      document.querySelector<HTMLButtonElement>('.ruleset-migration button')!.click(); // Apply is first
+      document.querySelector<HTMLButtonElement>('.dialog-controls button')!.click(); // Apply is first
       expect(onConfirm).toHaveBeenCalledTimes(1);
       const [id, migration] = onConfirm.mock.calls[0]!;
       expect(id).toBe('wireworld');
@@ -237,7 +239,7 @@ describe('attachRulesetPicker', () => {
           [1, 3],
         ]),
       );
-      expect(document.querySelector<HTMLElement>('.ruleset-migration-overlay')!.hidden).toBe(true);
+      expect(document.querySelector('.dialog-panel')).toBeNull(); // torn down, not merely hidden
       expect(picker.open).toBe(false);
     });
 
@@ -253,7 +255,7 @@ describe('attachRulesetPicker', () => {
       picker.root.querySelector<HTMLButtonElement>('.ruleset-toggle')!.click();
       picker.root.querySelector<HTMLElement>('#ruleset-option-wireworld')!.click();
 
-      const applyButton = document.querySelector<HTMLButtonElement>('.ruleset-migration button')!;
+      const applyButton = document.querySelector<HTMLButtonElement>('.dialog-controls button')!;
       applyButton.dispatchEvent(new Event('pointerdown', { bubbles: true }));
       applyButton.click();
 
@@ -267,10 +269,11 @@ describe('attachRulesetPicker', () => {
       picker.root.querySelector<HTMLButtonElement>('.ruleset-toggle')!.click();
       picker.root.querySelector<HTMLElement>('#ruleset-option-wireworld')!.click();
 
-      const [, cancelButton] = document.querySelectorAll<HTMLButtonElement>('.ruleset-migration button');
+      const [, cancelButton] = document.querySelectorAll<HTMLButtonElement>('.dialog-controls button');
       cancelButton!.click();
       expect(onConfirm).not.toHaveBeenCalled();
-      expect(document.querySelector<HTMLElement>('.ruleset-migration-overlay')!.hidden).toBe(true);
+      expect(document.querySelector('.dialog-panel')).toBeNull();
+      expect(picker.open).toBe(false); // Cancel closes the whole picker, not just the dialog
     });
 
     it('Escape inside the dialog closes it (and the picker), without confirming', () => {
@@ -280,53 +283,12 @@ describe('attachRulesetPicker', () => {
       picker.root.querySelector<HTMLElement>('#ruleset-option-wireworld')!.click();
 
       document
-        .querySelector<HTMLElement>('.ruleset-migration')!
+        .querySelector<HTMLElement>('.dialog-panel')!
         .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 
       expect(onConfirm).not.toHaveBeenCalled();
-      expect(document.querySelector<HTMLElement>('.ruleset-migration-overlay')!.hidden).toBe(true);
+      expect(document.querySelector('.dialog-panel')).toBeNull();
       expect(picker.open).toBe(false);
-    });
-
-    it('a minimal focus trap cycles Tab/Shift+Tab within the dialog', () => {
-      const { picker } = setup();
-      cleanup = () => picker.dispose();
-      picker.root.querySelector<HTMLButtonElement>('.ruleset-toggle')!.click();
-      picker.root.querySelector<HTMLElement>('#ruleset-option-wireworld')!.click();
-
-      const dialog = document.querySelector<HTMLElement>('.ruleset-migration')!;
-      const focusable = [...dialog.querySelectorAll<HTMLElement>('select, button')];
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
-
-      last.focus();
-      const forwardEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
-      dialog.dispatchEvent(forwardEvent);
-      expect(forwardEvent.defaultPrevented).toBe(true);
-      expect(document.activeElement).toBe(first);
-
-      first.focus();
-      const backwardEvent = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
-      dialog.dispatchEvent(backwardEvent);
-      expect(backwardEvent.defaultPrevented).toBe(true);
-      expect(document.activeElement).toBe(last);
-    });
-
-    it('a Tab in the middle of the dialog is left alone (no trap interference)', () => {
-      const { picker } = setup();
-      cleanup = () => picker.dispose();
-      picker.root.querySelector<HTMLButtonElement>('.ruleset-toggle')!.click();
-      picker.root.querySelector<HTMLElement>('#ruleset-option-wireworld')!.click();
-
-      const dialog = document.querySelector<HTMLElement>('.ruleset-migration')!;
-      const focusable = [...dialog.querySelectorAll<HTMLElement>('select, button')];
-      // Any element strictly between the first and last (here: the "Apply" button, second-to-last)
-      // is neither trap edge, so Tab from it must be left alone.
-      const middle = focusable[focusable.length - 2]!;
-      middle.focus();
-      const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
-      dialog.dispatchEvent(event);
-      expect(event.defaultPrevented).toBe(false);
     });
   });
 

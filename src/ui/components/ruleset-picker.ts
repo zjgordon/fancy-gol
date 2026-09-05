@@ -11,14 +11,12 @@
  * when to animate into them and when to stop — "thumbnails run only while the picker is open"
  * (P1-D-4's own acceptance criterion) is enforced by that caller, not by a timer in here.
  *
- * The state-migration prompt is a small, self-contained overlay built directly in this file —
- * P1-D-5 ("Toasts, dialogs, tooltips") doesn't exist yet, and this is the first task that
- * genuinely needs a modal. Provisional, like every other piece of infrastructure this phase has
- * built ahead of its own dedicated task (P1-D-1's tokens, P1-D-2's `store.ts` gap): a real focus
- * trap and `Escape`-to-close, `role="dialog"`/`aria-modal`, but not sharing code with whatever
- * P1-D-5 eventually builds — that task can fold this one in in, or leave it, once it exists.
+ * The state-migration prompt is built on `dialog.ts`'s shared `openDialog` primitive (P1-D-5) —
+ * this task originally hand-rolled its own portal/focus-trap/`Escape`-close copy before that
+ * primitive existed; folding it in was exactly the follow-up P1-D-5 itself named.
  */
 import type { StateDef, StateId } from '@shared/types';
+import { openDialog, type DialogHandle } from './dialog';
 
 export interface RulesetSummary {
   readonly id: string;
@@ -203,56 +201,33 @@ export function attachRulesetPicker(options: RulesetPickerOptions): RulesetPicke
 
   // --- The migration dialog -------------------------------------------------------------
 
-  const migrationOverlay = document.createElement('div');
-  migrationOverlay.className = 'ruleset-migration-overlay';
-  migrationOverlay.hidden = true;
-
-  const migrationDialog = document.createElement('div');
-  migrationDialog.className = 'ruleset-migration chrome-panel';
-  migrationDialog.setAttribute('role', 'dialog');
-  migrationDialog.setAttribute('aria-modal', 'true');
-
-  const migrationTitle = document.createElement('h3');
-  migrationDialog.appendChild(migrationTitle);
-  const migrationHint = document.createElement('p');
-  migrationHint.className = 'ruleset-migration-hint';
-  migrationHint.textContent = 'These states don’t match. Choose where each one goes.';
-  migrationDialog.appendChild(migrationHint);
-
-  const migrationRows = document.createElement('div');
-  migrationRows.className = 'ruleset-migration-rows';
-  migrationDialog.appendChild(migrationRows);
-
-  const migrationControls = document.createElement('div');
-  migrationControls.className = 'controls';
-  const applyButton = document.createElement('button');
-  applyButton.type = 'button';
-  applyButton.textContent = 'Apply';
-  const cancelButton = document.createElement('button');
-  cancelButton.type = 'button';
-  cancelButton.textContent = 'Cancel';
-  migrationControls.append(applyButton, cancelButton);
-  migrationDialog.appendChild(migrationControls);
-
-  migrationOverlay.appendChild(migrationDialog);
-  // A portal, not a child of `root`: `root` lives inside `#chrome-toolbar`, and every
-  // `.chrome-region` sets `transform` (for its own centring/intro choreography) — a `transform`
-  // on any ancestor creates a new containing block for a `position: fixed` descendant, which
-  // pins `inset: 0` to *that* ancestor's box instead of the viewport, not centring at all.
-  // Caught live in a browser (jsdom, this component's unit-test environment, never lays out real
-  // `transform`s). `document.body` has no such ancestor, so this dialog actually centres.
-  document.body.appendChild(migrationOverlay);
-
-  let pendingMigrationTarget: RulesetSummary | null = null;
-  let migrationSelects: ReadonlyArray<{ readonly oldState: StateDef; readonly select: HTMLSelectElement }> = [];
+  let migrationHandle: DialogHandle | null = null;
 
   function openMigration(target: RulesetSummary): void {
     const current = byId.get(activeId);
     if (!current) return;
-    pendingMigrationTarget = target;
-    migrationTitle.textContent = `Switch to ${target.name}`;
-    migrationRows.replaceChildren();
 
+    popover.hidden = true;
+
+    const handle = openDialog({
+      title: `Switch to ${target.name}`,
+      // Fires for *every* close reason (Escape, Cancel, or Apply below all end by calling
+      // handle.close()) — nulling the handle here before calling the picker's own close() is
+      // what keeps that mutual call safe rather than an infinite loop (see close()'s own note).
+      onClose: () => {
+        migrationHandle = null;
+        close();
+      },
+    });
+    migrationHandle = handle;
+
+    const hint = document.createElement('p');
+    hint.className = 'ruleset-migration-hint';
+    hint.textContent = 'These states don’t match. Choose where each one goes.';
+    handle.panel.appendChild(hint);
+
+    const rowsEl = document.createElement('div');
+    rowsEl.className = 'ruleset-migration-rows';
     const defaults = defaultMigration(current.states, target.states);
     const rows: Array<{ readonly oldState: StateDef; readonly select: HTMLSelectElement }> = [];
     for (const oldState of current.states) {
@@ -271,58 +246,32 @@ export function attachRulesetPicker(options: RulesetPickerOptions): RulesetPicke
       }
       select.value = String(defaults.get(oldState.id) ?? 0);
       row.append(label, select);
-      migrationRows.appendChild(row);
+      rowsEl.appendChild(row);
       rows.push({ oldState, select });
     }
-    migrationSelects = rows;
+    handle.panel.appendChild(rowsEl);
 
-    popover.hidden = true;
-    migrationOverlay.hidden = false;
+    const controls = document.createElement('div');
+    controls.className = 'controls dialog-controls';
+    const applyButton = document.createElement('button');
+    applyButton.type = 'button';
+    applyButton.textContent = 'Apply';
+    const cancelButton = document.createElement('button');
+    cancelButton.type = 'button';
+    cancelButton.textContent = 'Cancel';
+    controls.append(applyButton, cancelButton);
+    handle.panel.appendChild(controls);
+
+    applyButton.addEventListener('click', () => {
+      const migration = new Map<StateId, StateId>();
+      for (const { oldState, select } of rows) migration.set(oldState.id, Number(select.value));
+      handle.close(); // triggers onClose above, closing the picker too, before onConfirm fires
+      options.onConfirm(target.id, migration);
+    });
+    cancelButton.addEventListener('click', () => handle.close());
+
     applyButton.focus();
   }
-
-  function closeMigration(): void {
-    migrationOverlay.hidden = true;
-    pendingMigrationTarget = null;
-  }
-
-  applyButton.addEventListener('click', () => {
-    if (!pendingMigrationTarget) return;
-    const migration = new Map<StateId, StateId>();
-    for (const { oldState, select } of migrationSelects) migration.set(oldState.id, Number(select.value));
-    const targetId = pendingMigrationTarget.id;
-    closeMigration();
-    close();
-    options.onConfirm(targetId, migration);
-  });
-
-  cancelButton.addEventListener('click', () => {
-    closeMigration();
-    close();
-  });
-
-  migrationDialog.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      e.stopPropagation();
-      closeMigration();
-      close();
-      return;
-    }
-    if (e.key !== 'Tab') return;
-    // A minimal focus trap: cycle Tab/Shift+Tab within the dialog's own focusable elements —
-    // provisional until P1-D-5's shared dialog primitive exists (see this file's module doc).
-    const focusable = migrationDialog.querySelectorAll<HTMLElement>('select, button');
-    if (focusable.length === 0) return;
-    const first = focusable[0]!;
-    const last = focusable[focusable.length - 1]!;
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  });
 
   // --- Selection --------------------------------------------------------------------------
 
@@ -345,12 +294,13 @@ export function attachRulesetPicker(options: RulesetPickerOptions): RulesetPicke
   // --- Open / close -------------------------------------------------------------------------
 
   function onOutsidePointerDown(e: Event): void {
-    // `migrationOverlay` is a portal (appended to `document.body`, not a descendant of `root` —
-    // see where it's appended for why), so it needs its own containment check here: without it,
-    // a pointerdown on *anything* inside the migration dialog — including its own Apply button —
-    // reads as "outside", closing everything on the pointerdown phase, before the button's own
-    // click handler ever runs. Caught live in a browser: Apply silently did nothing.
-    if (e.target instanceof Node && (root.contains(e.target) || migrationOverlay.contains(e.target))) return;
+    // The migration dialog is a portal (`dialog.ts`'s own `openDialog`, appended to
+    // `document.body`, not a descendant of `root`), so it needs its own containment check here:
+    // without it, a pointerdown on *anything* inside it — including its own Apply button — reads
+    // as "outside", closing everything on the pointerdown phase, before the button's own click
+    // handler ever runs. Caught live in a browser (P1-D-4, before this check existed): Apply
+    // silently did nothing.
+    if (e.target instanceof Node && (root.contains(e.target) || migrationHandle?.root.contains(e.target))) return;
     close();
   }
 
@@ -369,8 +319,10 @@ export function attachRulesetPicker(options: RulesetPickerOptions): RulesetPicke
     if (!isOpen) return;
     isOpen = false;
     popover.hidden = true;
-    migrationOverlay.hidden = true;
-    pendingMigrationTarget = null;
+    // `migrationHandle.close()` re-enters here via its own `onClose` — safe, not infinite: it
+    // nulls `migrationHandle` *before* calling `close()` again, and `isOpen` is already `false`
+    // by then, so the re-entrant call hits the guard above and returns immediately.
+    migrationHandle?.close();
     toggle.setAttribute('aria-expanded', 'false');
     window.removeEventListener('pointerdown', onOutsidePointerDown);
     options.onOpenChange(false);
@@ -470,7 +422,7 @@ export function attachRulesetPicker(options: RulesetPickerOptions): RulesetPicke
     dispose(): void {
       window.removeEventListener('pointerdown', onOutsidePointerDown);
       resetTypeahead();
-      migrationOverlay.remove(); // the portal — see where it's appended for why
+      migrationHandle?.close(); // the portal — see where it's opened for why
     },
   };
 }
