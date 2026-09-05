@@ -176,6 +176,26 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   pointerdown inside the dialog was reading as "outside", silently no-oping Apply). Also fixed:
   the status bar's per-state chips (P1-D-3) only ever set a chip's name on first creation, so
   reusing the same small `StateId`s across a ruleset switch left stale names on screen. (P1-D-4)
+- Shared dialog, toast, and tooltip primitives (`src/ui/components/{dialog,toast,tooltip}.ts`):
+  `openDialog` portals to `document.body` (escaping any ancestor `.chrome-region`'s `transform`,
+  the exact containment bug P1-D-4 hit and worked around ad hoc), traps focus (Tab/Shift+Tab
+  cycling, skipping disabled/`tabindex="-1"` elements), closes on Escape, and restores focus to
+  whatever had it before opening. `confirmDialog` builds on it for the common yes/no case,
+  resolving `false` for Cancel *and* for Escape/dismiss-without-choosing — never an implicit yes —
+  and focusing Cancel by default even when the confirming action is `destructive`. `createToastRegion`
+  is a single `aria-live="polite"` portal for non-blocking notices, auto-dismissing (default 5s) or
+  dismissible by a labelled `×` button. `bindingTooltip` reads a command's current binding live from
+  `Keymap` rather than a hardcoded string, so it will pick up Phase 4's eventual remapping with no
+  code change here. `ruleset-picker.ts`'s P1-D-4 hand-rolled migration dialog (~120 lines of its own
+  portal/focus-trap/Escape-close copy) is now built on `openDialog` instead — the exact fold-in that
+  task's own notes named as a follow-up. `client/main.ts` routes every destructive/long-running
+  action named by this task through one of these: `Clear` now asks via `confirmDialog` before
+  touching the grid; a flood fill that hits its cap (`FillTool.capped`) reports via a toast rather
+  than a dialog, since the fill has already happened by the time anyone could confirm anything about
+  it — a dialog there would be asking permission for something already done. Added `axe-core` as a
+  devDependency (test-only, never bundled) to prove each primitive's rendered markup has zero
+  accessibility violations, both in jsdom and — since jsdom has no real layout engine and so can't
+  evaluate colour-contrast — against the live app in a real browser. (P1-D-5)
 
 ## [0.1.0] — 2026-09-04
 

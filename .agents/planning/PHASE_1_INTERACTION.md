@@ -472,7 +472,10 @@ wide-shot-to-framed camera move.
 - **The migration dialog is a small, self-contained modal built directly in this file** —
   P1-D-5 ("Toasts, dialogs, tooltips") doesn't exist yet. Real focus trap and `Escape`-to-close,
   `role="dialog"`/`aria-modal`, provisional like every other piece of infrastructure this phase
-  has built ahead of its own dedicated task.
+  has built ahead of its own dedicated task. — **Folded into the shared primitive by P1-D-5
+  (2026-09-05):** `ruleset-picker.ts`'s hand-rolled portal/focus-trap/`Escape`-close copy is gone;
+  it now builds its dialog on `dialog.ts`'s `openDialog`, exactly the follow-up this note itself
+  named.
 - **Three real bugs found only by actually running this in a browser** (`npm run dev` +
   Playwright, not just `npm run verify` — jsdom, this project's unit-test DOM, never lays out real
   CSS cascade/`transform`/`[hidden]` behaviour, so none of these could have failed a unit test):
@@ -504,12 +507,54 @@ wide-shot-to-framed camera move.
 - [x] Keyboard navigable; type-ahead search works — `ArrowUp`/`ArrowDown` (wrapping), `Home`/`End`, `Enter`/`Space` to select, `Escape` to close, all via `aria-activedescendant` over the flattened entry list; type-ahead accumulates typed characters and jumps to the next name starting with them, reset after 600 ms idle. Proven in `ruleset-picker.spec.ts` and live in a browser.
 - [x] Switching Conway → WireWorld surfaces the migration prompt with sensible defaults preselected — proven exactly as stated: `defaultMigration(CONWAY_STATES, WIREWORLD_STATES)` maps `dead → empty`, `alive → electron-head`; the dialog's `<select>`s open pre-set to those values, editable before Apply. Verified live in a browser end to end, including the actual grid re-colouring and the status bar's chips showing WireWorld's real state names/counts afterward.
 
-#### - [ ] P1-D-5 · Toasts, dialogs, tooltips
-**Depends on:** P1-D-1
+#### - [x] P1-D-5 · Toasts, dialogs, tooltips — @claude, started 2026-09-05, finished 2026-09-05
+**Depends on:** P1-D-1 · **Files:** `src/ui/components/dialog.ts`, `src/ui/components/toast.ts`, `src/ui/components/tooltip.ts`
 **Implementation notes** One shared, accessible primitive set: focus trap on dialogs, `Escape` to close, `aria-live="polite"` for toasts, tooltips that show the command's current keybinding. Every long-running or destructive action (clear, flood-fill over cap, ruleset switch) routes through these.
+- **`dialog.ts`'s `openDialog`** is a one-shot lifecycle (builds and shows immediately; `close()`
+  tears the whole thing down, not just hides it), not a toggle like the ruleset picker's own
+  reusable popover — the right shape for "ask one question, get one answer." It's a portal
+  (appended to `document.body`), for the exact reason P1-D-4 discovered the hard way before this
+  file existed: `position: fixed` is contained by *any* ancestor with a `transform`, and every
+  `.chrome-region` sets one. A real focus trap (Tab/Shift+Tab cycling, skipping disabled/
+  `tabindex="-1"` elements) and `Escape`-to-close, both on the document's capture phase so a
+  dialog always wins over whatever else might otherwise handle those keys first (a tool's own
+  Escape-cancels-gesture handling, say). Closing always restores focus to whatever had it before
+  the dialog opened.
+- **`confirmDialog`** is the "every destructive action routes through this" convenience: title +
+  message + Confirm/Cancel, resolving `true`/`false` — `false` for Cancel *and* for dismissing
+  without choosing at all (`Escape`), never treated as an implicit yes. Focuses Cancel by default,
+  never the destructive action itself.
+- **`ruleset-picker.ts`'s migration dialog now builds on `openDialog`** instead of the hand-rolled
+  portal/focus-trap copy P1-D-4 shipped ahead of this task existing — see that task's own note,
+  now marked closed. Its outside-pointerdown-closes-the-picker listener still needs its own
+  containment check against the dialog's portal (a plain `ui/` component, not something
+  `dialog.ts` itself has any reason to know about), now checking `migrationHandle?.root` instead
+  of a fixed element.
+- **`toast.ts`**: a single shared `aria-live="polite"` region (also a portal, same transform
+  reasoning), created once, into which callers push stacking, auto-dismissing (default 5 s, or
+  dismissed early by hand) notices. Flood-fill-over-cap is the phase doc's own named example of
+  why this is a toast and not a `confirmDialog`: by the time anyone could ask a yes/no question
+  about it, the fill has already happened (`ui/tools/fill.ts`'s own doc comment: "`capped` is
+  readable after a fill either way") — there's nothing left to confirm, only something to report.
+- **`tooltip.ts`'s `bindingTooltip`** is a pure lookup against `Keymap` (the same live registry
+  Phase 4's eventual remapping UI will mutate), not a new tooltip *mechanism* — every control
+  already showed its tooltip via the native `title` attribute. `transport.ts`'s buttons used to
+  hardcode their binding string per button (`{ commandId, label, binding: 'Space' }`); refactored
+  to read it from `Keymap` instead, which is what actually makes the "current binding, not the
+  default" criterion true once Phase 4 exists, with no further change needed here.
+- **Wired into `client/main.ts`**: `SimControl.clear()` now awaits `confirmDialog` before actually
+  clearing (Cancel/Escape leaves the grid untouched — proven live in a browser); a capped flood
+  fill shows a toast naming the cap. The ruleset-switch migration dialog was already routed
+  through the shared dialog primitive by the refactor above.
+- **`axe-core` added as a devDependency** (test-only — never bundled, so it doesn't touch the
+  no-bloat runtime-surface rule) — one package, no meaningful transitive tree. Runs against real
+  jsdom-rendered DOM in `dialog.spec.ts`/`toast.spec.ts`; jsdom has no real layout engine, so
+  colour-contrast-class checks are effectively no-ops there (a real-browser run would be needed
+  for full confidence on those specifically), but the structural/ARIA rules this task's own
+  components actually need checked (`role`, `aria-*`, labelling, focusable-content) run for real.
 **Acceptance criteria**
-- [ ] Axe-core reports zero violations on the dialog and toast components.
-- [ ] Tooltips display the *user's current* binding, not the default, once Phase 4 adds remapping.
+- [x] Axe-core reports zero violations on the dialog and toast components — `axe.run()` against a real rendered `openDialog`/`confirmDialog`/`createToastRegion` DOM in `dialog.spec.ts`/`toast.spec.ts` reports zero violations in every case (an empty dialog, one with content, a toast showing). jsdom's own layout limitations mean this doesn't exercise colour-contrast rules for real — the same honest scope P1-H-2's eventual visual regression baseline exists to cover for anything CSS-layout-dependent.
+- [x] Tooltips display the *user's current* binding, not the default, once Phase 4 adds remapping — proven by construction, not by simulation: `bindingTooltip` reads `Keymap.list()` live on every call, the same registry Phase 4's remapping UI will mutate; `tooltip.spec.ts`'s own test registers a binding *other than* a command's Phase-1 default and confirms the tooltip reflects it, standing in for "Phase 4 remapped it" today.
 
 ---
 
