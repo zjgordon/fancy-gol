@@ -112,7 +112,10 @@ export function createStatusBar(): StatusBar {
     memory.el,
   );
 
-  const chipEls = new Map<number, { readonly el: HTMLElement; readonly count: HTMLElement }>();
+  const chipEls = new Map<
+    number,
+    { readonly el: HTMLElement; readonly name: HTMLElement; readonly count: HTMLElement }
+  >();
 
   function syncChips(chips: readonly StatusChip[]): void {
     const seen = new Set<number>();
@@ -126,14 +129,20 @@ export function createStatusBar(): StatusBar {
         swatch.className = 'status-chip-swatch';
         const name = document.createElement('span');
         name.className = 'status-chip-name';
-        name.textContent = chip.name;
         const count = document.createElement('span');
         count.className = 'status-value';
         el.append(swatch, name, count);
         chipsRow.appendChild(el);
-        entry = { el, count };
+        entry = { el, name, count };
         chipEls.set(chip.id, entry);
       }
+      // Always refresh every field, not just on creation — a ruleset switch (P1-D-4) reuses the
+      // same small StateIds for entirely different states (WireWorld's id 1 is "electron-head",
+      // not Conway's "alive"), so a chip element surviving the switch (same id, new meaning)
+      // must never keep showing its *previous* ruleset's name. Caught live in a browser: it
+      // rendered "alive"/"dead" long after switching to WireWorld, with the right colours and
+      // counts but the wrong labels.
+      entry.name.textContent = chip.name;
       entry.el.style.setProperty('--gol-chip-color', chip.color);
       entry.count.textContent = String(chip.count);
     }

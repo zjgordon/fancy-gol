@@ -116,6 +116,16 @@ describe('createStatusBar', () => {
       expect(chipAfter!.querySelector('.status-value')!.textContent).toBe('6');
     });
 
+    it('updates a chip\'s name too, not just its colour/count — a ruleset switch (P1-D-4) reuses the same small StateIds for entirely different states', () => {
+      const bar = createStatusBar();
+      bar.update(baseState({ chips: [{ id: 1, name: 'alive', count: 5, color: '#7cf9d0' }] }));
+      expect(bar.root.querySelector('.status-chip-name')!.textContent).toBe('alive');
+
+      // Same id (1), a different ruleset's meaning for it (WireWorld's "electron-head").
+      bar.update(baseState({ chips: [{ id: 1, name: 'electron-head', count: 0, color: '#ff6b81' }] }));
+      expect(bar.root.querySelector('.status-chip-name')!.textContent).toBe('electron-head');
+    });
+
     it('drops a chip once its state id is no longer present (a ruleset switch shrinking the state set)', () => {
       const bar = createStatusBar();
       bar.update(
