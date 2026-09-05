@@ -41,6 +41,12 @@
  * required the migration dialog. `activeRuleset` replaces the `CONWAY` constant everywhere it
  * used to be assumed fixed (the status bar's chips, `gunOps`' painted state, …).
  *
+ * P1-D-5 routes "every long-running or destructive action" through the shared dialog/toast
+ * primitives: `sim.clear` now awaits `confirmDialog` before actually clearing (Cancel/Escape
+ * leaves the grid untouched), and a flood fill that hit its cap (`ui/tools/fill.ts`'s own
+ * `capped` flag — the fill has already happened by the time anyone could ask a yes/no question
+ * about it, so it's a toast, not a confirmation) shows one via the shared toast region.
+ *
  * Deliberately NOT done here, recorded rather than silently skipped:
  *  - `EditStack`/`CommandBus.onUndoableRun` stay unwired. No `AppCommand` is `undoable: true`
  *    yet, and `edit.undo`/`edit.redo` aren't registered commands (their `bindings.ts` table
@@ -70,6 +76,9 @@ import { createTransportControls } from '@ui/components/transport';
 import { createSpeedControl, TpsMeter } from '@ui/components/speed';
 import { createStatusBar, STATUS_THROTTLE_MS, zoomPercent } from '@ui/components/statusbar';
 import { attachRulesetPicker, type RulesetSummary } from '@ui/components/ruleset-picker';
+import { confirmDialog } from '@ui/components/dialog';
+import { createToastRegion } from '@ui/components/toast';
+import type { FillTool } from '@ui/tools/fill';
 import { createAppContext } from './app-context';
 
 /**
@@ -316,9 +325,21 @@ function main(): void {
     requestAnimationFrame(cameraRedrawLoop);
   }
 
+  const toasts = createToastRegion();
+
   const { context: toolContext, registry } = createAppContext({
     onPaint: (ops) => {
       void client.send({ cmd: 'paint', ops });
+      // "Every long-running or destructive action ... routes through" the shared toast/dialog
+      // primitives (P1-D-5) — a flood fill has already happened by the time anyone could ask a
+      // yes/no question about it (`fill.ts`'s own doc comment), so a capped one gets a toast,
+      // not a confirmation.
+      if (toolContext.toolRegistry.active?.id === 'fill') {
+        const fillTool = toolContext.toolRegistry.get('fill') as FillTool | undefined;
+        if (fillTool?.capped) {
+          toasts.show(`Flood fill stopped at ${fillTool.cap.toLocaleString()} cells — the pattern may be incomplete.`);
+        }
+      }
     },
   });
   for (const cmd of SIM_COMMANDS) registry.register(cmd);
@@ -360,6 +381,13 @@ function main(): void {
     },
     clear() {
       void (async () => {
+        const confirmed = await confirmDialog({
+          title: 'Clear the grid?',
+          message: 'Every live cell will be removed. This cannot be undone.',
+          confirmLabel: 'Clear',
+          destructive: true,
+        });
+        if (!confirmed) return;
         await client.send({ cmd: 'clear' });
         mirror.reset();
         if (hasFrame) renderer.draw({ cells: mirror.view(), dirty: null, tick: lastTick });
@@ -423,7 +451,7 @@ function main(): void {
   attachKeymap(keymap, window, bus);
   canvas.style.cursor = context.toolRegistry.active?.cursor ?? 'default';
 
-  const transport = createTransportControls(bus);
+  const transport = createTransportControls(bus, keymap);
   const speed = createSpeedControl((tps) => simControl.setSpeed(tps));
   shell.transport.append(transport.root, speed.root);
 
