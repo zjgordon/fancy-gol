@@ -4,6 +4,8 @@ import { SIM_COMMANDS } from '@ui/commands/builtin/sim';
 import { CommandBus } from '@ui/commands/bus';
 import { CommandRegistry, type AppContext, type SimControl } from '@ui/commands/registry';
 import { ToolRegistry } from '@ui/tools/registry';
+import { attachDefaultBindings } from '@ui/input/bindings';
+import { Keymap } from '@ui/input/keymap';
 
 interface FakeSim {
   readonly sim: SimControl;
@@ -41,7 +43,9 @@ function setup(sim: SimControl) {
   for (const cmd of SIM_COMMANDS) registry.register(cmd);
   const context: AppContext = { toolRegistry: new ToolRegistry(), sim };
   const bus = new CommandBus(registry, context);
-  return { bus };
+  const keymap = new Keymap(() => false); // non-mac, so 'Mod' reads as 'Ctrl' consistently
+  attachDefaultBindings(keymap, registry);
+  return { bus, keymap };
 }
 
 function findButton(root: HTMLElement, label: string): HTMLButtonElement {
@@ -50,8 +54,8 @@ function findButton(root: HTMLElement, label: string): HTMLButtonElement {
 
 describe('createTransportControls', () => {
   it('renders one button per real transport action, each with an accessible name', () => {
-    const { bus } = setup(fakeSim().sim);
-    const transport = createTransportControls(bus);
+    const { bus, keymap } = setup(fakeSim().sim);
+    const transport = createTransportControls(bus, keymap);
     const buttons = [...transport.root.querySelectorAll('button')];
     const labels = buttons.map((b) => b.textContent);
     for (const expected of ['Pause', 'Step', 'Step back', 'Reset', 'Clear', 'Soup']) {
@@ -63,8 +67,8 @@ describe('createTransportControls', () => {
   });
 
   it('every real button carries its keybinding in its title tooltip', () => {
-    const { bus } = setup(fakeSim().sim);
-    const transport = createTransportControls(bus);
+    const { bus, keymap } = setup(fakeSim().sim);
+    const transport = createTransportControls(bus, keymap);
     expect(findButton(transport.root, 'Pause').title).toContain('Space');
     expect(findButton(transport.root, 'Step').title).toContain('.');
     expect(findButton(transport.root, 'Reset').title).toContain('R');
@@ -73,8 +77,8 @@ describe('createTransportControls', () => {
   });
 
   it('the step-back button is present but disabled, with a Phase 4 tooltip — never a mystery', () => {
-    const { bus } = setup(fakeSim().sim);
-    const transport = createTransportControls(bus);
+    const { bus, keymap } = setup(fakeSim().sim);
+    const transport = createTransportControls(bus, keymap);
     const stepBack = findButton(transport.root, 'Step back');
     expect(stepBack.disabled).toBe(true);
     expect(stepBack.title.toLowerCase()).toContain('phase 4');
@@ -82,8 +86,8 @@ describe('createTransportControls', () => {
 
   it('clicking each real button runs its command through the bus, reaching SimControl', () => {
     const fake = fakeSim();
-    const { bus } = setup(fake.sim);
-    const transport = createTransportControls(bus);
+    const { bus, keymap } = setup(fake.sim);
+    const transport = createTransportControls(bus, keymap);
 
     findButton(transport.root, 'Reset').click();
     findButton(transport.root, 'Clear').click();
@@ -95,15 +99,15 @@ describe('createTransportControls', () => {
 
   it('clicking Pause toggles the run state via the bus', () => {
     const fake = fakeSim();
-    const { bus } = setup(fake.sim);
-    const transport = createTransportControls(bus);
+    const { bus, keymap } = setup(fake.sim);
+    const transport = createTransportControls(bus, keymap);
     findButton(transport.root, 'Pause').click();
     expect(fake.toggleRun).toHaveBeenCalledTimes(1);
   });
 
   it('update() flips the Play/Pause label and aria-pressed to match running state', () => {
-    const { bus } = setup(fakeSim().sim);
-    const transport = createTransportControls(bus);
+    const { bus, keymap } = setup(fakeSim().sim);
+    const transport = createTransportControls(bus, keymap);
     const playPause = () =>
       [...transport.root.querySelectorAll('button')].find((b) => ['Play', 'Pause'].includes(b.textContent ?? ''))!;
 
@@ -117,8 +121,8 @@ describe('createTransportControls', () => {
   });
 
   it('update() disables Step while running — stepping mid-free-run is not a coherent action', () => {
-    const { bus } = setup(fakeSim().sim);
-    const transport = createTransportControls(bus);
+    const { bus, keymap } = setup(fakeSim().sim);
+    const transport = createTransportControls(bus, keymap);
 
     transport.update({ running: true });
     expect(findButton(transport.root, 'Step').disabled).toBe(true);

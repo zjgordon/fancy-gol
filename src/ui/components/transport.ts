@@ -12,8 +12,15 @@
  * readouts already use; `src/client/store.ts`'s observable state (§2.6's file tree) isn't built
  * by any task yet, so this doesn't invent a second, inconsistent state-propagation mechanism
  * ahead of it.
+ *
+ * P1-D-5: every button's tooltip reads its binding live from `Keymap` (`bindingTooltip`) instead
+ * of a hardcoded string baked in here — this used to be a literal `binding` field per button,
+ * which could silently drift from whatever `bindings.ts` actually registered, and would never
+ * have picked up Phase 4's remapping once it exists.
  */
 import type { CommandBus } from '@ui/commands/bus';
+import type { Keymap } from '@ui/input/keymap';
+import { bindingTooltip } from './tooltip';
 
 export interface TransportState {
   readonly running: boolean;
@@ -28,18 +35,17 @@ export interface TransportControls {
 interface ButtonSpec {
   readonly commandId: string;
   readonly label: string;
-  readonly binding: string;
 }
 
 const BUTTONS: readonly ButtonSpec[] = [
-  { commandId: 'sim.toggleRun', label: 'Pause', binding: 'Space' },
-  { commandId: 'sim.step', label: 'Step', binding: '.' },
-  { commandId: 'sim.reset', label: 'Reset', binding: 'R' },
-  { commandId: 'sim.clear', label: 'Clear', binding: 'C' },
-  { commandId: 'sim.randomSoup', label: 'Soup', binding: 'N' },
+  { commandId: 'sim.toggleRun', label: 'Pause' },
+  { commandId: 'sim.step', label: 'Step' },
+  { commandId: 'sim.reset', label: 'Reset' },
+  { commandId: 'sim.clear', label: 'Clear' },
+  { commandId: 'sim.randomSoup', label: 'Soup' },
 ];
 
-export function createTransportControls(bus: CommandBus): TransportControls {
+export function createTransportControls(bus: CommandBus, keymap: Keymap): TransportControls {
   const root = document.createElement('div');
   root.className = 'chrome-panel controls';
 
@@ -48,7 +54,7 @@ export function createTransportControls(bus: CommandBus): TransportControls {
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = spec.label;
-    button.title = `${spec.label} (${spec.binding})`;
+    button.title = bindingTooltip(keymap, spec.commandId, spec.label);
     button.addEventListener('click', () => void bus.run(spec.commandId));
     buttons.set(spec.commandId, button);
     root.appendChild(button);
@@ -68,8 +74,9 @@ export function createTransportControls(bus: CommandBus): TransportControls {
   const stepButton = buttons.get('sim.step')!;
 
   function update(state: TransportState): void {
-    playPauseButton.textContent = state.running ? 'Pause' : 'Play';
-    playPauseButton.title = `${state.running ? 'Pause' : 'Play'} (Space)`;
+    const label = state.running ? 'Pause' : 'Play';
+    playPauseButton.textContent = label;
+    playPauseButton.title = bindingTooltip(keymap, 'sim.toggleRun', label);
     playPauseButton.setAttribute('aria-pressed', String(state.running));
     stepButton.disabled = state.running;
   }
