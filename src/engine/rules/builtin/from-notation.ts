@@ -28,6 +28,7 @@ export function fromNotation(meta: LifeMeta): BuiltinRuleSet {
     transition: parsed.transition,
     boundary: 'toroidal',
     tags: meta.tags,
+    notation: meta.notation,
   };
   const extra: { author?: string; year?: number } = {};
   if (meta.author !== undefined) extra.author = meta.author;

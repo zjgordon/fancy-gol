@@ -10,4 +10,9 @@ export type BuiltinTag = 'chaotic' | 'stable' | 'explosive' | 'maze-like' | 'mul
 export interface BuiltinRuleSet extends RuleSetDocument {
   readonly tags: readonly BuiltinTag[];
   readonly year?: number;
+  /** The Life-family B/S(/G) notation this rule was defined from, e.g. `"B3/S23"` — present only
+   * for `fromNotation()`-built rules (P1-D-4's ruleset picker shows it when available; a
+   * state-table/weighted-threshold rule like WireWorld or Highlands/Liquid has no such notation
+   * and leaves this undefined rather than fabricate one). */
+  readonly notation?: string;
 }
