@@ -12,7 +12,7 @@
  * module `shared/` may not import from (ADR-009). The worker handler (`worker/`, which may
  * import both) runs that deeper check once a `Command` has already been structurally accepted.
  */
-import type { PaintOp, Rect, RuleSet, Snapshot, StatSample, TickStats } from './types';
+import type { PaintOp, Rect, RuleSet, Snapshot, StateId, StatSample, TickStats } from './types';
 
 export const PROTOCOL_VERSION = 1;
 
@@ -49,7 +49,21 @@ export type Command =
       readonly height: number;
       readonly seed: number;
     }
-  | { readonly id: number; readonly cmd: 'setRuleset'; readonly ruleset: RuleSet }
+  | {
+      readonly id: number;
+      readonly cmd: 'setRuleset';
+      readonly ruleset: RuleSet;
+      /**
+       * A `StateMigration` as data (P1-D-4): index = old `StateId`, value = the new `StateId` it
+       * maps to. Functions aren't structured-clone-safe, so this is what actually crosses the
+       * wire; `worker/handler.ts` reconstructs the `(old) => migration[old]` callback
+       * `Simulation.setRuleset` wants. Required whenever the new ruleset's palette differs from
+       * the current one — `Simulation.setRuleset` itself is the single source of truth for
+       * "differs" and throws a structured error naming both palettes if it's needed and missing,
+       * exactly as it already does for a same-thread caller.
+       */
+      readonly migration?: readonly StateId[];
+    }
   | { readonly id: number; readonly cmd: 'step'; readonly n: number }
   | { readonly id: number; readonly cmd: 'run'; readonly tps: number } // free-run at target ticks/sec; tps === Infinity is "unbounded" (P1-D-2) — steps as fast as the scheduler allows
   | { readonly id: number; readonly cmd: 'pause' }
@@ -233,6 +247,13 @@ export function parseCommand(raw: unknown): ParseResult<Command> {
     case 'setRuleset': {
       if (!isRuleSetShaped(raw['ruleset']))
         return fail('ruleset', 'setRuleset.ruleset must be a RuleSet-shaped object');
+      const migration = raw['migration'];
+      if (migration !== undefined) {
+        if (!Array.isArray(migration) || !migration.every(isFiniteNumber)) {
+          return fail('migration', 'setRuleset.migration must be an array of finite StateIds');
+        }
+        return ok({ id, cmd, ruleset: raw['ruleset'], migration });
+      }
       return ok({ id, cmd, ruleset: raw['ruleset'] });
     }
     case 'step': {

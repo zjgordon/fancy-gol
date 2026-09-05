@@ -200,6 +200,26 @@ describe('parseCommand: malformed messages reject with a structured issue, never
       if (!result.ok) expect(result.issue.path).toBe('tps');
     }
   });
+
+  it('accepts setRuleset.migration (P1-D-4) as an array of StateIds', () => {
+    const result = parseCommand({ id: 1, cmd: 'setRuleset', ruleset: CONWAY, migration: [0, 1, 1] });
+    expect(result.ok).toBe(true);
+    if (result.ok && result.value.cmd === 'setRuleset') expect(result.value.migration).toEqual([0, 1, 1]);
+  });
+
+  it('accepts setRuleset with no migration at all (unchanged from before P1-D-4)', () => {
+    const result = parseCommand({ id: 1, cmd: 'setRuleset', ruleset: CONWAY });
+    expect(result.ok).toBe(true);
+    if (result.ok && result.value.cmd === 'setRuleset') expect(result.value.migration).toBeUndefined();
+  });
+
+  it('rejects a non-array or non-numeric setRuleset.migration', () => {
+    for (const migration of ['nope', [0, 'nope'], [0, NaN]]) {
+      const result = parseCommand({ id: 1, cmd: 'setRuleset', ruleset: CONWAY, migration });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.issue.path).toBe('migration');
+    }
+  });
 });
 
 const VALID_EVENTS: Record<Event['type'], Record<string, unknown>> = {

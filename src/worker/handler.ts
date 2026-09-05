@@ -14,7 +14,7 @@ import type { Clock } from '@engine/clock';
 import { CHUNK_AREA, CHUNK_SIZE, chunkToWorld, unpackChunkX, unpackChunkY } from '@engine/grid/coords';
 import { validateRuleSet } from '@engine/rules/validate';
 import { Simulation } from '@engine/simulation';
-import type { ChangeSet, Rect } from '@engine/types';
+import { DEAD, type ChangeSet, type Rect, type StateId } from '@engine/types';
 import { parseCommand, type Command, type Event, type TransferredChunks, type WorkerCaps } from '@shared/protocol';
 import type { TickStats } from '@shared/types';
 
@@ -156,8 +156,15 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
       }
       case 'setRuleset': {
         const active = requireSim();
-        active.setRuleset(validateRuleSet(cmd.ruleset));
+        const migration = cmd.migration;
+        const migrate = migration ? (old: StateId): StateId => migration[old] ?? DEAD : undefined;
+        active.setRuleset(validateRuleSet(cmd.ruleset), migrate);
         opts.post({ id: cmd.id, type: 'ok' });
+        // Every live cell's byte can change here (a migration remaps the whole palette, not an
+        // incremental edit) — `setRuleset` returns no `ChangeSet` at all, so a full frame is the
+        // only honest way for the client's mirror (and therefore the renderer) to actually see
+        // the new state values, exactly like `clear`/`seedRandom`/`seek`/`restore` already do.
+        postFullFrame(active);
         return;
       }
       case 'step': {

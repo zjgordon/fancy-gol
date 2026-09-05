@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Clock } from '@engine/clock';
-import { CONWAY } from '@engine/rules/builtin';
+import { BRIANS_BRAIN, CONWAY } from '@engine/rules/builtin';
 import type { Event } from '@shared/protocol';
 import { createHandler, REAL_SCHEDULER, type Scheduler, type WorkerHandler } from '@worker/handler';
 
@@ -103,6 +103,52 @@ describe('worker-protocol: the full Phase 0 command set, through an in-memory po
     port.send({ id: 2, cmd: 'setRuleset', ruleset: { ...CONWAY, id: 'highlife' } });
     const reply = port.events[1];
     expect(reply).toEqual({ id: 2, type: 'ok' });
+  });
+
+  it('setRuleset to an incompatible palette without a migration fails structurally, naming both palettes', () => {
+    const port = createPort();
+    port.send({ id: 1, cmd: 'init', ruleset: CONWAY, width: 16, height: 16, seed: 1 });
+    expect(() => port.send({ id: 2, cmd: 'setRuleset', ruleset: BRIANS_BRAIN })).not.toThrow();
+    const reply = port.events[1];
+    expect(reply?.type).toBe('error');
+    if (reply?.type === 'error') {
+      expect(reply.message).toContain(CONWAY.name);
+      expect(reply.message).toContain(BRIANS_BRAIN.name);
+    }
+  });
+
+  it('setRuleset with a migration (P1-D-4) remaps live cells and pushes a full frame reflecting it', () => {
+    const port = createPort();
+    port.send({ id: 1, cmd: 'init', ruleset: CONWAY, width: 8, height: 8, seed: 1 });
+    port.send({ id: 2, cmd: 'paint', ops: [{ x: 2, y: 2, state: 1 }] }); // Conway "alive"
+
+    // Conway: [dead=0, alive=1]. Brian's Brain: [dead=0, firing=1, refractory=2] -- map
+    // Conway's alive to Brian's Brain's "firing", the "sensible default" P1-D-4's picker
+    // itself would also pick (same-kind: both are the rule's live state).
+    port.send({ id: 3, cmd: 'setRuleset', ruleset: BRIANS_BRAIN, migration: [0, 1] });
+    expect(replyTo(port.events, 3)).toEqual({ id: 3, type: 'ok' });
+
+    const frame = lastByType(port.events, 'frame');
+    expect(frame).toBeDefined();
+    // (2, 2) is local index (2 & 31) + ((2 & 31) << 5) within its chunk's 1024-byte page.
+    expect(frame?.chunks.data[2 + (2 << 5)]).toBe(1); // now Brian's Brain state 1 ("firing")
+    expect(frame?.stats.population).toBe(1);
+  });
+
+  it('setRuleset with a migration shorter than the old palette falls back to dead for any unmapped old state', () => {
+    const port = createPort();
+    port.send({ id: 1, cmd: 'init', ruleset: BRIANS_BRAIN, width: 8, height: 8, seed: 1 });
+    // Brian's Brain "refractory" (state 2) painted directly -- a real Simulation would only ever
+    // reach it via evolution, but painting it is the simplest way to prove an *old state id with
+    // no entry in `migration`* falls back to dead rather than an out-of-bounds `undefined` byte.
+    port.send({ id: 2, cmd: 'paint', ops: [{ x: 1, y: 1, state: 2 }] });
+
+    // Only entries for old states 0 and 1 -- state 2 ("refractory") has no entry at all.
+    port.send({ id: 3, cmd: 'setRuleset', ruleset: CONWAY, migration: [0, 1] });
+    expect(replyTo(port.events, 3)).toEqual({ id: 3, type: 'ok' });
+
+    const frame = lastByType(port.events, 'frame');
+    expect(frame?.stats.population).toBe(0); // the unmapped cell fell back to dead, not garbage
   });
 
   it('step replies "ok" and pushes a frame reflecting the change', () => {
