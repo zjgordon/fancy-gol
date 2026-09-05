@@ -28,6 +28,7 @@
         --gol-color-accent-strong: #9dfbdd;
         --gol-color-accent-pressed: #5ed6ae;
         --gol-color-on-accent: #05070a;
+        --gol-color-scrim: rgba(0, 0, 0, 0.5);
 
         --gol-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
         --gol-font-size-sm: 13px;
@@ -64,12 +65,27 @@
         background: var(--gol-color-bg);
       }
 
+      /* The cascade's `origin` beats specificity: an author rule that sets `display` on a
+       * `[hidden]` element (e.g. `.chrome-panel { display: flex }`) always wins over the UA
+       * stylesheet's own `[hidden] { display: none }`, no matter how low its specificity —
+       * caught live in a browser (P1-D-4's ruleset picker and migration dialog, both toggled via
+       * the `hidden` property, rendered permanently open). This is the standard, narrow fix:
+       * guarantee `hidden` always wins, for every element in this document, forever. */
+      [hidden] {
+        display: none !important;
+      }
+
       #app {
         position: fixed;
         inset: 0;
       }
 
-      canvas {
+      /* Scoped to the scene canvas specifically, not every `<canvas>` on the page — P1-D-4 added
+       * 14 more (the ruleset picker's thumbnails), and a blanket `canvas { position: fixed;
+       * inset: 0 }` rule pulled every one of them out of its flex layout and stretched it to
+       * fill the viewport, caught live in a browser (`ruleset-picker.spec.ts`'s jsdom tests never
+       * render real layout, so this had no way to fail there). */
+      #scene {
         position: fixed;
         inset: 0;
         display: block;
@@ -319,13 +335,160 @@
       }
 
       /*
+       * The ruleset picker (P1-D-4): a toolbar toggle button opening a popover listbox, plus a
+       * migration dialog for an incompatible palette switch. `.ruleset-popover`/
+       * `.ruleset-migration-overlay` get explicit z-index because they're descendants of the
+       * *first* chrome region in DOM order (`#chrome-toolbar`) and must still paint above the
+       * later regions (transport, status, panel dock) that would otherwise stack on top per
+       * plain DOM order.
+       */
+      .ruleset-picker {
+        position: relative;
+      }
+      .ruleset-toggle {
+        font: inherit;
+        color: var(--gol-color-text);
+        background: var(--gol-color-surface);
+        border: 1px solid var(--gol-color-border);
+        border-radius: var(--gol-radius-sm);
+        padding: var(--gol-space-2) var(--gol-space-3);
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .ruleset-toggle:hover {
+        border-color: var(--gol-color-accent);
+      }
+      .ruleset-toggle:focus-visible {
+        outline: 2px solid var(--gol-color-accent);
+        outline-offset: 2px;
+      }
+      .ruleset-toggle-name {
+        font-weight: var(--gol-font-weight-medium);
+      }
+      .ruleset-popover {
+        position: absolute;
+        left: calc(100% + var(--gol-space-2));
+        top: 50%;
+        transform: translateY(-50%);
+        width: 340px;
+        max-height: min(70vh, 520px);
+        overflow-y: auto;
+        z-index: 20;
+        padding: var(--gol-space-2);
+      }
+      .ruleset-listbox:focus-visible {
+        outline: 2px solid var(--gol-color-accent);
+        outline-offset: -2px;
+      }
+      .ruleset-group-title {
+        margin: var(--gol-space-2) 0 var(--gol-space-1);
+        font-size: var(--gol-font-size-sm);
+        font-weight: var(--gol-font-weight-medium);
+        color: var(--gol-color-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .ruleset-group:first-child .ruleset-group-title {
+        margin-top: 0;
+      }
+      .ruleset-entry {
+        display: flex;
+        align-items: center;
+        gap: var(--gol-space-2);
+        padding: var(--gol-space-1) var(--gol-space-2);
+        border-radius: var(--gol-radius-sm);
+        cursor: pointer;
+      }
+      .ruleset-entry:hover,
+      .ruleset-entry--highlighted {
+        background: var(--gol-color-elevated);
+      }
+      .ruleset-entry[aria-selected='true'] {
+        outline: 1px solid var(--gol-color-accent);
+      }
+      .ruleset-thumb {
+        flex: none;
+        width: 32px;
+        height: 32px;
+        border-radius: var(--gol-radius-sm);
+        background: var(--gol-color-bg);
+      }
+      .ruleset-entry-info {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+      .ruleset-entry-name {
+        font-weight: var(--gol-font-weight-medium);
+      }
+      .ruleset-entry-meta {
+        font-size: var(--gol-font-size-sm);
+        color: var(--gol-color-muted);
+      }
+      .ruleset-entry-desc {
+        font-size: var(--gol-font-size-sm);
+        color: var(--gol-color-muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .ruleset-migration-overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--gol-color-scrim);
+        z-index: 30;
+      }
+      .ruleset-migration {
+        width: min(90vw, 360px);
+        max-height: 80vh;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: var(--gol-space-2);
+      }
+      .ruleset-migration h3 {
+        margin: 0;
+      }
+      .ruleset-migration-hint {
+        margin: 0;
+        color: var(--gol-color-muted);
+        font-size: var(--gol-font-size-sm);
+      }
+      .ruleset-migration-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--gol-space-2);
+      }
+      .ruleset-migration-row select {
+        font: inherit;
+        color: var(--gol-color-text);
+        background: var(--gol-color-elevated);
+        border: 1px solid var(--gol-color-border);
+        border-radius: var(--gol-radius-sm);
+        padding: var(--gol-space-1) var(--gol-space-2);
+      }
+
+      /*
        * Narrow-viewport reflow (phones, the 320px floor): `.chrome-status` moves out of the
        * bottom-right corner — at that width it would otherwise overlap `.chrome-transport`'s
        * centred dock — and stacks below it instead, both still bottom-anchored and centred.
-       * `.chrome-toolbar`/`.chrome-panel-dock` need no rule here: they render nothing yet
-       * (`:empty` above already keeps them out of flow entirely).
+       * `.chrome-panel-dock` needs no rule here: it renders nothing yet (`:empty` above keeps
+       * it out of flow entirely). `.ruleset-popover` anchors to the viewport instead of the
+       * toggle button so a 340px popover never overflows a 320px screen.
        */
       @media (max-width: 600px) {
+        .ruleset-popover {
+          left: var(--gol-space-3);
+          right: var(--gol-space-3);
+          top: auto;
+          bottom: calc(100% + var(--gol-space-2));
+          transform: none;
+          width: auto;
+        }
         #chrome-transport {
           bottom: calc(var(--gol-space-3) + 3.6em);
         }
