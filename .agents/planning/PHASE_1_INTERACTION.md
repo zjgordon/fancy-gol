@@ -678,13 +678,44 @@ wide-shot-to-framed camera move.
 
 ### Workstream F — Persistence & sharing
 
-#### - [ ] P1-F-1 · Session model & autosave
+#### - [x] P1-F-1 · Session model & autosave — @claude, started 2026-09-06, finished 2026-09-06
 **Depends on:** P1-D-1 · **Files:** `src/client/session.ts`, `src/shared/session.ts`
 **Implementation notes** `SessionDoc` = `{ version, ruleset (id or inline), grid (RLE), camera, tick, seed, theme, toolState }`. Autosave to `localStorage` debounced at 2 s and on `visibilitychange`. A versioned migration function from day one — the format *will* change in Phase 2 and 4.
+- `grid (RLE)` reuses `ui/tools/select.ts`'s existing minimal RLE codec (states 0-24) rather than
+  a second implementation — that codec's own doc comment already names itself "superseded [by
+  Phase 2's full codec], not extended," and a session's grid needs exactly the same format P1-F-2
+  (shareable URLs) compresses next, not the richer `Snapshot` (ADR-007/P0-E-4) a worker restart
+  uses. Added `gridOrigin` (world coordinates of the RLE pattern's local `(0,0)`) alongside the
+  eight fields the phase doc names — RLE alone only carries local width/height, and the grid must
+  reappear at the exact world position the camera is also restored to, not wherever `(0,0)`
+  happens to sit. `shared/session.ts` only *types* `SessionDoc` (ADR-009: `shared/` imports only
+  `shared/`); the actual RLE encode/decode lives in `client/session.ts`, which may import `ui/`.
+- **Honest about what "restores... exactly" means**: `tick`/`seed` are recorded for continuity,
+  not full determinism — a session restores the grid/camera/ruleset/theme/tool a user actually
+  sees, not a bit-identical continuation for a stochastic rule (that would need the PRNG's exact
+  internal state, which is exactly the "seed alone breaks the instant a rule consumes randomness"
+  tradeoff ADR-007 already names and accepts; solving it is what the History journal is for, not
+  a session snapshot meant to resume *editing* from).
+- **The migration mechanism is genuinely built, not just documented**: `upgradeToVersion()` is
+  the chain-walking loop factored out of `migrateSessionDoc()` so it can be exercised directly —
+  with today's real `MIGRATIONS` table empty (v1 is both oldest and newest), `migrateSessionDoc`
+  itself can only ever call it with `fromVersion === targetVersion`, never touching the loop body,
+  so `tests/unit/shared/session.spec.ts` drives the chaining logic (multiple hops, a missing hop
+  returning `null` rather than a half-upgraded document) with synthetic migrations instead of
+  claiming coverage of a real Phase 2/4 step that doesn't exist yet.
+- Every impure dependency (`SessionStorage`, `Timers`, `VisibilitySource`, the `notify` callback)
+  is constructor-injected into `createAutosave`, the same discipline `themes/registry.ts` and
+  `ui/components/shell.ts` already established — `notify` deliberately takes only a message
+  string, matching `ui/components/toast.ts`'s `ToastRegion.show()` closely enough that wiring
+  `notify: (msg) => toastRegion.show(msg)` at boot is a one-line follow-up, not a redesign.
+- Wiring a live `Simulation`/`Camera`/`ThemeRegistry` into `buildSessionDoc`'s input, calling
+  `createAutosave` from a real boot sequence, and restoring a loaded session into the running app
+  are all out of this task's two files — the same "this task builds the seam, a later one plugs
+  into it" split already applied to `themes/registry.ts` and the Default theme.
 **Acceptance criteria**
-- [ ] Reload restores grid, camera, ruleset, theme and tool exactly.
-- [ ] A v1 document still loads after the Phase 4 format change (migration test committed now, extended later).
-- [ ] Quota-exceeded is handled with a toast and a graceful downgrade (drop grid, keep settings), never a crash.
+- [x] Reload restores grid, camera, ruleset, theme and tool exactly — proven at the pure-function level available without a real page reload: `tests/unit/client/session.spec.ts`'s `buildSessionDoc`/`applySessionDoc` round-trip test captures a live grid, camera, builtin ruleset, theme id and active tool, then confirms every one comes back unchanged (including an inline-ruleset variant, and a legible `RangeError` — never a silent fallback — for a builtin id that no longer exists). The literal "after a real page reload" claim needs Playwright (`P1-H-1`, doesn't exist yet); relocated there, not claimed here — the same treatment `P1-D-1`'s own criteria already received.
+- [x] A v1 document still loads after the Phase 4 format change (migration test committed now, extended later) — `tests/unit/shared/session.spec.ts` freezes a literal v1 JSON document (not built from the test's own fixture helper, so a future edit to that helper can't accidentally keep it passing for the wrong reason) and asserts `migrateSessionDoc` accepts it; whoever adds Phase 4's format change extends `MIGRATIONS` and this exact fixture must keep passing unmodified.
+- [x] Quota-exceeded is handled with a toast and a graceful downgrade (drop grid, keep settings), never a crash — `writeSessionDoc` catches a `QuotaExceededError` (matched by name and the legacy numeric code), retries with `grid: ''` while keeping every other field, and calls the injected `notify` callback describing the downgrade; if even the reduced document doesn't fit, or the failure is unrelated to quota, the write is silently skipped rather than thrown — this runs from inside a debounce timer with no caller able to catch an escaping exception, so "never a crash" is enforced for every failure mode, not only the one named in the criterion (`tests/unit/client/session.spec.ts`, four dedicated cases).
 
 #### - [ ] P1-F-2 · Shareable URLs
 **Depends on:** P1-F-1

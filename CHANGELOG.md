@@ -260,6 +260,24 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   needs Playwright (relocated to P1-H-3); what a CPU-only harness can honestly show is that the
   real theme costs the same as the trivial stub it replaces (12.0ms vs. 11.9ms, both inside the
   shared 16.6ms Phase 0 floor). (P1-E-3)
+- `SessionDoc` and autosave (`src/shared/session.ts`, `src/client/session.ts`, P1-F-1):
+  `{ version, ruleset, grid, gridOrigin, tick, seed, camera, theme, toolState }`, versioned from
+  day one (`migrateSessionDoc`, backed by a genuinely-tested `upgradeToVersion` chaining
+  mechanism, not just a documented intention — a frozen v1 fixture is committed now and must
+  still load once Phase 2/4 add a real migration step). `grid` reuses `ui/tools/select.ts`'s
+  existing minimal RLE codec rather than a second implementation, plus a new `gridOrigin` field
+  (RLE alone has no world-space position). `client/session.ts`'s `buildSessionDoc`/
+  `applySessionDoc` round-trip a live grid/camera/ruleset/theme/tool through the format exactly;
+  `tick`/`seed` are recorded for continuity, not a claim of bit-identical continued simulation for
+  a stochastic rule (ADR-007's already-accepted "seed alone breaks the instant a rule consumes
+  randomness" tradeoff — that's what the History journal is for). `createAutosave` debounces at
+  2s and flushes immediately on `visibilitychange`, with every impure dependency (storage, timers,
+  visibility source, a toast-shaped `notify` callback) constructor-injected. `writeSessionDoc`
+  handles `QuotaExceededError` by retrying with the grid dropped and notifying, and swallows every
+  other write failure too — "never a crash" covers the whole function, not only the named case,
+  since this runs from inside a debounce timer with no caller to catch an escaping exception. Not
+  yet wired into a live `Simulation`/`Camera`/`ThemeRegistry` or a real boot sequence — deferred
+  per P1-E-1/P1-E-2's own precedent. (P1-F-1)
 
 ## [0.1.0] — 2026-09-04
 
