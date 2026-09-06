@@ -1,0 +1,110 @@
+/*
+ * The token *contract* (ADR-008, P1-E-1): every `--gol-*` custom property the UI chrome may ever
+ * read, declared once here with a Default-theme fallback value so the app is never left with an
+ * undefined variable — before any JS has run, or if a future theme forgets to override one.
+ *
+ * This file mirrors `src/themes/types.ts`'s `TokenSet` group-for-group and key-for-key; a token
+ * added to one without the other is an incomplete task, not a style choice. Every declaration
+ * below carries a trailing comment stating what it's *for* and what its Default value *is* —
+ * `tests/unit/themes/tokens.spec.ts` parses this file and fails the build if either is missing.
+ *
+ * Not yet linked from anywhere: `client/index.html` still carries its own interim `--gol-*`
+ * block (P1-D-1's provisional set, scoped to exactly what today's chrome consumes). Migrating
+ * that block onto this contract — and onto `themes/registry.ts`'s runtime `activate()` — is a
+ * pure relocation for a later task (P1-E-2/P1-E-3), not this one; this file is the destination,
+ * not yet the source. Token *names* were chosen to match that interim block exactly wherever a
+ * role already exists, so the relocation is a rename-free move.
+ *
+ * Names are roles, never themes: nothing here says what a theme *looks* like (no
+ * `--gol-neon-pink`), only what a value *does* (`--gol-color-danger`). The six Phase 3 themes
+ * reuse every name below; they never add role names of their own.
+ */
+
+:root {
+  /* ---------------------------------------------------------------------------------------- */
+  /* Colour — role-based, never theme-specific.                                                */
+  /* ---------------------------------------------------------------------------------------- */
+
+  --gol-color-bg: #0e0f11; /* Page/canvas backdrop behind everything. Default: near-black neutral grey (#0e0f11). */
+  --gol-color-surface: rgba(255, 255, 255, 0.05); /* A floating chrome panel's fill. Default: 5% white over the backdrop. */
+  --gol-color-elevated: rgba(255, 255, 255, 0.09); /* A panel raised above another (popovers, dialogs, disabled controls). Default: 9% white. */
+  --gol-color-border: rgba(255, 255, 255, 0.14); /* The default hairline around any panel or control. Default: 14% white. */
+  --gol-color-border-strong: rgba(255, 255, 255, 0.24); /* A border that must read as emphasised — a focus container, a hovered edge. Default: 24% white. */
+  --gol-color-text: #eef0f2; /* Primary chrome text. Default: near-white (#eef0f2), AA against `--gol-color-bg` and `--gol-color-surface`. */
+  --gol-color-muted: #9aa0a6; /* Secondary/label text — units, hints, timestamps. Default: mid grey (#9aa0a6). */
+  --gol-color-accent: #8a97a8; /* The interactive/selected colour: primary buttons, focus rings, active toggles. Default: a muted steel-grey-blue (#8a97a8) — "compatible", not neon. */
+  --gol-color-accent-strong: #a6b2c2; /* `--gol-color-accent`, hovered. Default: lightened steel-blue (#a6b2c2). */
+  --gol-color-accent-pressed: #6f7c8c; /* `--gol-color-accent`, pressed/active. Default: darkened steel-blue (#6f7c8c). */
+  --gol-color-on-accent: #0e0f11; /* Text/icon colour drawn on top of `--gol-color-accent`. Default: same near-black as the backdrop, for contrast. */
+  --gol-color-scrim: rgba(0, 0, 0, 0.55); /* The dimming layer behind a modal dialog. Default: 55% black. */
+  --gol-color-danger: #e5484d; /* Destructive actions and error states. Default: a desaturated red (#e5484d), AA on `--gol-color-bg`. */
+  --gol-color-danger-strong: #ff6369; /* `--gol-color-danger`, hovered/pressed. Default: lightened red (#ff6369). */
+  --gol-color-success: #3dd68c; /* Confirmation states (autosave landed, a copy succeeded). Default: a muted green (#3dd68c). */
+  --gol-color-success-strong: #5eeaa6; /* `--gol-color-success`, hovered/pressed. Default: lightened green (#5eeaa6). */
+
+  /* ---------------------------------------------------------------------------------------- */
+  /* Type — 1 sans stack, 1 mono stack, 6 sizes, 3 weights, 2 letter-spacings.                  */
+  /* ---------------------------------------------------------------------------------------- */
+
+  --gol-font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; /* Chrome prose. Default: the platform's own UI font — "compatible" (P1-E-3), never a webfont download. */
+  --gol-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; /* Numeric readouts, coordinates, keybindings. Default: the platform's own monospace stack. */
+  --gol-font-size-xs: 11px; /* Chip labels, footnotes. Default: 11px. */
+  --gol-font-size-sm: 13px; /* Secondary readouts and labels. Default: 13px (the size already load-bearing in `client/index.html`'s interim tokens). */
+  --gol-font-size-md: 15px; /* Base chrome body text. Default: 15px. */
+  --gol-font-size-lg: 18px; /* Panel titles, the ruleset toggle's name. Default: 18px. */
+  --gol-font-size-xl: 22px; /* Dialog headings. Default: 22px. */
+  --gol-font-size-xxl: 28px; /* The rare full-screen moment (an empty-state headline). Default: 28px. */
+  --gol-font-weight-regular: 400; /* Prose. Default: 400. */
+  --gol-font-weight-medium: 600; /* Emphasis — button labels, active items. Default: 600 (matches `client/index.html`'s interim value). */
+  --gol-font-weight-bold: 700; /* Rare, strong emphasis (a destructive-confirmation heading). Default: 700. */
+  --gol-letter-spacing-normal: 0; /* Prose. Default: 0 (no tracking). */
+  --gol-letter-spacing-wide: 0.04em; /* Small-caps-style eyebrow labels (the ruleset picker's group titles). Default: 0.04em (the value already shipping in `client/index.html`). */
+
+  /* ---------------------------------------------------------------------------------------- */
+  /* Space — a 7-step scale for every gap, padding and margin in the chrome.                    */
+  /* ---------------------------------------------------------------------------------------- */
+
+  --gol-space-1: 4px; /* The tightest gap (an icon from its label). Default: 4px. */
+  --gol-space-2: 8px; /* The default inline gap between controls. Default: 8px. */
+  --gol-space-3: 12px; /* A panel's inner padding. Default: 12px. */
+  --gol-space-4: 16px; /* A panel's outer margin from the viewport edge. Default: 16px. */
+  --gol-space-5: 24px; /* Section spacing inside a larger panel (a dialog's stacked rows). Default: 24px. */
+  --gol-space-6: 32px; /* Space between unrelated chrome groups. Default: 32px. */
+  --gol-space-7: 48px; /* The largest gap — full-panel separation. Default: 48px. */
+
+  /* ---------------------------------------------------------------------------------------- */
+  /* Radius                                                                                     */
+  /* ---------------------------------------------------------------------------------------- */
+
+  --gol-radius-sm: 6px; /* Buttons, chips, small controls. Default: 6px. */
+  --gol-radius-md: 8px; /* Panels, popovers. Default: 8px. */
+  --gol-radius-lg: 14px; /* Dialogs and other large surfaces. Default: 14px. */
+
+  /* ---------------------------------------------------------------------------------------- */
+  /* Shadow                                                                                     */
+  /* ---------------------------------------------------------------------------------------- */
+
+  --gol-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25); /* Chips, inline popovers. Default: a tight, soft drop shadow. */
+  --gol-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35); /* Floating chrome panels. Default: the shadow already shipping as `client/index.html`'s `--gol-shadow-chrome`. */
+  --gol-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.45); /* Modal dialogs. Default: a deep, wide drop shadow. */
+
+  /* ---------------------------------------------------------------------------------------- */
+  /* Motion — 4 durations, 5 easings.                                                           */
+  /* ---------------------------------------------------------------------------------------- */
+
+  --gol-duration-instant: 0ms; /* No visible animation — the value every transition collapses to under `prefers-reduced-motion`. Default: 0ms. */
+  --gol-duration-fast: 150ms; /* Micro-interactions: hover, a toggle, the chrome show/hide fade. Default: 150ms (matches `client/index.html`'s interim value). */
+  --gol-duration-slow: 600ms; /* Choreographed entrances — the cold-start intro's per-region fade. Default: 600ms (matches `client/index.html`'s interim value). */
+  --gol-duration-slower: 900ms; /* The rare full-scene transition (a Phase 3 theme cross-fade). Default: 900ms. */
+  --gol-ease-linear: linear; /* Constant-rate motion — a marching-ants dash, a progress sweep. Default: `linear`. */
+  --gol-ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1); /* The default curve for almost everything. Default: matches `client/index.html`'s interim `--gol-ease-standard`. */
+  --gol-ease-decelerate: cubic-bezier(0, 0, 0.2, 1); /* Entrances — fast in, settles gently. Default: the Material "decelerate" curve. */
+  --gol-ease-accelerate: cubic-bezier(0.4, 0, 1, 1); /* Exits — starts gently, leaves fast. Default: the Material "accelerate" curve. */
+  --gol-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1); /* A small, deliberate overshoot for a moment that should feel alive (Agit-Prop: motion is not exempt from "fabulous"). Default: a slight back-ease. */
+
+  /* ---------------------------------------------------------------------------------------- */
+  /* Effects                                                                                    */
+  /* ---------------------------------------------------------------------------------------- */
+
+  --gol-blur-chrome: blur(4px); /* Backdrop blur behind a floating panel, with a `@supports not` solid fallback at every call site. Default: 4px. */
+}

@@ -3,6 +3,7 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 import globals from 'globals';
+import { noLiteralDesignTokens } from './scripts/eslint-rules/no-literal-design-tokens.mjs';
 
 const ENGINE_FORBIDDEN_GLOBALS = [
   'window',
@@ -61,6 +62,16 @@ export default tseslint.config(
           message: 'Hot-path code preallocates; do not Array.prototype.push here.',
         },
       ],
+    },
+  },
+  // Token contract (ADR-008, P1-E-1): src/ui/** reads --gol-* tokens, it never hardcodes a
+  // colour or a raw motion duration/size. See src/themes/tokens.css for the token names.
+  {
+    files: ['src/ui/**/*.ts'],
+    ignores: ['**/*.spec.ts'],
+    plugins: { local: { rules: { 'no-literal-design-tokens': noLiteralDesignTokens } } },
+    rules: {
+      'local/no-literal-design-tokens': 'error',
     },
   },
   {
