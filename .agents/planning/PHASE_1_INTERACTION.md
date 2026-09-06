@@ -560,14 +560,32 @@ wide-shot-to-framed camera move.
 
 ### Workstream E — Default theme & token system
 
-#### - [ ] P1-E-1 · Token contract and lint enforcement
+#### - [x] P1-E-1 · Token contract and lint enforcement — @claude, started 2026-09-06, finished 2026-09-06
 **Depends on:** Phase 0 · **Files:** `src/themes/types.ts`, `src/themes/tokens.css`, `eslint.config.js`
 **Implementation notes** Enumerate every token the UI will ever need — colour (surface/elevated/border/text/muted/accent/danger/success), type (family, 6 sizes, 3 weights, 2 letter-spacings), space scale, radius scale, shadow scale, motion (4 durations, 5 easings), and the cell palette contract. Add an ESLint rule banning literal hex/rgb/hsl values and raw `ms`/`px` durations in `src/ui/**`.
+- `ThemeModule.palette` reuses `render/types.ts`'s existing `CellPalette` function shape
+  (`(state, age) => string`) rather than a second, differently-shaped type — that file's own doc
+  comment already frames this one as "an extension of this shape, not a replacement for it", and
+  the function already *is* ADR-008's "StateId → colour ramp by age". `MotionSignature` is the
+  non-CSS twin of `TokenSet.motion` (same named `DurationKey`/`EasingKey`s, resolved to numbers
+  and functions instead of CSS strings) for code a stylesheet can't reach — `Camera.animateTo`,
+  `grid-lines.ts`'s `FadeCurve`, a dash-offset.
+- The lint rule is a hand-written rule object (`scripts/eslint-rules/no-literal-design-tokens.mjs`,
+  no new `eslint-plugin-*` dependency), wired into `eslint.config.js` for `src/ui/**` only. It
+  flags a string `Literal` or a no-interpolation `TemplateLiteral` matching a hex colour, an
+  `rgb()`/`rgba()`/`hsl()`/`hsla()` call, or a bare `<number>ms`/`<number>px` string — and
+  deliberately does *not* flag a `TemplateLiteral` with interpolation, because that is exactly the
+  sanctioned pattern `grid-lines.ts`/`selection.ts` already use to assemble a CSS colour string
+  from theme-supplied RGB components at runtime. Verified against those two files directly: zero
+  false positives.
+- `client/index.html`'s P1-D-1 interim `--gol-*` block is deliberately left untouched — this
+  task's own note says migrating it onto this contract is "a pure relocation later", not P1-E-1's
+  job; `tokens.css` exists now as the destination, not yet wired to anything.
 **Follow-up for whichever task first wires a real theme through:** `src/ui/overlay/grid-lines.ts` (P1-A-3) takes its zoom-fade/activity-fade shape as an injectable `FadeCurve` (default `SMOOTHSTEP`, a hand-written placeholder) and its colours as a required `GridLinesPalette` of `{r,g,b}` triples (no default) — rewire both to the real `motion.easings` token and the active theme's palette once they exist; no API change needed on `grid-lines.ts`'s side.
 **Acceptance criteria**
-- [ ] `tokens.css` documents every variable with a comment stating its purpose and its Default value.
-- [ ] The lint rule catches a deliberately introduced `color: #333` in a component.
-- [ ] Token names contain no theme-specific words (no `--gol-neon-pink`).
+- [x] `tokens.css` documents every variable with a comment stating its purpose and its Default value — every one of the 46 declarations carries a trailing `/* purpose. Default: value. */` comment; `tests/unit/themes/tokens.spec.ts` parses the file and fails the build if any is missing or comment-free.
+- [x] The lint rule catches a deliberately introduced `color: #333` in a component — proven twice: `tests/unit/eslint-rules/no-literal-design-tokens.spec.ts` runs the rule through ESLint's own `Linter` against a `color = '#333'` snippet, and it was manually verified live against `src/ui/camera.ts` (`npx eslint` reported the violation, reverted after).
+- [x] Token names contain no theme-specific words (no `--gol-neon-pink`) — every colour, type, space, radius, shadow and motion token is named by role; `tokens.spec.ts` asserts none of the six Phase 3 theme names (or "neon"/"pink"/"cyan") appear in a token name.
 
 #### - [ ] P1-E-2 · Theme registry & activation
 **Depends on:** P1-E-1 · **Files:** `src/themes/registry.ts`

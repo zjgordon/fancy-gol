@@ -196,6 +196,30 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   devDependency (test-only, never bundled) to prove each primitive's rendered markup has zero
   accessibility violations, both in jsdom and — since jsdom has no real layout engine and so can't
   evaluate colour-contrast — against the live app in a real browser. (P1-D-5)
+- The design-token contract (`src/themes/types.ts`, `src/themes/tokens.css`, ADR-008): `TokenSet`
+  enumerates every value the UI chrome will ever need — 16 role-based colours (surface, elevated,
+  border, text, muted, accent, danger, success and their variants; no theme-specific names, so no
+  `--gol-neon-pink`), 6 font sizes, 3 weights, 2 letter-spacings, a 7-step space scale, 3-step
+  radius and shadow scales, and motion (4 durations, 5 easings) — mirrored one-for-one in
+  `tokens.css` as documented `--gol-*` custom properties, each with a stated purpose and Default
+  value. `ThemeModule` and `MotionSignature` complete ADR-008's contract now, with every Phase 3
+  field (render hooks, `sound`, `shaders`) optional so the theme registry (P1-E-2) and the six
+  Phase 3 themes never force a breaking change here; `ThemeModule.palette` reuses
+  `render/types.ts`'s existing `CellPalette` function shape rather than inventing a second,
+  differently-shaped one. Not yet wired to anything — `client/index.html` keeps its own interim
+  `--gol-*` block (P1-D-1) for now; migrating it onto this contract is a follow-up task's pure
+  relocation, not this one's. (P1-E-1)
+- A hand-written ESLint rule, `local/no-literal-design-tokens`
+  (`scripts/eslint-rules/no-literal-design-tokens.mjs`), banning literal hex/`rgb()`/`hsl()`
+  colours and raw `ms`/`px` duration-or-size strings anywhere in `src/ui/**` — the enforcement
+  half of the token contract above. A template literal only counts as "literal" when it has no
+  interpolation, so the runtime colour strings `ui/overlay/grid-lines.ts` and
+  `ui/overlay/selection.ts` already assemble from theme-supplied RGB components keep passing; a
+  Canvas2D font spec like `'12px monospace'` is left alone too (a `<canvas>` context can't resolve
+  `var(--gol-*)`, so that literal isn't the kind this rule exists to catch). No new
+  `eslint-plugin-*` dependency — a plain rule object over the ESLint API this project already
+  depends on, unit-tested directly (`tests/unit/eslint-rules/no-literal-design-tokens.spec.ts`) the
+  same way `scripts/check-boundaries.mjs`'s pure functions already are. (P1-E-1)
 
 ## [0.1.0] — 2026-09-04
 
