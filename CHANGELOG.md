@@ -220,6 +220,20 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   `eslint-plugin-*` dependency — a plain rule object over the ESLint API this project already
   depends on, unit-tested directly (`tests/unit/eslint-rules/no-literal-design-tokens.spec.ts`) the
   same way `scripts/check-boundaries.mjs`'s pure functions already are. (P1-E-1)
+- `ThemeRegistry` (`src/themes/registry.ts`): `register`/`list`/`activate`/`getActive`/
+  `getCompiledTheme`/`subscribe`, the same constructor-injected-dependencies idiom
+  `ui/tools/registry.ts` and `ui/input/gestures.ts` already use, so it needs no real DOM,
+  `matchMedia` or `localStorage` to test. `activate(id)` resolves the theme, writes every token in
+  its `TokenSet` onto `:root` via `tokenEntries()` (a pure, exhaustive `TokenSet → --gol-*`
+  mapping checked against `tokens.css`'s own declared names) in one synchronous pass — no `await`,
+  `requestAnimationFrame`, or `setTimeout` anywhere in the path, which is what makes switching
+  instant and flicker-free — persists the choice (degrading silently if storage is unavailable or
+  throws, never crashing), and notifies subscribers with the theme's `CompiledTheme` projection
+  (`compileTheme()`) for a renderer to pick up. `register()` accepts a plain `ThemeModule` or an
+  `AdaptiveThemeModule` (`{kind:'adaptive', light, dark}`) for `prefers-color-scheme` support,
+  generalised rather than special-cased to the Default theme: the scheme-change subscription arms
+  lazily on first adaptive activation and a live OS flip only re-resolves while an adaptive theme
+  is still active. (P1-E-2)
 
 ## [0.1.0] — 2026-09-04
 

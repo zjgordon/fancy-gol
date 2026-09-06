@@ -587,12 +587,39 @@ wide-shot-to-framed camera move.
 - [x] The lint rule catches a deliberately introduced `color: #333` in a component — proven twice: `tests/unit/eslint-rules/no-literal-design-tokens.spec.ts` runs the rule through ESLint's own `Linter` against a `color = '#333'` snippet, and it was manually verified live against `src/ui/camera.ts` (`npx eslint` reported the violation, reverted after).
 - [x] Token names contain no theme-specific words (no `--gol-neon-pink`) — every colour, type, space, radius, shadow and motion token is named by role; `tokens.spec.ts` asserts none of the six Phase 3 theme names (or "neon"/"pink"/"cyan") appear in a token name.
 
-#### - [ ] P1-E-2 · Theme registry & activation
+#### - [x] P1-E-2 · Theme registry & activation — @claude, started 2026-09-06, finished 2026-09-06
 **Depends on:** P1-E-1 · **Files:** `src/themes/registry.ts`
 **Implementation notes** `activate(id)` writes tokens to `:root`, hands the `CellPalette` to the renderer, and (from Phase 3) swaps render hooks and the sound pack. Persist the choice. Honour `prefers-color-scheme` for the Default theme's light/dark variants. Switching must be instant and flicker-free — pre-apply tokens before the next paint.
+- `ThemeRegistry` (a class, the same idiom `ui/tools/registry.ts`'s `ToolRegistry` and
+  `ui/commands/registry.ts`'s `CommandRegistry` already use) takes every impure dependency by
+  constructor injection — where tokens are written (`TokenTarget`), where the choice persists
+  (`ThemeStorage | null`), and whether/how the system colour scheme is read
+  (`PrefersDarkQuery`/`PrefersDarkSubscribe`) — the same discipline `ui/input/gestures.ts`'s
+  `Clock`/`FrameScheduler`/`ReducedMotionQuery` established, so the whole module is unit-testable
+  with no real DOM, `matchMedia`, or `localStorage`.
+- "Honour `prefers-color-scheme` for the Default theme's light/dark variants" is implemented
+  generically, not special-cased to one id: `register()` accepts either a plain `ThemeModule` or
+  an `AdaptiveThemeModule` (`{kind:'adaptive', id, name, light, dark}`, two full `ThemeModule`s
+  under one selectable id). `activate()` resolves the current variant via `prefersDark()`; the
+  scheme-change subscription is armed lazily, only the first time an adaptive theme actually
+  activates (a registry with no adaptive theme never touches `matchMedia`), and a live OS flip
+  re-resolves and re-notifies only while an adaptive theme is still the active selection — proven
+  a no-op after switching to a plain theme (`registry.spec.ts`'s dedicated case).
+- "Instant and flicker-free... pre-apply before the next paint": `activate()` is synchronous end
+  to end — no `await`, `requestAnimationFrame`, or `setTimeout` anywhere in the path from
+  `entries.get(id)` to the last `root.setProperty()` call — so there is no intermediate frame for
+  the browser to paint against half-applied tokens. `tokenEntries()` is a pure, explicitly
+  key-by-key mapping (not a generic camelCase→kebab-case transform) so a mismatch with
+  `tokens.css` can't be silent; `registry.spec.ts` diffs its output against the CSS file's own
+  declared `--gol-*` names directly.
+- `ThemeModule.palette` → `render/types.ts`'s `CompiledTheme` via a pure `compileTheme()` helper —
+  the "hands the `CellPalette` to the renderer" half of the note; a future caller subscribes and
+  forwards `event.compiled` to `Renderer.setTheme()` (that wiring, and instantiating a
+  `ThemeRegistry` for production use, is out of this task's one file, the same "this task builds
+  the seam, a later one plugs into it" split already applied to `ui/tools/registry.ts`).
 **Acceptance criteria**
-- [ ] Switching themes causes no full-page reflow and no flash of unstyled content.
-- [ ] The registry API already accepts optional render hooks and a sound pack (Phase 3 adds no new API surface).
+- [x] Switching themes causes no full-page reflow and no flash of unstyled content — `activate()` only ever calls `root.setProperty(name, value)` (46 calls, one per token, all synchronous) through a `TokenTarget` interface that is physically incapable of touching `document.body`, swapping a stylesheet `<link>`, or doing anything else that would force a full recalc; `registry.spec.ts` proves the call count and synchrony. What jsdom cannot measure — the actual paint/reflow cost in a real browser — needs `P1-H-2`'s visual regression baseline, which doesn't exist yet; not claimed here, the same "prove what's measurable today" treatment `P1-D-1`'s own criteria already got.
+- [x] The registry API already accepts optional render hooks and a sound pack (Phase 3 adds no new API surface) — `register()` takes a full `ThemeModule` (P1-E-1), which already declares `sound?`/`drawBackground?`/`drawCellOverride?`/`postProcess?`/`shaders?` as optional; `types.spec.ts` (P1-E-1) already proves a theme with every one of those fields populated satisfies the interface, and `registry.spec.ts`'s `makeTheme()` fixture round-trips through `register()`/`activate()`/`getActive()` unchanged.
 
 #### - [ ] P1-E-3 · The Default theme
 **Depends on:** P1-E-2 · **Files:** `src/themes/default/*`
