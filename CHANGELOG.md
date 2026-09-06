@@ -234,6 +234,32 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   generalised rather than special-cased to the Default theme: the scheme-change subscription arms
   lazily on first adaptive activation and a live OS flip only re-resolves while an adaptive theme
   is still active. (P1-E-2)
+- `shared/color.ts`: hand-written colour maths shared by every theme (no `culori`/`chroma.js`/
+  `color2k`) — OKLCH→sRGB (Björn Ottosson's published formulas), WCAG relative-luminance/
+  contrast-ratio/AA-threshold, `#hex`/`rgb()`/`rgba()` parsing with alpha compositing, and a
+  Machado/Oliveira/Fluck (2009) protanopia/deuteranopia simulation (the same matrices Chromium
+  DevTools' own vision-deficiency emulation uses) — a documented approximation, not a
+  certification tool. 100% statement/branch coverage.
+- The Default theme (`src/themes/default/`, P1-E-3): "simple, grey, basic... very compatible and
+  good for large grids." `tokens.ts` supplies independently-tuned light and dark `TokenSet`s (not
+  one ramp reused twice); every `text`/`muted`-on-backdrop and `onAccent`-on-button pairing a real
+  chrome rule produces clears WCAG AA (4.5:1) in both, verified against each token's actual
+  composited value. `palette.ts` computes two 8-state OKLCH-derived ramps once at module load —
+  lightness is the primary channel separating states (hue alone collapses under red-green colour
+  vision deficiency), tuned by a randomised search until the worst pairwise separation under
+  simulated protanopia/deuteranopia cleared a wide margin (dark ≈71, light ≈59, against a 50-point
+  bar); `makeDefaultPalette()`'s returned function is a zero-allocation array lookup, measured at
+  ~220M calls/sec. `theme.ts` assembles `DEFAULT_DARK_THEME`/`DEFAULT_LIGHT_THEME` (`cost: 'low'`,
+  no render hooks, no sound — Phase 3 territory) and `DEFAULT_THEME`, the
+  `AdaptiveThemeModule` a caller registers with `themes/registry.ts`. `default.css` is the same
+  token values as static `--gol-*` custom properties (dark `:root`, light via
+  `prefers-color-scheme`) for the no-JS-required path, checked against `tokenEntries()` so it
+  can't drift from `tokens.ts`. Not yet wired into `client/index.html` or registered for
+  production use — deferred per P1-E-1/P1-E-2's own notes. Added
+  `tests/bench/default-theme.bench.ts`: the literal "≤10ms in a real browser" frame-time claim
+  needs Playwright (relocated to P1-H-3); what a CPU-only harness can honestly show is that the
+  real theme costs the same as the trivial stub it replaces (12.0ms vs. 11.9ms, both inside the
+  shared 16.6ms Phase 0 floor). (P1-E-3)
 
 ## [0.1.0] — 2026-09-04
 
