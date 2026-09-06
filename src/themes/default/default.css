@@ -1,0 +1,106 @@
+/*
+ * The Default theme's concrete token values (P1-E-3), expressed as CSS custom properties — the
+ * static/no-JS-required twin of `themes/default/tokens.ts`'s `DEFAULT_DARK_TOKENS`/
+ * `DEFAULT_LIGHT_TOKENS`. `themes/registry.ts`'s `activate()` is the *runtime* path (JS writes
+ * every token from a `TokenSet` onto `:root`); this file is what a page gets before any JS runs,
+ * or if it never runs at all — "the app must be fully functional... themes... degrade, they do
+ * not break" (ADR-002's consequence, generalised to the theme layer).
+ *
+ * Every declaration below is checked by `tests/unit/themes/default/default-css.spec.ts` against
+ * `registry.ts`'s own `tokenEntries()` output for the matching `TokenSet`, so this file and
+ * `tokens.ts` cannot silently drift apart.
+ *
+ * Dark is the default (no media query needed to match `client/index.html`'s existing
+ * `color-scheme: dark`); `prefers-color-scheme: light` overrides every colour token. Only
+ * `color` differs between variants — type/space/radius/shadow/motion apply to both.
+ *
+ * Not yet linked from `client/index.html` — that page keeps its own P1-D-1 interim `--gol-*`
+ * block for now; wiring this file in (and deleting that block) is the "pure relocation" P1-E-1's
+ * own note already deferred to a later task.
+ */
+
+:root {
+  color-scheme: dark;
+
+  --gol-color-bg: #0e0f11;
+  --gol-color-surface: rgba(255, 255, 255, 0.06);
+  --gol-color-elevated: rgba(255, 255, 255, 0.1);
+  --gol-color-border: rgba(255, 255, 255, 0.14);
+  --gol-color-border-strong: rgba(255, 255, 255, 0.24);
+  --gol-color-text: #f0f1f2;
+  --gol-color-muted: #a7acb1;
+  --gol-color-accent: #8fa6c9;
+  --gol-color-accent-strong: #a9bcda;
+  --gol-color-accent-pressed: #7089ad;
+  --gol-color-on-accent: #0e0f11;
+  --gol-color-scrim: rgba(0, 0, 0, 0.55);
+  --gol-color-danger: #e5484d;
+  --gol-color-danger-strong: #ff6369;
+  --gol-color-success: #3dd68c;
+  --gol-color-success-strong: #5eeaa6;
+
+  --gol-font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --gol-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --gol-font-size-xs: 11px;
+  --gol-font-size-sm: 13px;
+  --gol-font-size-md: 15px;
+  --gol-font-size-lg: 18px;
+  --gol-font-size-xl: 22px;
+  --gol-font-size-xxl: 28px;
+  --gol-font-weight-regular: 400;
+  --gol-font-weight-medium: 600;
+  --gol-font-weight-bold: 700;
+  --gol-letter-spacing-normal: 0;
+  --gol-letter-spacing-wide: 0.04em;
+
+  --gol-space-1: 4px;
+  --gol-space-2: 8px;
+  --gol-space-3: 12px;
+  --gol-space-4: 16px;
+  --gol-space-5: 24px;
+  --gol-space-6: 32px;
+  --gol-space-7: 48px;
+
+  --gol-radius-sm: 6px;
+  --gol-radius-md: 8px;
+  --gol-radius-lg: 14px;
+
+  --gol-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --gol-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --gol-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.45);
+
+  --gol-duration-instant: 0ms;
+  --gol-duration-fast: 150ms;
+  --gol-duration-slow: 600ms;
+  --gol-duration-slower: 900ms;
+  --gol-ease-linear: linear;
+  --gol-ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --gol-ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --gol-ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
+  --gol-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --gol-blur-chrome: blur(4px);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+
+    --gol-color-bg: #f6f6f8;
+    --gol-color-surface: rgba(20, 20, 30, 0.045);
+    --gol-color-elevated: rgba(20, 20, 30, 0.08);
+    --gol-color-border: rgba(20, 20, 30, 0.12);
+    --gol-color-border-strong: rgba(20, 20, 30, 0.22);
+    --gol-color-text: #15161a;
+    --gol-color-muted: #585d63;
+    --gol-color-accent: #3a5f8a;
+    --gol-color-accent-strong: #2c4b6e;
+    --gol-color-accent-pressed: #294669;
+    --gol-color-on-accent: #ffffff;
+    --gol-color-scrim: rgba(0, 0, 0, 0.4);
+    --gol-color-danger: #c22b30;
+    --gol-color-danger-strong: #9f2226;
+    --gol-color-success: #177a51;
+    --gol-color-success-strong: #186f4a;
+  }
+}
