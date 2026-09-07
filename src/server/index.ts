@@ -11,6 +11,7 @@
 // sibling `app.ts` at both typecheck- and dev-time (`tsx watch`) — this is the standard pattern
 // for TS projects targeting Node ESM, not a typo.
 import { createApp, installGracefulShutdown } from './app.js';
+import { attachLiveServer, isLiveEnabled } from './routes/live.js';
 
 const PORT = Number(process.env['PORT'] ?? 8080);
 
@@ -20,5 +21,10 @@ const server = app.listen(PORT, () => {
   const boundPort = address && typeof address === 'object' ? address.port : PORT;
   console.log(`fancy-gol server listening on :${boundPort}`);
 });
+
+// `/live` needs the real, listening `http.Server` for its WebSocket upgrade (ADR-002, P1-G-3) —
+// `createApp()` only ever returns the Express app, so this can't live inside it the way every
+// `/api/*` route does.
+if (isLiveEnabled()) attachLiveServer(server);
 
 installGracefulShutdown(server);
