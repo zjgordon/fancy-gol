@@ -769,13 +769,58 @@ wide-shot-to-framed camera move.
 
 ### Workstream G — Server API v1
 
-#### - [ ] P1-G-1 · Ruleset routes
+#### - [x] P1-G-1 · Ruleset routes — @claude, started 2026-09-07, finished 2026-09-07
 **Depends on:** P0-I-2, P0-D-2 · **Files:** `src/server/routes/rulesets.ts`, `src/server/store/file-store.ts`
 **Implementation notes** Builtins served from the engine; user rulesets stored as JSON files in a mounted `data/` volume with slugified, path-traversal-safe ids. **Server-side validation reuses `validateRuleSet` from the engine** — one validator, one source of truth (this is the only permitted `server → engine` import per ADR-009). Body limit 64 kB.
+- **"Supertest coverage" is satisfied in spirit, not by adding the package**: this project's own
+  no-bloat rule and its already-proven `tests/unit/server/*.spec.ts` convention (a real
+  `http.Server` on an ephemeral port, plain `fetch`, established at P0-I-2 specifically to avoid
+  "an extra test-only HTTP client dependency") already cover everything Supertest would — the
+  criterion's actual requirement (comprehensive route coverage including the traversal case) is
+  met by `tests/unit/server/rulesets-route.spec.ts`, not the named library.
+- **Read "the only permitted `server → engine` import" as scoped to *purpose* (ADR-009's own
+  table annotation: "validation only"), not a literal one-function allowlist**: this task's own
+  note requires "Builtins served from the engine" too, a second engine import for the same broad
+  purpose — canonical ruleset *data* — never simulation logic or anything Pure-Logic-adjacent.
+- **Ids are rejected, never sanitised**: a submitted id containing anything outside a
+  conservative safe set (letters/digits/spaces/`'`/`_`/`-`) is a 400, full stop —
+  `deriveUserRulesetId('../../etc/passwd')` returns `null`, not a slug like `etc-passwd` that
+  happens to be safe. Slugifying (lowercasing, hyphenating) only ever applies to an id that
+  already passed that check; a server-owned `user:` prefix is always prepended, never trusted
+  from the client, so builtin-vs-user is a one-branch question everywhere in this file.
+- **`file-store.ts` is generic, not ruleset-specific** (its own file name says so): `save()` is
+  an atomic *upsert* (temp-file-then-`rename()`) unlike P1-F-2's `session-store.ts`, which only
+  ever needed atomic *create* (a share is never edited, and always gets a fresh server-chosen
+  id). Left `session-store.ts` on its own narrower implementation rather than retrofitting it
+  onto this one mid-feature — a real, small refactor opportunity, but "never mix a refactor with
+  a feature" (AGENTS.md §7) means it stays a noted follow-up, not something this commit does.
+- **Discovered and fixed a second, larger pre-existing build gap this task's own imports
+  exposed**: `getBuiltin`/`BUILTIN_RULESETS` pull in essentially the whole `engine/rules/**` (and
+  transitively `engine/grid/**`, `engine/history/**`, `engine/neighborhood/**`) for the first
+  time under `tsconfig.server.json`'s plain-`tsc` build — and every one of those files' *internal*
+  relative imports (written for Vite/vitest consumption, which tolerates an extensionless
+  specifier) lacked the explicit `.js` extension Node's ESM loader requires, the exact problem
+  P1-F-2 already fixed for its own two new files. Rather than patch call sites one crash at a
+  time, added `.js` to every relative import/export across `src/engine/**` and `src/shared/**`
+  (22 files, purely mechanical — `npm run test`'s full 1200+-test suite, which exercises this
+  code via Vite/vitest's own bundler resolution regardless of the specifier's extension, is
+  unchanged) and fixed the one case that mechanical pass got wrong on its own
+  (`../neighborhood` → `../neighborhood.js`, which doesn't exist — a directory needs
+  `../neighborhood/index.js`). This also broke `scripts/check-boundaries.mjs`'s own specifier
+  resolution, which compared a resolved `.js`-suffixed path against the matrix's extensionless
+  entries and failed every such import — fixed by stripping a trailing `.js` in
+  `resolveSpecifier()` itself (a correctness fix to the checker's module-identity comparison, not
+  a weakened rule; `tests/unit/boundaries.spec.ts` gained a case proving it). Verified end to end
+  against the actual compiled server (all four routes, by hand against `dist/server/index.js`,
+  not just a green `tsc`/`vitest` exit code) and confirmed via a clean, non-concurrent
+  `npm run bench` run that this purely-mechanical change caused zero real performance regression
+  (an earlier bench run showed two, both resolved as CPU contention from an accidentally
+  concurrent `npm run coverage`, the same false-alarm class already seen and documented in this
+  project's own P1-E-2/P1-E-3 work).
 **Acceptance criteria**
-- [ ] Supertest coverage of all four routes including a traversal attempt (`../../etc/passwd`) returning 400.
-- [ ] An invalid ruleset POST returns the structured `issues[]` array the Phase 2 editor will render.
-- [ ] Concurrent writes to the same id do not corrupt the file (atomic write via temp + rename).
+- [x] Supertest coverage of all four routes including a traversal attempt (`../../etc/passwd`) returning 400 — `tests/unit/server/rulesets-route.spec.ts` covers `GET /`, `GET /:id`, `POST /`, `DELETE /:id` (22 cases) via this project's established real-`http.Server`-plus-`fetch` harness, not the named package (see the note above); the traversal case is exercised against all three id-taking routes (`GET/:id`, `POST` body id, `DELETE /:id`), each returning 400, and manually confirmed against the real compiled server too — the naive test (an unencoded `../../etc/passwd` in a URL) is a false pass, since curl/browsers normalise `..` client-side before the request is even sent; the real test percent-encodes the slashes (`..%2F..%2Fetc%2Fpasswd`) so the raw traversal string actually reaches the route handler as `req.params.id`.
+- [x] An invalid ruleset POST returns the structured `issues[]` array the Phase 2 editor will render — `RuleValidationError.issues` (P0-D-2's own shape: `{path, message, hint?}`) is forwarded verbatim as `{issues: [...]}` on a 400; a bad id (fails `deriveUserRulesetId`, distinct from a schema failure) gets the same `{issues: [...]}` shape for a consistent client-side contract, not a different error format.
+- [x] Concurrent writes to the same id do not corrupt the file (atomic write via temp + rename) — `file-store.ts`'s `save()` writes to a randomly-suffixed temp file then `rename()`s it into place (POSIX/Windows-atomic); `tests/unit/server/rulesets-route.spec.ts` fires 10 concurrent `POST`s at the same id through the real HTTP server and confirms the file that lands is always one complete, parseable variant, never a mix of two.
 
 #### - [ ] P1-G-2 · Pattern routes (skeleton)
 **Depends on:** P1-G-1 · **Files:** `src/server/routes/patterns.ts`

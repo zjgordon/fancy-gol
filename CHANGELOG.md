@@ -294,6 +294,28 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   switching the new server files to relative `.js` imports (plain `tsc`, unlike the Vite-bundled
   client/worker, emits path aliases verbatim, which Node's ESM loader can't resolve). Verified end
   to end against the actual compiled server, not just a green typecheck. (P1-F-2)
+- Ruleset routes (P1-G-1): `GET /api/rulesets` (builtin + user summaries), `GET /api/rulesets/:id`,
+  `POST /api/rulesets` (validated via the engine's own `validateRuleSet` — one validator, one
+  source of truth — returning `{id}` or a structured `{issues: [...]}` on rejection), and
+  `DELETE /api/rulesets/:id` (user rulesets only; 403 on a builtin). A submitted id is *rejected*
+  (400), never sanitised, if it contains anything outside a conservative safe set — a path
+  traversal attempt doesn't get slugified into something coincidentally safe, it gets refused
+  outright. Every accepted id is slugified and stored under a server-owned `user:` prefix. Added
+  `src/server/store/file-store.ts`, a generic file-backed store with an atomic upsert (temp file
+  + `rename()`) — unlike P1-F-2's create-only `session-store.ts`, a ruleset id can be
+  legitimately re-submitted (an edit), so this task's own "concurrent writes never corrupt the
+  file" criterion needed the stronger guarantee.
+- Fixed a second, larger instance of the build gap P1-F-2 first found: `getBuiltin`/
+  `BUILTIN_RULESETS` pull in effectively all of `engine/rules/**` (and transitively `engine/grid/**`,
+  `engine/history/**`, `engine/neighborhood/**`) into the plain-`tsc`-compiled server build for
+  the first time, and every one of those files' own relative imports — written for Vite/vitest,
+  which tolerates a missing extension — needed the explicit `.js` Node's ESM loader requires.
+  Added it across `src/engine/**`/`src/shared/**` (22 files, mechanical, semantics-preserving —
+  full test suite and a clean, non-concurrent `npm run bench` run both confirm zero regression),
+  and fixed `scripts/check-boundaries.mjs`'s specifier resolution to strip a trailing `.js`
+  before comparing against the layering matrix (a correctness fix, not a weakened rule — it was
+  failing every such import outright). Verified against the real compiled server, all four routes
+  by hand, not just a green `tsc`. (P1-G-1)
 
 ## [0.1.0] — 2026-09-04
 
