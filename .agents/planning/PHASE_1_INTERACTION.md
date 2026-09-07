@@ -822,12 +822,36 @@ wide-shot-to-framed camera move.
 - [x] An invalid ruleset POST returns the structured `issues[]` array the Phase 2 editor will render — `RuleValidationError.issues` (P0-D-2's own shape: `{path, message, hint?}`) is forwarded verbatim as `{issues: [...]}` on a 400; a bad id (fails `deriveUserRulesetId`, distinct from a schema failure) gets the same `{issues: [...]}` shape for a consistent client-side contract, not a different error format.
 - [x] Concurrent writes to the same id do not corrupt the file (atomic write via temp + rename) — `file-store.ts`'s `save()` writes to a randomly-suffixed temp file then `rename()`s it into place (POSIX/Windows-atomic); `tests/unit/server/rulesets-route.spec.ts` fires 10 concurrent `POST`s at the same id through the real HTTP server and confirms the file that lands is always one complete, parseable variant, never a mix of two.
 
-#### - [ ] P1-G-2 · Pattern routes (skeleton)
+#### - [x] P1-G-2 · Pattern routes (skeleton) — @claude, started 2026-09-07, finished 2026-09-07
 **Depends on:** P1-G-1 · **Files:** `src/server/routes/patterns.ts`
 **Implementation notes** Serve the Phase 1 hardcoded stamp set from `patterns/` on disk with the query interface Phase 2 will fill out. Establish the response shape now so the client never changes.
+- Added the repo-root `patterns/` directory itself (ten `.rle` files, real RLE header comments —
+  `#N` name, `#O` author where genuinely known, `#C` description) — it didn't exist before this
+  task. Content is the *same* ten patterns `ui/tools/stamp.ts`'s `BUILTIN_STAMPS` already ships,
+  independently duplicated, not read from or generated off that module: ADR-002 requires the
+  client to keep its own bundled copy so the stamp tool works with the server unreachable, so a
+  second, server-side source of the same content is the intended shape, not an oversight.
+  `tests/unit/server/patterns-route.spec.ts` decodes both copies (`ui/tools/select.ts`'s
+  `decodeRLE`) and asserts every one resolves to the identical set of live cells, so the two
+  can never silently diverge.
+- **`docker/Dockerfile` needed a real fix, caught by actually running the compiled output, not
+  assumed**: the runtime stage only ever copied `dist/`, but `patterns.ts` reads the repo-root
+  `patterns/` directory at startup (three levels up from `dist/server/routes/`, deliberately the
+  same relative depth as the uncompiled `src/server/routes/` so one path formula works in both
+  contexts) — `patterns/` was never in the image at all. Fixed by copying it into the runtime
+  stage alongside `dist/`; verified by reproducing the exact runtime layout locally (`dist/`,
+  `patterns/`, `package.json` copied into a scratch directory, `node_modules` linked in, no repo
+  source present) rather than trusting a same-repo smoke test that would never have caught this.
+- A hand-written parser reads only `#N`/`#O`/`#C` and the `x = W, y = H` header line — never a
+  full RLE decode into cells (`server/` may not import `ui/tools/select.ts`'s real codec, ADR-009);
+  a pattern's body stays opaque RLE text all the way to the client, which already owns a real one.
+- `PatternSummary` is deliberately not the full RLE spec's field set (no `#O` fallback chains, no
+  multi-ruleset tagging beyond a hardcoded `"conway"`) — "establish the response shape now so the
+  client never changes" means the *shape* is stable (Phase 2's P2-B-4 adds fields and real
+  query params against it), not that every field is already maximally rich.
 **Acceptance criteria**
-- [ ] `GET /api/patterns?ruleset=conway` returns the ten Phase 1 patterns with complete metadata.
-- [ ] Responses are cacheable (`ETag`, `Cache-Control`).
+- [x] `GET /api/patterns?ruleset=conway` returns the ten Phase 1 patterns with complete metadata — all ten `patterns/*.rle` files parse into `{id, name, description, author, ruleset, width, height, rle}` summaries (`author` present only where genuinely documented — Guy's glider, Gosper's gun — never fabricated for the naturally-occurring ones); `?ruleset=conway` matches all ten since every Phase 1 pattern is a classic Conway's-Life shape, and an unknown ruleset tag correctly returns `[]`, not an error.
+- [x] Responses are cacheable (`ETag`, `Cache-Control`) — `Cache-Control: public, max-age=3600` is set explicitly; `ETag` comes from Express's own default weak-etag behaviour (never disabled) and is confirmed stable across two identical requests, proving it is a real content hash, not a per-request accident.
 
 #### - [ ] P1-G-3 · `/live` broadcast
 **Depends on:** P1-G-1 · **Files:** `src/server/routes/live.ts`, `src/server/live-hub.ts`

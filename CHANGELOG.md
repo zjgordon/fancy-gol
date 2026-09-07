@@ -316,6 +316,16 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   before comparing against the layering matrix (a correctness fix, not a weakened rule — it was
   failing every such import outright). Verified against the real compiled server, all four routes
   by hand, not just a green `tsc`. (P1-G-1)
+- Pattern routes (P1-G-2): `GET /api/patterns?ruleset=<id>` serves the ten Phase 1 patterns from a
+  new repo-root `patterns/` directory (real RLE header comments — `#N`/`#O`/`#C` — parsed by a
+  small hand-written reader, never a full RLE decode server-side). Same ten patterns
+  `ui/tools/stamp.ts`'s `BUILTIN_STAMPS` already ships, independently duplicated per ADR-002 (the
+  client needs its own bundled copy for the stamp tool to work offline); cross-checked by
+  decoding both copies and confirming identical cells, so they can't silently diverge. Responses
+  set `Cache-Control: public, max-age=3600`, with Express's own default weak `ETag`. Caught and
+  fixed a real gap by running the actual production layout locally: `docker/Dockerfile`'s runtime
+  stage only ever copied `dist/`, never the new `patterns/` directory the route reads at startup
+  — added it alongside `dist/` in the runtime `COPY`. (P1-G-2)
 
 ## [0.1.0] — 2026-09-04
 
