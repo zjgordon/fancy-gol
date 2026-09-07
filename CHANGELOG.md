@@ -326,6 +326,24 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   fixed a real gap by running the actual production layout locally: `docker/Dockerfile`'s runtime
   stage only ever copied `dist/`, never the new `patterns/` directory the route reads at startup
   — added it alongside `dist/` in the runtime `COPY`. (P1-G-2)
+- `/live` broadcast (P1-G-3): a shared, always-running Conway's Life exhibition (128×128,
+  toroidal, ~35% seed density) anybody can watch — the inception document's "State Sync", scoped
+  honestly. `server/live-hub.ts`'s `LiveHub` owns the one `Simulation`, steps it at 10 Hz, and
+  broadcasts each `ChangeSet` as a compact JSON delta to every client keeping up; a full keyframe
+  goes out on join and again to any client whose `bufferedAmount` exceeded the backpressure
+  threshold once it has fully drained — resynchronised, never disconnected for merely being slow.
+  An independent heartbeat ping/pong reaps sockets that stop responding at all. `maxClients`
+  caps concurrent sockets (rejected with close code 1013). `server/routes/live.ts` wires a real
+  `ws.WebSocketServer` onto the listening `http.Server` at `/live`, gated by a new
+  `ENABLE_LIVE` env flag (opt-*out*, default on locally, `server/index.ts`). Added
+  `shared/live-protocol.ts` (the wire message types + a `parseLiveMessage` guard, both
+  `live-hub.ts` and a new `client/live-client.ts` need) and `client/live-client.ts` itself (a
+  reconnecting `/live` connection with exponential backoff — not in this task's own file list,
+  but nothing else in Phase 1 owns the "server restart doesn't wedge reconnecting clients"
+  criterion; no rendering, no UI, just the connection-resilience seam a future viewer sits on).
+  Caught a real bug by actually simulating a server kill in a test: `ws`'s `WebSocketServer.close()`
+  never closes already-open clients, which left the underlying `http.Server.close()` hanging
+  forever — fixed by explicitly `terminate()`-ing every connected socket first. (P1-G-3)
 
 ## [0.1.0] — 2026-09-04
 

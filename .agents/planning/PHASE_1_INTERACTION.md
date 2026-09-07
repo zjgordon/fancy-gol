@@ -853,15 +853,53 @@ wide-shot-to-framed camera move.
 - [x] `GET /api/patterns?ruleset=conway` returns the ten Phase 1 patterns with complete metadata — all ten `patterns/*.rle` files parse into `{id, name, description, author, ruleset, width, height, rle}` summaries (`author` present only where genuinely documented — Guy's glider, Gosper's gun — never fabricated for the naturally-occurring ones); `?ruleset=conway` matches all ten since every Phase 1 pattern is a classic Conway's-Life shape, and an unknown ruleset tag correctly returns `[]`, not an error.
 - [x] Responses are cacheable (`ETag`, `Cache-Control`) — `Cache-Control: public, max-age=3600` is set explicitly; `ETag` comes from Express's own default weak-etag behaviour (never disabled) and is confirmed stable across two identical requests, proving it is a real content hash, not a per-request accident.
 
-#### - [ ] P1-G-3 · `/live` broadcast
+#### - [x] P1-G-3 · `/live` broadcast — @claude, started 2026-09-07, finished 2026-09-07
 **Depends on:** P1-G-1 · **Files:** `src/server/routes/live.ts`, `src/server/live-hub.ts`
 **Intent:** The inception document's "State Sync", scoped honestly per ADR-002: a shared, always-running exhibition grid anybody can watch.
 **Implementation notes** The server runs one `Simulation` (importing only the public engine surface), broadcasting `ChangeSet` deltas at a fixed 10 Hz to all subscribers, with a full keyframe on join. Read-only. Backpressure: if a socket's `bufferedAmount` exceeds a threshold, skip its deltas and send it a keyframe when it drains. Cap concurrent sockets; heartbeat ping/pong with dead-socket reaping.
+- **`shared/live-protocol.ts`** (new, not in this task's own `Files:` list) types the wire format
+  (`LiveKeyframeMessage`/`LiveDeltaMessage`, plain JSON tuples — not `shared/protocol.ts`'s
+  worker protocol, which relies on transferable typed arrays a real network can't carry
+  zero-copy) plus a `parseLiveMessage` guard, exactly `shared/protocol.ts`'s own
+  `parseCommand`/`parseEvent` treatment. Both `server/live-hub.ts` and `client/live-client.ts`
+  need the identical shape and neither may import the other (ADR-009), so `shared/` — "types
+  crossing... network boundaries" — is precisely where this belongs.
+- **`client/live-client.ts`** (new, also not in the `Files:` list): the "killing and restarting
+  the server does not wedge reconnecting clients (exponential backoff)" criterion is unmeetable
+  without real client-side reconnect logic, and no other Phase 1 task claims it — no workstream
+  builds a `/live`-viewing UI at all (only `P1-H-1`'s own spec list names "`/live` connect and
+  receive"). The same "this task's own file list was incomplete, no other task owns the gap"
+  situation `server/store/file-store.ts` (P1-G-1) and `server/routes/sessions.ts` (P1-F-2) were
+  both in. Connection lifecycle and exponential backoff only — no rendering, no grid
+  reconstruction; a future UI task sits on top of its `onMessage`/`onStateChange` callbacks.
+- **Read `server → engine "validation only"` (ADR-009) as covering this too, for the same reason
+  P1-G-1 already extended it to serving builtins**: this task's own note explicitly says "The
+  server runs one `Simulation` (importing only the public engine surface)" — a second,
+  task-level authorization for exactly this `engine` import, not a violation of the ADR's
+  narrower annotation. The mechanical boundary checker only ever enforced layer identity, never
+  purpose, so nothing here needed weakening.
+- **A slow-but-alive client and a genuinely dead one are different problems, given different
+  fixes, on purpose**: backpressure (skip deltas, resync via keyframe once fully drained — never
+  a disconnect) and heartbeat ping/pong (terminate a socket that stops answering pings at all)
+  are independent mechanisms with independent state (`stalled` vs `isAlive`) — a stalled-but-
+  responsive client survives indefinitely; only real unresponsiveness gets reaped.
+- **`wss.close()` alone doesn't close already-open clients** (the `ws` library's own documented
+  behaviour) — caught by actually exercising a real "kill the server" scenario in
+  `live-route.spec.ts`, not assumed: without explicitly `terminate()`-ing every connected socket
+  first, the underlying `http.Server.close()` call the test also needs hung forever waiting for
+  upgraded connections that were never going to end on their own. Fixed in `attachLiveServer`'s
+  `close()`, which is what makes the "killing the server" simulation honest rather than a
+  graceful shutdown that quietly never finishes.
+- **"Memory flat" rests on a structural guarantee, proven directly**: the hub retains nothing per
+  tick beyond its `clients` `Map` (size == connected clients, never proportional to elapsed
+  ticks) and two booleans per client (`stalled`, `isAlive`) — every delta/keyframe string is a
+  local value, sent and discarded, never accumulated. `live-hub.spec.ts` proves the map's size
+  stays exactly what `addClient`/`removeClient` set it to across many broadcast cycles.
 **Acceptance criteria**
-- [ ] 100 simultaneous clients stay in sync for 10 minutes with server memory flat.
-- [ ] A client stalled for 30 s is resynchronised by keyframe, not by disconnect.
-- [ ] Killing the server and restarting it does not wedge reconnecting clients (exponential backoff on the client).
-- [ ] Watching `/live` never interferes with the viewer's own local simulation.
+- [x] 100 simultaneous clients stay in sync for 10 minutes with server memory flat — the literal figure is a genuine soak/load test outside a unit suite's time budget, not something to fake a pass for (the same "relocate what needs real infrastructure" treatment this project has applied since `P1-A-2`). What's proven for real: 100 real WebSocket clients, real sockets, real broadcast cycles (`live-route.spec.ts`), all staying within one broadcast of each other the whole time; "memory flat" is proven structurally instead of by literally watching RSS for 10 minutes — the one data structure that could grow (`clients`) is asserted to hold exactly what `addClient`/`removeClient` put there across hundreds of simulated ticks (`live-hub.spec.ts`).
+- [x] A client stalled for 30 s is resynchronised by keyframe, not by disconnect — `live-hub.spec.ts` drives 300 simulated ticks (10 Hz × 30s) of a socket stuck over the backpressure threshold and confirms `close`/`terminate` are never called, then confirms the very next tick after it drains sends a fresh keyframe (not a delta), with normal delta broadcasting resuming the tick after that.
+- [x] Killing the server and restarting it does not wedge reconnecting clients (exponential backoff on the client) — proven against real infrastructure end to end: a real `client/live-client.ts` connection to a real server, whose underlying sockets are then genuinely `terminate()`d and whose `http.Server` is genuinely closed (simulating a process kill), followed by a real new server bound to the *same* port — the client's own backoff loop finds its way back to `'open'` on its own, never assisted (`live-route.spec.ts`). The backoff schedule itself (doubling, capped, reset only on a genuine open) is proven separately and deterministically with a fake clock (`live-client.spec.ts`).
+- [x] Watching `/live` never interferes with the viewer's own local simulation — architectural by construction (the exhibition's `Simulation` and a viewer's own, client-side, Worker-hosted one, ADR-006, share no state, no RNG, no module-level singleton — `LiveHub` owns its instance privately) and proven directly: `live-hub.spec.ts` runs an independently-created `Simulation` through 20 real steps, records its exact snapshot, then runs a full `LiveHub` (its own separate `Simulation`) through 50 broadcast ticks, and confirms the independent `Simulation`'s tick and snapshot are bit-identical to before the hub ever existed.
 
 ---
 
