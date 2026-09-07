@@ -1,0 +1,7 @@
+#N Beacon
+#C A period-2 oscillator: two 2x2 blocks that touch corners and pull apart each generation.
+x = 4, y = 4, rule = B3/S23
+2o$
+2o$
+2b2o$
+2b2o!

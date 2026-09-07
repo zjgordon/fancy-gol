@@ -1,0 +1,7 @@
+#N Lightweight spaceship
+#C The smallest orthogonal spaceship, period 4 -- faster than the glider and moves in a straight line.
+x = 5, y = 4, rule = B3/S23
+b4o$
+o3bo$
+4bo$
+o2bo!

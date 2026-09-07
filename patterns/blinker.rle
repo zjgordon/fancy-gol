@@ -1,0 +1,4 @@
+#N Blinker
+#C The smallest oscillator, period 2 -- a row of three cells that flips between horizontal and vertical.
+x = 3, y = 1, rule = B3/S23
+3o!

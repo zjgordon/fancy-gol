@@ -1,0 +1,5 @@
+#N Toad
+#C A period-2 oscillator: two overlapping rows of three that shift back and forth.
+x = 4, y = 2, rule = B3/S23
+b3o$
+3o!

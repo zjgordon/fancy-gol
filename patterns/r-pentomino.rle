@@ -1,0 +1,6 @@
+#N R-pentomino
+#C A five-cell methuselah that stabilises only after 1103 generations, ending with 116 live cells.
+x = 3, y = 3, rule = B3/S23
+b2o$
+2o$
+bo!

@@ -1,0 +1,7 @@
+#N Glider
+#C The smallest and most common spaceship, translating diagonally by (1, 1) every 4 generations.
+#O Richard K. Guy, 1970
+x = 3, y = 3, rule = B3/S23
+bo$
+2bo$
+3o!

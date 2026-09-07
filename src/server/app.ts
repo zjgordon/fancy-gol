@@ -6,8 +6,8 @@
  * too). `index.ts` is the thin, real-environment adapter that actually listens — the same
  * split `worker/handler.ts`/`worker/sim.worker.ts` already established.
  *
- * `/api/sessions` (ADR-002, P1-F-2) and `/api/rulesets` (ADR-002, P1-G-1) are the real routes so
- * far; `/api/patterns` and `/live` are still Phase 1 follow-ups.
+ * `/api/sessions` (ADR-002, P1-F-2), `/api/rulesets` (ADR-002, P1-G-1) and `/api/patterns`
+ * (ADR-002, P1-G-2) are the real routes so far; `/live` is still a Phase 1 follow-up.
  */
 import { readFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
@@ -16,6 +16,7 @@ import express, { type Express } from 'express';
 // `.js`, not `.ts` (`allowImportingTsExtensions: false` here, and Node's ESM loader needs a
 // resolvable extension on a relative specifier) — the same convention `index.ts`'s own `./app.js`
 // import already established.
+import { createPatternsRouter } from './routes/patterns.js';
 import { createRulesetsRouter } from './routes/rulesets.js';
 import { createSessionsRouter } from './routes/sessions.js';
 import type { RuleSetDocument } from '../engine/rules/schema.js';
@@ -47,6 +48,8 @@ export interface CreateAppOptions {
   /** Where user rulesets are written. Defaults to `data/rulesets` under the cwd; same test-isolation reasoning as `sessionsDir`. Ignored if `rulesetStore` is given. */
   readonly rulesetsDir?: string;
   readonly rulesetStore?: FileStore<RuleSetDocument>;
+  /** Directory `.rle` pattern files are read from. Defaults to the repo-root `patterns/`; overridable so a test uses a scratch fixture instead of the real bundled set. */
+  readonly patternsDir?: string;
 }
 
 /** Vite's hashed asset filenames (`assets/index-<hash>.js`) never change contents under a given URL — safe to cache forever. `index.html` names the *current* hashed assets, so it must always be revalidated. */
@@ -71,6 +74,7 @@ export function createApp(opts: CreateAppOptions = {}): Express {
 
   app.use('/api/sessions', createSessionsRouter(sessionStore));
   app.use('/api/rulesets', createRulesetsRouter(rulesetStore));
+  app.use('/api/patterns', opts.patternsDir ? createPatternsRouter(opts.patternsDir) : createPatternsRouter());
 
   app.use(
     express.static(distDir, {
@@ -83,9 +87,9 @@ export function createApp(opts: CreateAppOptions = {}): Express {
     }),
   );
 
-  // Anything under /api/ that isn't a real route (patterns, /live are still to come) is a JSON
-  // 404, never the SPA shell — an API client checking `err.response.data.error` shouldn't have
-  // to sniff HTML.
+  // Anything under /api/ that isn't a real route (/live is still to come) is a JSON 404, never
+  // the SPA shell — an API client checking `err.response.data.error` shouldn't have to sniff
+  // HTML.
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'not found' });
   });

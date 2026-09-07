@@ -25,6 +25,11 @@ ENV PORT=8080
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build --chown=node:node /app/dist ./dist
+# P1-G-2: `server/routes/patterns.ts` reads these at startup from the repo-root `patterns/`
+# directory (three levels up from `dist/server/routes/`, same relative depth as the uncompiled
+# `src/server/routes/` — see that file's own `DEFAULT_PATTERNS_DIR` note), so the runtime image
+# needs the directory itself, not just the compiled route that reads it.
+COPY --from=build --chown=node:node /app/patterns ./patterns
 
 # `data/` (ADR-002: "file-backed JSON on a mounted volume") — created and owned by `node` here so
 # it's writable under `USER node` below whether or not a volume ends up mounted over it. Docker

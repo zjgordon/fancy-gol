@@ -1,0 +1,6 @@
+#N Acorn
+#C A seven-cell methuselah that takes 5206 generations to stabilise, ending with 633 live cells.
+x = 7, y = 3, rule = B3/S23
+bo$
+3bo$
+2o2b3o!

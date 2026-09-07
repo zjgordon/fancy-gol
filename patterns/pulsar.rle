@@ -1,0 +1,16 @@
+#N Pulsar
+#C The most common period-3 oscillator, with 4-fold symmetry across a 13x13 bounding box.
+x = 13, y = 13, rule = B3/S23
+2b3o3b3o$
+$
+o4bobo4bo$
+o4bobo4bo$
+o4bobo4bo$
+2b3o3b3o$
+$
+2b3o3b3o$
+o4bobo4bo$
+o4bobo4bo$
+o4bobo4bo$
+$
+2b3o3b3o!
