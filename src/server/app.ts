@@ -6,17 +6,25 @@
  * too). `index.ts` is the thin, real-environment adapter that actually listens — the same
  * split `worker/handler.ts`/`worker/sim.worker.ts` already established.
  *
- * No API routes yet (ADR-002's `/api/rulesets`, `/api/patterns`, `/api/sessions`, `/live`):
- * those are Phase 1+. This is deliberately just enough to serve the built client and prove the
- * process is alive.
+ * `/api/sessions` (ADR-002, P1-F-2) is the first real route beyond `/api/health`; the rest
+ * (`/api/rulesets`, `/api/patterns`, `/live`) are still Phase 1+ follow-ups.
  */
 import { readFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express, { type Express } from 'express';
+// `.js`, not `.ts` (`allowImportingTsExtensions: false` here, and Node's ESM loader needs a
+// resolvable extension on a relative specifier) — the same convention `index.ts`'s own `./app.js`
+// import already established.
+import { createSessionsRouter } from './routes/sessions.js';
+import { createFileSessionStore, type SessionStore } from './store/session-store.js';
 
 const DEFAULT_DIST_CLIENT = fileURLToPath(new URL('../../dist/client', import.meta.url));
 const PACKAGE_JSON_PATH = fileURLToPath(new URL('../../package.json', import.meta.url));
+/** ADR-002: "file-backed JSON on a mounted volume" — `data/` at the process's cwd, which in the
+ * production image (`docker/Dockerfile`) is `/app`, the directory `docker/docker-compose*.yml`
+ * mounts a volume onto. */
+const DEFAULT_SESSIONS_DIR = join(process.cwd(), 'data/sessions');
 
 function readPackageVersion(): string {
   const pkg = JSON.parse(readFileSync(PACKAGE_JSON_PATH, 'utf8')) as { version: string };
@@ -28,6 +36,10 @@ export interface CreateAppOptions {
   readonly distDir?: string;
   /** Reported by `/api/health`. Defaults to `package.json`'s own version. */
   readonly version?: string;
+  /** Where shared sessions are written. Defaults to `data/sessions` under the cwd; overridable so tests use a scratch directory instead of the real (or absent) mounted volume. Ignored if `sessionStore` is given. */
+  readonly sessionsDir?: string;
+  /** Supplying a store directly (a test double, an in-memory one) bypasses the filesystem entirely. */
+  readonly sessionStore?: SessionStore;
 }
 
 /** Vite's hashed asset filenames (`assets/index-<hash>.js`) never change contents under a given URL — safe to cache forever. `index.html` names the *current* hashed assets, so it must always be revalidated. */
@@ -39,6 +51,7 @@ export function createApp(opts: CreateAppOptions = {}): Express {
   const distDir = resolve(opts.distDir ?? DEFAULT_DIST_CLIENT);
   const version = opts.version ?? readPackageVersion();
   const indexHtmlPath = join(distDir, 'index.html');
+  const sessionStore = opts.sessionStore ?? createFileSessionStore(opts.sessionsDir ?? DEFAULT_SESSIONS_DIR);
 
   const app = express();
   app.disable('x-powered-by');
@@ -46,6 +59,8 @@ export function createApp(opts: CreateAppOptions = {}): Express {
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true, version, uptime: process.uptime() });
   });
+
+  app.use('/api/sessions', createSessionsRouter(sessionStore));
 
   app.use(
     express.static(distDir, {
@@ -58,8 +73,9 @@ export function createApp(opts: CreateAppOptions = {}): Express {
     }),
   );
 
-  // Anything under /api/ that isn't a real route (there are none yet) is a JSON 404, never the
-  // SPA shell — an API client checking `err.response.data.error` shouldn't have to sniff HTML.
+  // Anything under /api/ that isn't a real route (rulesets, patterns, /live are still to come)
+  // is a JSON 404, never the SPA shell — an API client checking `err.response.data.error`
+  // shouldn't have to sniff HTML.
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'not found' });
   });

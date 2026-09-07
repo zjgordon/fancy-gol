@@ -3,8 +3,15 @@
   "compilerOptions": {
     "noEmit": false,
     "allowImportingTsExtensions": false,
-    "outDir": "dist/server",
-    "rootDir": "src/server"
+    // rootDir/outDir are "src"/"dist", not "src/server"/"dist/server": P1-F-2's server code is
+    // the first to have a real ADR-009 server -> shared cross-layer import, and rootDir must
+    // cover every file tsc actually compiles, aliased-away or not. Chosen so the entry point's
+    // own path is unchanged (src/server/index.ts -> dist/server/index.js, exactly what
+    // docker/Dockerfile's CMD and package.json's "start" already name) — src/shared/**,
+    // src/engine/** land alongside it under dist/shared/**, dist/engine/** as a side effect,
+    // never colliding with vite.config.ts's separately-scoped dist/client output.
+    "outDir": "dist",
+    "rootDir": "src"
   },
   "include": ["src/server/**/*.ts"]
 }

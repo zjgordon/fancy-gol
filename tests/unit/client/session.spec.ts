@@ -1,19 +1,29 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ChunkedGrid } from '@engine/grid/chunked-grid';
 import { getBuiltin } from '@engine/rules/builtin';
+import { Simulation } from '@engine/simulation';
+import { CONWAY } from '@engine/rules/builtin/life';
+import { BUILTIN_STAMPS } from '@ui/tools/stamp';
 import type { RuleSet } from '@shared/types';
 import type { SessionDoc } from '@shared/session';
 import {
+  DEFAULT_MAX_FRAGMENT_BYTES,
   REAL_TIMERS,
   SYSTEM_HIDDEN,
   applySessionDoc,
   buildSessionDoc,
+  buildShareLink,
   captureGridRLE,
   createAutosave,
+  decodeInlineShare,
+  encodeInlineShare,
   gridPaintOps,
   loadSession,
+  parseShareFragment,
   realSessionStorage,
+  resolveShareFragment,
   writeSessionDoc,
+  type PostedSession,
   type SessionStorage,
   type Timers,
   type VisibilitySource,
@@ -377,5 +387,202 @@ describe('the real (non-injected) environment adapters', () => {
   it('SYSTEM_HIDDEN degrades to false when document is unavailable (plain Node)', () => {
     expect(typeof document).toBe('undefined');
     expect(SYSTEM_HIDDEN()).toBe(false);
+  });
+});
+
+function minimalDoc(overrides: Partial<SessionDoc> = {}): SessionDoc {
+  return {
+    version: 1,
+    ruleset: { kind: 'builtin', id: 'conway' },
+    grid: 'x = 1, y = 1\no!',
+    gridOrigin: { x: 0, y: 0 },
+    tick: 0,
+    seed: 1,
+    camera: { originX: 0, originY: 0, cellSize: 16 },
+    theme: 'default',
+    toolState: { activeToolId: 'brush' },
+    ...overrides,
+  };
+}
+
+describe('encodeInlineShare / decodeInlineShare', () => {
+  it('round-trips a document exactly through deflate + base64url', async () => {
+    const doc = minimalDoc({ tick: 12, grid: 'x = 3, y = 3\nbo$2bo$3o!' });
+    const payload = await encodeInlineShare(doc);
+    expect(payload).toMatch(/^[A-Za-z0-9_-]+$/); // no '+', '/' or '=' padding leaked through
+    await expect(decodeInlineShare(payload)).resolves.toEqual(doc);
+  });
+
+  it('returns null for a corrupt payload rather than throwing', async () => {
+    await expect(decodeInlineShare('not-a-real-payload!!')).resolves.toBeNull();
+  });
+});
+
+describe('parseShareFragment', () => {
+  it('recognises an inline fragment, with or without a leading #', () => {
+    expect(parseShareFragment('#d:abc123')).toEqual({ kind: 'inline', payload: 'abc123' });
+    expect(parseShareFragment('d:abc123')).toEqual({ kind: 'inline', payload: 'abc123' });
+  });
+
+  it('recognises a server fragment', () => {
+    expect(parseShareFragment('#s:cFcZvYY9yg8')).toEqual({ kind: 'server', id: 'cFcZvYY9yg8' });
+  });
+
+  it('returns null for anything that is not one of this app’s share links', () => {
+    expect(parseShareFragment('')).toBeNull();
+    expect(parseShareFragment('#')).toBeNull();
+    expect(parseShareFragment('#some-anchor')).toBeNull();
+  });
+});
+
+describe('buildShareLink', () => {
+  it('produces an inline #d: link when the document fits under the budget', async () => {
+    const result = await buildShareLink(minimalDoc(), { baseUrl: 'https://example.test/' });
+    expect(result.kind).toBe('inline');
+    if (result.kind === 'inline') {
+      expect(result.url.startsWith('https://example.test/#d:')).toBe(true);
+      expect(result.sizeBytes).toBeLessThan(DEFAULT_MAX_FRAGMENT_BYTES);
+    }
+  });
+
+  it('falls back to a server-backed #s: link once the fragment exceeds the configured budget', async () => {
+    const postServerSession = vi.fn<(doc: SessionDoc) => Promise<PostedSession>>(() =>
+      Promise.resolve({ id: 'shortid123', shareUrl: 'https://example.test/#s:shortid123' }),
+    );
+    const result = await buildShareLink(minimalDoc(), {
+      baseUrl: 'https://example.test/',
+      maxFragmentBytes: 4, // deliberately tiny, so even this minimal doc exceeds it
+      postServerSession,
+    });
+    expect(postServerSession).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ kind: 'server', url: 'https://example.test/#s:shortid123', id: 'shortid123' });
+  });
+
+  it('returns a long inline link (never fails) when over budget with no server configured', async () => {
+    const result = await buildShareLink(minimalDoc(), { baseUrl: 'https://example.test/', maxFragmentBytes: 4 });
+    expect(result.kind).toBe('inline');
+  });
+
+  it('a glider gun session round-trips through a URL under 2 kB (P1-F-2 AC1)', async () => {
+    const gun = BUILTIN_STAMPS.find((s) => s.id === 'gosper-gun');
+    expect(gun).toBeDefined();
+    const grid = new ChunkedGrid({ boundary: 'infinite' });
+    for (const op of gridPaintOps({ grid: gun!.rle, gridOrigin: { x: 0, y: 0 } })) grid.set(op.x, op.y, op.state);
+
+    const doc = buildSessionDoc({
+      ruleset: { kind: 'builtin', id: 'conway' },
+      grid: grid.view(),
+      tick: 0,
+      seed: 1,
+      camera: { originX: 0, originY: 0, cellSize: 16 },
+      theme: 'default',
+      activeToolId: 'stamp',
+    });
+
+    const result = await buildShareLink(doc, { baseUrl: 'https://example.test/' });
+    expect(result.kind).toBe('inline');
+    if (result.kind !== 'inline') throw new Error('unreachable');
+    expect(result.sizeBytes).toBeLessThan(2048);
+
+    const fragment = result.url.slice(result.url.indexOf('#'));
+    const parsed = parseShareFragment(fragment);
+    expect(parsed?.kind).toBe('inline');
+    const restored = parsed?.kind === 'inline' ? await decodeInlineShare(parsed.payload) : null;
+    expect(restored).toEqual(doc);
+  });
+
+  it('a ~100k-cell pattern automatically switches to server-backed sharing (P1-F-2 AC2)', async () => {
+    const sim = new Simulation({ ruleset: CONWAY, width: 500, height: 500 });
+    sim.seedRandom(0.4, 1); // ~100,000 live cells, deliberately poorly compressible (a soup)
+
+    const doc = buildSessionDoc({
+      ruleset: { kind: 'builtin', id: 'conway' },
+      grid: sim.view(),
+      tick: 0,
+      seed: 1,
+      camera: { originX: 0, originY: 0, cellSize: 16 },
+      theme: 'default',
+      activeToolId: 'brush',
+    });
+
+    const postServerSession = vi.fn<(doc: SessionDoc) => Promise<PostedSession>>(() =>
+      Promise.resolve({ id: 'bigpattern1', shareUrl: 'https://example.test/#s:bigpattern1' }),
+    );
+    const result = await buildShareLink(doc, { baseUrl: 'https://example.test/', postServerSession });
+
+    expect(postServerSession).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({
+      kind: 'server',
+      url: 'https://example.test/#s:bigpattern1',
+      id: 'bigpattern1',
+    });
+    // The "short link" claim: a server-backed URL never scales with pattern size.
+    expect(result.url.length).toBeLessThan(64);
+  });
+});
+
+describe('resolveShareFragment', () => {
+  it('returns null for a fragment that is not a share link at all, without asking anything', async () => {
+    const confirmOverwrite = vi.fn(() => true);
+    const resolved = await resolveShareFragment('#not-a-share-link', {
+      hasExistingAutosave: true,
+      confirmOverwrite,
+    });
+    expect(resolved).toBeNull();
+    expect(confirmOverwrite).not.toHaveBeenCalled();
+  });
+
+  it('never asks when there is no existing autosave to overwrite', async () => {
+    const doc = minimalDoc();
+    const payload = await encodeInlineShare(doc);
+    const confirmOverwrite = vi.fn(() => false); // would decline if asked -- must not be asked
+    const resolved = await resolveShareFragment(`#d:${payload}`, {
+      hasExistingAutosave: false,
+      confirmOverwrite,
+    });
+    expect(confirmOverwrite).not.toHaveBeenCalled();
+    expect(resolved).toEqual(doc);
+  });
+
+  it('asks before overwriting an existing autosave, and honours a decline (P1-F-2 AC3)', async () => {
+    const doc = minimalDoc();
+    const payload = await encodeInlineShare(doc);
+    const confirmOverwrite = vi.fn(() => false);
+    const resolved = await resolveShareFragment(`#d:${payload}`, {
+      hasExistingAutosave: true,
+      confirmOverwrite,
+    });
+    expect(confirmOverwrite).toHaveBeenCalledTimes(1);
+    expect(resolved).toBeNull();
+  });
+
+  it('proceeds with the inline document once the user confirms the overwrite', async () => {
+    const doc = minimalDoc();
+    const payload = await encodeInlineShare(doc);
+    const resolved = await resolveShareFragment(`#d:${payload}`, {
+      hasExistingAutosave: true,
+      confirmOverwrite: () => true,
+    });
+    expect(resolved).toEqual(doc);
+  });
+
+  it('fetches a server-backed session by id once confirmed', async () => {
+    const doc = minimalDoc({ tick: 5 });
+    const fetchServerSession = vi.fn((id: string) => Promise.resolve(id === 'abc123' ? doc : null));
+    const resolved = await resolveShareFragment('#s:abc123', {
+      hasExistingAutosave: false,
+      confirmOverwrite: () => true,
+      fetchServerSession,
+    });
+    expect(fetchServerSession).toHaveBeenCalledWith('abc123');
+    expect(resolved).toEqual(doc);
+  });
+
+  it('resolves to null for a server fragment when no fetcher is configured', async () => {
+    const resolved = await resolveShareFragment('#s:abc123', {
+      hasExistingAutosave: false,
+      confirmOverwrite: () => true,
+    });
+    expect(resolved).toBeNull();
   });
 });

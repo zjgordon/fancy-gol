@@ -11,3 +11,11 @@ services:
     environment:
       - PORT=8080
     restart: unless-stopped
+    volumes:
+      # ADR-002: "file-backed JSON on a mounted volume" — P1-F-2's shared sessions today, P1-G-1's
+      # user rulesets later, both under this same directory. A named volume, not a bind mount:
+      # nothing on the host needs to read these files directly.
+      - data:/app/data
+
+volumes:
+  data:

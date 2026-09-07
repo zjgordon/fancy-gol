@@ -26,6 +26,13 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build --chown=node:node /app/dist ./dist
 
+# `data/` (ADR-002: "file-backed JSON on a mounted volume") — created and owned by `node` here so
+# it's writable under `USER node` below whether or not a volume ends up mounted over it. Docker
+# seeds a named volume's first mount from whatever the image already has at that path, so getting
+# the ownership right in the image is what makes an *empty* named volume work too, not just a
+# host bind mount that already has the right owner.
+RUN mkdir -p /app/data/sessions && chown -R node:node /app/data
+
 # node:22-alpine already ships a non-root `node` user (uid 1000) — no need to create one.
 USER node
 

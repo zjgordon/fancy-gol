@@ -3,15 +3,27 @@
  * (`buildSessionDoc`/`applySessionDoc`), and autosaving that document to `localStorage`,
  * debounced at 2s and flushed immediately on `visibilitychange` (`createAutosave`).
  *
+ * Shareable URLs (P1-F-2, §2.6's own file-tree comment: "session.ts — autosave, URL hash
+ * encode/decode", both jobs in one file): `buildShareLink` deflates a `SessionDoc` (platform
+ * `CompressionStream`, zero dependency) into a base64url URL fragment, falling back to
+ * `POST /api/sessions` for a short server-backed link once the fragment would exceed ~8kB.
+ * `resolveShareFragment` is the inverse, on the reading side — and the one place "never
+ * overwrite an existing autosave without asking" (this task's third acceptance criterion) is
+ * enforced, via an injected `confirmOverwrite` callback rather than a direct dialog import, the
+ * same DI discipline as everything else in this file. Everything after the `#` — never the query
+ * string, which a server logs on every request that carries it (this task's own explicit rule).
+ *
  * Every impure dependency — where the document is written, how a debounce timer is scheduled,
- * how visibility changes are heard about, and how the user is notified of a degraded save — is
- * injected, the same discipline `themes/registry.ts`'s `TokenTarget`/`ThemeStorage`/
- * `PrefersDarkQuery` and `ui/components/shell.ts`'s `Timers` already established. Nothing in
- * this file wires a live `Simulation`/`Camera`/`ThemeRegistry` into `buildSessionDoc`'s
- * `SessionSnapshot` input for production use, or calls `createAutosave` from a real boot
- * sequence — that composition is a mechanical follow-up for whichever task builds `client/main.ts`'s
- * full app wiring, the same "this task builds the seam, a later one plugs into it" split
- * `themes/registry.ts`'s own header note already applies to itself.
+ * how visibility changes are heard about, how the user is notified of a degraded save or asked
+ * before an overwrite, and how a server-backed share is actually posted/fetched — is injected,
+ * the same discipline `themes/registry.ts`'s `TokenTarget`/`ThemeStorage`/`PrefersDarkQuery` and
+ * `ui/components/shell.ts`'s `Timers` already established. Nothing in this file wires a live
+ * `Simulation`/`Camera`/`ThemeRegistry` into `buildSessionDoc`'s `SessionSnapshot` input for
+ * production use, calls `createAutosave` from a real boot sequence, or hands `buildShareLink`/
+ * `resolveShareFragment` a real `fetch`/`confirmDialog` — that composition is a mechanical
+ * follow-up for whichever task builds `client/main.ts`'s full app wiring, the same "this task
+ * builds the seam, a later one plugs into it" split `themes/registry.ts`'s own header note
+ * already applies to itself.
  */
 import { getBuiltin } from '@engine/rules/builtin';
 import { DEAD, type GridView, type PaintOp, type RuleSet } from '@shared/types';
@@ -297,4 +309,184 @@ export function createAutosave(options: AutosaveOptions): Autosave {
   }
 
   return { scheduleSave, saveNow, dispose };
+}
+
+// -------------------------------------------------------------------------------------------
+// Shareable URLs (P1-F-2)
+// -------------------------------------------------------------------------------------------
+
+/** Above this size (in fragment characters — base64url is one byte per character, so this is
+ * also bytes), the fragment falls back to a server-backed short link instead. "~8kB" is this
+ * task's own figure. */
+export const DEFAULT_MAX_FRAGMENT_BYTES = 8192;
+
+const INLINE_PREFIX = 'd:';
+const SERVER_PREFIX = 's:';
+
+function concatChunks(chunks: readonly Uint8Array[]): Uint8Array {
+  const total = chunks.reduce((sum, c) => sum + c.length, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return out;
+}
+
+async function pipeThroughStream(bytes: Uint8Array, stream: CompressionStream | DecompressionStream): Promise<Uint8Array> {
+  const writer = stream.writable.getWriter();
+  // A plain `new Uint8Array(bytes)` copy, not `bytes` itself: `TextEncoder.encode()`'s return
+  // type is backed by `ArrayBufferLike` (which admits a `SharedArrayBuffer`), while the stream's
+  // `write()` wants the narrower `ArrayBuffer`-backed `Uint8Array` — a real typing distinction,
+  // not a formality, so this copy is what actually satisfies it rather than an `as` cast past it.
+  const writeDone = writer.write(new Uint8Array(bytes)).then(() => writer.close());
+  const reader = stream.readable.getReader();
+  const chunks: Uint8Array[] = [];
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) chunks.push(value);
+  }
+  await writeDone;
+  return concatChunks(chunks);
+}
+
+/** `deflate-raw`: the leanest of the three `CompressionStream` formats (no zlib/gzip header or
+ * checksum trailer) — every byte matters when the whole point is fitting under a URL length
+ * budget. Platform-native, so "zero dependency" (this task's own words) is literal, not just
+ * "no new npm package." */
+function deflateRaw(bytes: Uint8Array): Promise<Uint8Array> {
+  return pipeThroughStream(bytes, new CompressionStream('deflate-raw'));
+}
+
+function inflateRaw(bytes: Uint8Array): Promise<Uint8Array> {
+  return pipeThroughStream(bytes, new DecompressionStream('deflate-raw'));
+}
+
+/** `btoa`/`atob` operate on binary strings (one Unicode code point per byte), not `Uint8Array`
+ * directly — the loop is the whole reason this needs its own tiny codec instead of one call. */
+function toBase64Url(bytes: Uint8Array): string {
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function fromBase64Url(text: string): Uint8Array {
+  const base64 = text.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+/** `SessionDoc` → the URL-safe payload after the `d:` prefix: JSON, deflated, base64url. Public
+ * (not just an internal step of `buildShareLink`) so a test can assert the exact byte budget
+ * this task's "under 2kB" criterion names, independent of the size-threshold branching. */
+export async function encodeInlineShare(doc: SessionDoc): Promise<string> {
+  const json = new TextEncoder().encode(JSON.stringify(doc));
+  const compressed = await deflateRaw(json);
+  return toBase64Url(compressed);
+}
+
+/** The inverse of {@link encodeInlineShare}. `null` for anything that fails to decompress/parse/
+ * validate — a corrupt or hand-edited fragment is "no share found", never a thrown error. */
+export async function decodeInlineShare(payload: string): Promise<SessionDoc | null> {
+  try {
+    const compressed = fromBase64Url(payload);
+    const json = await inflateRaw(compressed);
+    return migrateSessionDoc(JSON.parse(new TextDecoder().decode(json)));
+  } catch {
+    return null;
+  }
+}
+
+export type ParsedShareFragment = { readonly kind: 'inline'; readonly payload: string } | { readonly kind: 'server'; readonly id: string };
+
+/** Reads a URL fragment (with or without its leading `#`) that {@link buildShareLink} produced.
+ * `null` for a fragment that isn't one of this app's share links at all (an anchor a user typed,
+ * an empty hash) — distinct from a share link that turns out to be corrupt, which
+ * {@link resolveShareFragment} surfaces by resolving to `null` only *after* trying. */
+export function parseShareFragment(fragment: string): ParsedShareFragment | null {
+  const text = fragment.startsWith('#') ? fragment.slice(1) : fragment;
+  if (text.startsWith(INLINE_PREFIX)) return { kind: 'inline', payload: text.slice(INLINE_PREFIX.length) };
+  if (text.startsWith(SERVER_PREFIX)) return { kind: 'server', id: text.slice(SERVER_PREFIX.length) };
+  return null;
+}
+
+export interface PostedSession {
+  readonly id: string;
+  readonly shareUrl: string;
+}
+
+export interface ShareLinkOptions {
+  /** Origin + path the fragment is appended to, e.g. `location.origin + location.pathname`. */
+  readonly baseUrl: string;
+  readonly maxFragmentBytes?: number;
+  /** `POST /api/sessions` (ADR-002). Omitting it just means a fragment over the size threshold
+   * is returned anyway, long URL and all, rather than silently failing to produce a link. */
+  readonly postServerSession?: (doc: SessionDoc) => Promise<PostedSession>;
+}
+
+export type ShareResult =
+  | { readonly kind: 'inline'; readonly url: string; readonly sizeBytes: number }
+  | { readonly kind: 'server'; readonly url: string; readonly id: string };
+
+/**
+ * Builds a shareable URL for `doc`: an inline `#d:...` fragment when it fits under
+ * `maxFragmentBytes` (default {@link DEFAULT_MAX_FRAGMENT_BYTES}), otherwise a server-backed
+ * `#s:<id>` short link (this task's second acceptance criterion — automatic, not a choice the
+ * caller makes). The id itself is the only thing that ever reaches a query string or path
+ * segment (in the `POST` call and any later `GET /api/sessions/:id>`); the fragment a person
+ * actually shares never contains the pattern data in a form a server request — and therefore a
+ * server access log — would ever see (this task's own "never put user data in the query string"
+ * rule, applied to the whole URL a recipient opens, not only the one this function returns).
+ */
+export async function buildShareLink(doc: SessionDoc, options: ShareLinkOptions): Promise<ShareResult> {
+  const payload = await encodeInlineShare(doc);
+  const fragment = `${INLINE_PREFIX}${payload}`;
+  const sizeBytes = fragment.length; // base64url + the ASCII prefix: one byte per character.
+  const maxBytes = options.maxFragmentBytes ?? DEFAULT_MAX_FRAGMENT_BYTES;
+  const inlineResult: ShareResult = { kind: 'inline', url: `${options.baseUrl}#${fragment}`, sizeBytes };
+
+  if (sizeBytes <= maxBytes || !options.postServerSession) {
+    // Under budget, or no server configured to fall back to — either way, the inline link is
+    // what there is; an unconfigured fallback means a long URL, never a failure to produce one.
+    return inlineResult;
+  }
+  const posted = await options.postServerSession(doc);
+  return { kind: 'server', url: `${options.baseUrl}#${SERVER_PREFIX}${posted.id}`, id: posted.id };
+}
+
+export interface ResolveShareOptions {
+  /** Whether a reload would currently clobber something — from `loadSession(storage) !== null`. */
+  readonly hasExistingAutosave: boolean;
+  /** Called only when {@link ResolveShareOptions.hasExistingAutosave} is true — this task's third
+   * acceptance criterion is specifically about not asking when there is nothing to overwrite. */
+  readonly confirmOverwrite: () => boolean | Promise<boolean>;
+  /** `GET /api/sessions/:id` (ADR-002). Omitting it makes every `s:` fragment resolve to `null`
+   * rather than throw — a share link with no server configured is "not found", not a crash. */
+  readonly fetchServerSession?: (id: string) => Promise<SessionDoc | null>;
+}
+
+/**
+ * The reading side of a share link: parses `fragment`, asks before overwriting an existing
+ * autosave (never silently, this task's third acceptance criterion), and resolves either kind of
+ * payload. `null` covers every "nothing to apply" outcome alike — not a share link, declined by
+ * the user, or corrupt/not found — a caller doesn't need to distinguish them to do the right
+ * thing (fall through to the existing autosave or a blank session).
+ */
+export async function resolveShareFragment(fragment: string, options: ResolveShareOptions): Promise<SessionDoc | null> {
+  const parsed = parseShareFragment(fragment);
+  if (!parsed) return null;
+
+  if (options.hasExistingAutosave) {
+    const proceed = await options.confirmOverwrite();
+    if (!proceed) return null;
+  }
+
+  if (parsed.kind === 'inline') return decodeInlineShare(parsed.payload);
+  if (!options.fetchServerSession) return null;
+  return options.fetchServerSession(parsed.id);
 }
