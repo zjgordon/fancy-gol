@@ -6,8 +6,8 @@
  * too). `index.ts` is the thin, real-environment adapter that actually listens — the same
  * split `worker/handler.ts`/`worker/sim.worker.ts` already established.
  *
- * `/api/sessions` (ADR-002, P1-F-2) is the first real route beyond `/api/health`; the rest
- * (`/api/rulesets`, `/api/patterns`, `/live`) are still Phase 1+ follow-ups.
+ * `/api/sessions` (ADR-002, P1-F-2) and `/api/rulesets` (ADR-002, P1-G-1) are the real routes so
+ * far; `/api/patterns` and `/live` are still Phase 1 follow-ups.
  */
 import { readFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
@@ -16,15 +16,19 @@ import express, { type Express } from 'express';
 // `.js`, not `.ts` (`allowImportingTsExtensions: false` here, and Node's ESM loader needs a
 // resolvable extension on a relative specifier) — the same convention `index.ts`'s own `./app.js`
 // import already established.
+import { createRulesetsRouter } from './routes/rulesets.js';
 import { createSessionsRouter } from './routes/sessions.js';
+import type { RuleSetDocument } from '../engine/rules/schema.js';
+import { createFileStore, type FileStore } from './store/file-store.js';
 import { createFileSessionStore, type SessionStore } from './store/session-store.js';
 
 const DEFAULT_DIST_CLIENT = fileURLToPath(new URL('../../dist/client', import.meta.url));
 const PACKAGE_JSON_PATH = fileURLToPath(new URL('../../package.json', import.meta.url));
 /** ADR-002: "file-backed JSON on a mounted volume" — `data/` at the process's cwd, which in the
  * production image (`docker/Dockerfile`) is `/app`, the directory `docker/docker-compose*.yml`
- * mounts a volume onto. */
+ * mounts a volume onto. Sessions and rulesets are separate subdirectories of that same volume. */
 const DEFAULT_SESSIONS_DIR = join(process.cwd(), 'data/sessions');
+const DEFAULT_RULESETS_DIR = join(process.cwd(), 'data/rulesets');
 
 function readPackageVersion(): string {
   const pkg = JSON.parse(readFileSync(PACKAGE_JSON_PATH, 'utf8')) as { version: string };
@@ -40,6 +44,9 @@ export interface CreateAppOptions {
   readonly sessionsDir?: string;
   /** Supplying a store directly (a test double, an in-memory one) bypasses the filesystem entirely. */
   readonly sessionStore?: SessionStore;
+  /** Where user rulesets are written. Defaults to `data/rulesets` under the cwd; same test-isolation reasoning as `sessionsDir`. Ignored if `rulesetStore` is given. */
+  readonly rulesetsDir?: string;
+  readonly rulesetStore?: FileStore<RuleSetDocument>;
 }
 
 /** Vite's hashed asset filenames (`assets/index-<hash>.js`) never change contents under a given URL — safe to cache forever. `index.html` names the *current* hashed assets, so it must always be revalidated. */
@@ -52,6 +59,8 @@ export function createApp(opts: CreateAppOptions = {}): Express {
   const version = opts.version ?? readPackageVersion();
   const indexHtmlPath = join(distDir, 'index.html');
   const sessionStore = opts.sessionStore ?? createFileSessionStore(opts.sessionsDir ?? DEFAULT_SESSIONS_DIR);
+  const rulesetStore =
+    opts.rulesetStore ?? createFileStore<RuleSetDocument>(opts.rulesetsDir ?? DEFAULT_RULESETS_DIR);
 
   const app = express();
   app.disable('x-powered-by');
@@ -61,6 +70,7 @@ export function createApp(opts: CreateAppOptions = {}): Express {
   });
 
   app.use('/api/sessions', createSessionsRouter(sessionStore));
+  app.use('/api/rulesets', createRulesetsRouter(rulesetStore));
 
   app.use(
     express.static(distDir, {
@@ -73,9 +83,9 @@ export function createApp(opts: CreateAppOptions = {}): Express {
     }),
   );
 
-  // Anything under /api/ that isn't a real route (rulesets, patterns, /live are still to come)
-  // is a JSON 404, never the SPA shell — an API client checking `err.response.data.error`
-  // shouldn't have to sniff HTML.
+  // Anything under /api/ that isn't a real route (patterns, /live are still to come) is a JSON
+  // 404, never the SPA shell — an API client checking `err.response.data.error` shouldn't have
+  // to sniff HTML.
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'not found' });
   });
