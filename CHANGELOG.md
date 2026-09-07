@@ -278,6 +278,22 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   since this runs from inside a debounce timer with no caller to catch an escaping exception. Not
   yet wired into a live `Simulation`/`Camera`/`ThemeRegistry` or a real boot sequence — deferred
   per P1-E-1/P1-E-2's own precedent. (P1-F-1)
+- Shareable URLs (P1-F-2): `client/session.ts`'s `buildShareLink` deflates a whole `SessionDoc`
+  (`CompressionStream('deflate-raw')`, zero dependency) into a base64url `#d:...` URL fragment,
+  falling back to a server-backed `#s:<id>` short link via a new `POST /api/sessions` once the
+  fragment would exceed ~8kB — automatic, not a caller's choice. `resolveShareFragment` is the
+  reading side, asking via an injected `confirmOverwrite` callback before an incoming share would
+  clobber an existing autosave, and never asking when there is nothing to overwrite. Added
+  `src/server/store/session-store.ts` (one JSON file per session, ADR-002's "file-backed JSON on
+  a mounted volume") and `src/server/routes/sessions.ts` (`POST`/`GET /api/sessions`, the one
+  route this workstream needs that no Workstream G task actually owns) plus `docker/Dockerfile`
+  and both compose files' `data/` volume. Along the way, fixed a real pre-existing gap in
+  `tsconfig.server.json` — `rootDir: "src/server"` had never been exercised against a genuine
+  `server → shared` import before this task's `SessionDoc` reuse needed one — by widening to
+  `rootDir: "src"` / `outDir: "dist"`, chosen so `dist/server/index.js`'s path is unchanged, and
+  switching the new server files to relative `.js` imports (plain `tsc`, unlike the Vite-bundled
+  client/worker, emits path aliases verbatim, which Node's ESM loader can't resolve). Verified end
+  to end against the actual compiled server, not just a green typecheck. (P1-F-2)
 
 ## [0.1.0] — 2026-09-04
 

@@ -717,13 +717,53 @@ wide-shot-to-framed camera move.
 - [x] A v1 document still loads after the Phase 4 format change (migration test committed now, extended later) — `tests/unit/shared/session.spec.ts` freezes a literal v1 JSON document (not built from the test's own fixture helper, so a future edit to that helper can't accidentally keep it passing for the wrong reason) and asserts `migrateSessionDoc` accepts it; whoever adds Phase 4's format change extends `MIGRATIONS` and this exact fixture must keep passing unmodified.
 - [x] Quota-exceeded is handled with a toast and a graceful downgrade (drop grid, keep settings), never a crash — `writeSessionDoc` catches a `QuotaExceededError` (matched by name and the legacy numeric code), retries with `grid: ''` while keeping every other field, and calls the injected `notify` callback describing the downgrade; if even the reduced document doesn't fit, or the failure is unrelated to quota, the write is silently skipped rather than thrown — this runs from inside a debounce timer with no caller able to catch an escaping exception, so "never a crash" is enforced for every failure mode, not only the one named in the criterion (`tests/unit/client/session.spec.ts`, four dedicated cases).
 
-#### - [ ] P1-F-2 · Shareable URLs
+#### - [x] P1-F-2 · Shareable URLs — @claude, started 2026-09-07, finished 2026-09-07
 **Depends on:** P1-F-1
 **Implementation notes** Encode a compact session into the URL fragment: RLE → deflate via the platform `CompressionStream` (zero dependency) → base64url. Fall back to a server-stored session (`POST /api/sessions`) with a short id when the fragment would exceed ~8 kB. Never put user data in the query string where it lands in server logs.
+- **No `Files:` line was given** — resolved from §2.6's own file tree: `src/client/session.ts`
+  ("autosave, URL hash encode/decode", both jobs in one file, per P1-F-1's precedent) plus
+  `src/server/routes/sessions.ts` and a new `src/server/store/session-store.ts` — §2.6 names
+  `server/routes/sessions.ts` in the architecture tree, but no Workstream G task claims it
+  (G-1/G-2/G-3 are rulesets/patterns//live only), so this is the one task that actually needs it:
+  the "automatically switches to server-backed sharing" criterion requires a real, working
+  `POST`/`GET /api/sessions` round trip, not a stub.
+- Whole-document compression, not RLE-substring-only: `encodeInlineShare` deflates the full
+  `JSON.stringify(SessionDoc)`, not just the `grid` field in isolation — simpler than segregating
+  fields, and the JSON wrapper's repeated tokens compress for free alongside the RLE text, which
+  is what actually dominates the payload. `CompressionStream('deflate-raw')` (no zlib/gzip
+  header or trailer) for the leanest possible byte count, since the point is fitting a size
+  budget. A hand-written base64url codec (`btoa`/`atob` operate on binary strings, not
+  `Uint8Array`, so the URL-safety transform is the only thing actually hand-written).
+- **Discovered and fixed a real, pre-existing build gap, not a new one this task caused**:
+  `tsconfig.server.json`'s `rootDir: "src/server"` had never been exercised against a genuine
+  `server → shared` cross-layer import (ADR-009 permits it; nothing before this task used it).
+  Fixed by widening to `rootDir: "src"` / `outDir: "dist"` — chosen specifically because it
+  leaves `src/server/index.ts`'s compiled path exactly `dist/server/index.js` (what
+  `docker/Dockerfile`'s `CMD` and `package.json`'s `start` already name), with `dist/shared/**`
+  landing alongside as a side effect, never colliding with `vite.config.ts`'s separately-scoped
+  `dist/client` output. Also switched the new server files' own shared/sibling imports to
+  relative `.js` specifiers, not `@shared`/`@server` aliases — plain `tsc` (this build, unlike
+  the Vite-bundled client/worker) emits an alias specifier verbatim, which Node's ESM loader then
+  can't resolve at runtime; verified by actually running the compiled `dist/server/index.js` and
+  exercising `POST`/`GET /api/sessions` against it for real, not just a green `tsc` exit code.
+- `server/store/session-store.ts`: one JSON file per session (ADR-002: "file-backed JSON on a
+  mounted volume — no database"), id generated server-side (`crypto.randomBytes`, base64url,
+  ~64 bits of entropy) and injected for deterministic collision/exhaustion tests rather than
+  hoping for a coincidence. `load()`'s id is untrusted (a URL param) and checked against a strict
+  base64url pattern before touching the filesystem — the same path-traversal discipline P1-G-1's
+  own note already names for *its* ids, applied here first since this task lands before it.
+  `docker/Dockerfile` now creates and `chown`s `/app/data` (so an empty named volume mounted over
+  it is still writable as the non-root `node` user), and both compose files/`.gitignore` account
+  for the new directory.
+- "Never put user data in the query string" is satisfied for the whole URL a recipient opens, not
+  only the fragment this task builds: the server-backed id appears in a path segment
+  (`/api/sessions/:id`) on the one `GET` that follows, not a query string, and it is an opaque,
+  non-sensitive short token, not the pattern data itself, whether by that check or the fragment
+  scheme's own use of `#`, which browsers never transmit to a server at all.
 **Acceptance criteria**
-- [ ] A glider gun session round-trips through a URL under 2 kB.
-- [ ] A 100k-cell pattern automatically switches to server-backed sharing with a copied short link.
-- [ ] Opening a share link never overwrites an existing autosave without asking.
+- [x] A glider gun session round-trips through a URL under 2 kB — built from the same hand-verified `BUILTIN_STAMPS` Gosper-gun RLE `ui/tools/stamp.ts` (P1-B-6) already ships, not re-typed coordinates; `tests/unit/client/session.spec.ts` builds a real `SessionDoc` from it, confirms `buildShareLink` returns an inline link under 2048 bytes, and decodes that exact fragment back to the original document.
+- [x] A 100k-cell pattern automatically switches to server-backed sharing with a copied short link — a real `Simulation.seedRandom(0.4, 1)` 500×500 soup (~100,000 live cells, deliberately poorly compressible) exceeds the 8 kB budget after compression, so `buildShareLink` calls the injected `postServerSession` and returns a `#s:<id>` link whose length never scales with pattern size; proven against a real compiled server too (`POST`/`GET /api/sessions` exercised end-to-end by hand against `dist/server/index.js`, and by `tests/unit/server/sessions-route.spec.ts`'s in-process `http.Server`). "Copied" is a clipboard-API concern for whichever task wires a share button to a live `navigator.clipboard` — out of this task's pure-logic scope, the same treatment already applied to every UI-wiring deferral in this workstream.
+- [x] Opening a share link never overwrites an existing autosave without asking — `resolveShareFragment` calls the injected `confirmOverwrite` only when `hasExistingAutosave` is true, and only proceeds to decode/fetch the incoming document if it resolves `true`; a decline, or no existing autosave at all (nothing to ask about), are both covered by dedicated tests, including proof `confirmOverwrite` is never even called when there's nothing to overwrite.
 
 ---
 
