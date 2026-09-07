@@ -10,9 +10,9 @@ import {
   unpackCellX,
   unpackCellY,
   worldToChunk,
-} from '../grid/coords';
-import { DEAD, type ChangeSet, type Snapshot } from '../types';
-import { decodeChunkSet, encodeChunkSet } from './compress';
+} from '../grid/coords.js';
+import { DEAD, type ChangeSet, type Snapshot } from '../types.js';
+import { decodeChunkSet, encodeChunkSet } from './compress.js';
 
 export const DEFAULT_KEYFRAME_INTERVAL = 64;
 export const DEFAULT_BYTE_CEILING = 256 * 1024 * 1024;

@@ -10,8 +10,8 @@
  * pattern stamped in with raw `set`s, …) that every subsequent `apply` call
  * can then update incrementally, independent of grid size.
  */
-import { CHUNK_AREA } from '../grid/coords';
-import { DEAD, type ChangeSet, type GridView } from '../types';
+import { CHUNK_AREA } from '../grid/coords.js';
+import { DEAD, type ChangeSet, type GridView } from '../types.js';
 
 /** A `StateId` is a grid byte; 256 slots always fits the palette. */
 const STATE_SLOTS = 256;

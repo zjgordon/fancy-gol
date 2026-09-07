@@ -8,8 +8,8 @@
  * actually needs it — this grid is the single-buffered storage step() reads from and writes
  * through.
  */
-import { DEAD, type ChunkView, type GridView, type Rect, type StateId } from '../types';
-import { Chunk } from './chunk';
+import { DEAD, type ChunkView, type GridView, type Rect, type StateId } from '../types.js';
+import { Chunk } from './chunk.js';
 import {
   CHUNK_SIZE,
   chunkToWorld,
@@ -19,7 +19,7 @@ import {
   unpackChunkX,
   unpackChunkY,
   worldToChunk,
-} from './coords';
+} from './coords.js';
 
 export interface ChunkedGridOptions {
   readonly boundary: 'bounded' | 'toroidal' | 'infinite';

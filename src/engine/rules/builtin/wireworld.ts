@@ -3,8 +3,8 @@
  * table. 4 × 4^8 = 262,144 entries — nobody hand-writes that; the generator is
  * the source of truth and is pinned against the schema-doc fixture.
  */
-import { SCHEMA_VERSION } from '../schema';
-import type { BuiltinRuleSet } from './types';
+import { SCHEMA_VERSION } from '../schema.js';
+import type { BuiltinRuleSet } from './types.js';
 
 const RADIX = 4;
 const NEIGHBOURS = 8;

@@ -4,7 +4,7 @@
  * with copy-pasteable examples, in `docs/ruleset-schema.md` — read that first if you're
  * writing a rule by hand.
  */
-import type { RuleSet } from '../types';
+import type { RuleSet } from '../types.js';
 
 /** Bumped whenever the persisted shape changes, so a future editor can migrate old documents. */
 export const SCHEMA_VERSION = 1;

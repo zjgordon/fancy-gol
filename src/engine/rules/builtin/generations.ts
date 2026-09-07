@@ -3,7 +3,7 @@
  * is the long-decay showcase (24 states — too many for lutN, so it compiles as
  * a closure, which is the point of shipping it).
  */
-import { fromNotation } from './from-notation';
+import { fromNotation } from './from-notation.js';
 
 export const STAR_WARS = fromNotation({
   id: 'star-wars',

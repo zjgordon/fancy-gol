@@ -15,9 +15,9 @@
  * indexed `state * (neighbours+1) + liveCount`. Same answers, a factor-of-states
  * less memory, and a simpler hot-path index.
  */
-import { compileNeighborhood, type CompiledNeighborhood } from '../neighborhood';
-import type { RuleSet, StateId, TransitionRow, TransitionSpec, TurmiteRow } from '../types';
-import { RuleValidationError } from './errors';
+import { compileNeighborhood, type CompiledNeighborhood } from '../neighborhood/index.js';
+import type { RuleSet, StateId, TransitionRow, TransitionSpec, TurmiteRow } from '../types.js';
+import { RuleValidationError } from './errors.js';
 
 /** Cap on a compiler-built (or reused) dense transition table. 4 MiB. */
 export const DENSE_TABLE_BUDGET = 4 * 1024 * 1024;

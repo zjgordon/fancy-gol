@@ -6,4 +6,4 @@
  * needs `RuleSet`, `PaintOp`, `ChangeSet` and friends too. This file re-exports that module in
  * full so every `@engine/types` import keeps working unchanged.
  */
-export * from '../shared/types';
+export * from '../shared/types.js';

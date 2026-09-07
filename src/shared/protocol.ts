@@ -12,7 +12,7 @@
  * module `shared/` may not import from (ADR-009). The worker handler (`worker/`, which may
  * import both) runs that deeper check once a `Command` has already been structurally accepted.
  */
-import type { PaintOp, Rect, RuleSet, Snapshot, StateId, StatSample, TickStats } from './types';
+import type { PaintOp, Rect, RuleSet, Snapshot, StateId, StatSample, TickStats } from './types.js';
 
 export const PROTOCOL_VERSION = 1;
 

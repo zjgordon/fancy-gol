@@ -2,12 +2,12 @@
  * The built-in ruleset catalogue. Every entry is a complete, validated,
  * compilable `RuleSetDocument` plus the tags Phase 2's library will filter on.
  */
-import { BRIANS_BRAIN } from './brians-brain';
-import { BLOOMERANG, STAR_WARS } from './generations';
-import { HIGHLANDS_LIQUID } from './highlands';
-import { LIFE_FAMILY } from './life';
-import type { BuiltinRuleSet } from './types';
-import { WIREWORLD } from './wireworld';
+import { BRIANS_BRAIN } from './brians-brain.js';
+import { BLOOMERANG, STAR_WARS } from './generations.js';
+import { HIGHLANDS_LIQUID } from './highlands.js';
+import { LIFE_FAMILY } from './life.js';
+import type { BuiltinRuleSet } from './types.js';
+import { WIREWORLD } from './wireworld.js';
 
 export const BUILTIN_RULESETS: readonly BuiltinRuleSet[] = [
   ...LIFE_FAMILY,
@@ -25,16 +25,16 @@ export function getBuiltin(id: string): BuiltinRuleSet | undefined {
   return BY_ID.get(id);
 }
 
-export type { BuiltinRuleSet, BuiltinTag } from './types';
-export { BRIANS_BRAIN } from './brians-brain';
-export { BLOOMERANG, STAR_WARS } from './generations';
+export type { BuiltinRuleSet, BuiltinTag } from './types.js';
+export { BRIANS_BRAIN } from './brians-brain.js';
+export { BLOOMERANG, STAR_WARS } from './generations.js';
 export {
   HIGHLANDS_GENERATIONS,
   HIGHLANDS_HEIGHT,
   HIGHLANDS_LIQUID,
   HIGHLANDS_SEED,
   HIGHLANDS_WIDTH,
-} from './highlands';
+} from './highlands.js';
 export {
   CONWAY,
   DAY_AND_NIGHT,
@@ -45,5 +45,5 @@ export {
   REPLICATOR,
   SEEDS,
   TWO_BY_TWO,
-} from './life';
-export { generateWireWorldTable, WIREWORLD, wireWorldNext } from './wireworld';
+} from './life.js';
+export { generateWireWorldTable, WIREWORLD, wireWorldNext } from './wireworld.js';

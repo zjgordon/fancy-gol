@@ -4,11 +4,11 @@
  * {@link RuleValidationError} whose `issues` carry a real JSON-pointer `path` and a `hint` —
  * never just the word "invalid" on its own.
  */
-import { compileNeighborhood } from '../neighborhood';
-import type { Neighborhood } from '../types';
-import { RuleValidationError, type RuleValidationIssue } from './errors';
-import type { RuleSetDocument } from './schema';
-import { SCHEMA_VERSION } from './schema';
+import { compileNeighborhood } from '../neighborhood/index.js';
+import type { Neighborhood } from '../types.js';
+import { RuleValidationError, type RuleValidationIssue } from './errors.js';
+import type { RuleSetDocument } from './schema.js';
+import { SCHEMA_VERSION } from './schema.js';
 
 const STATE_KINDS = new Set(['dead', 'live', 'decay', 'inert']);
 const BOUNDARY_KINDS = new Set(['bounded', 'toroidal', 'infinite']);

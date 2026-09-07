@@ -57,6 +57,12 @@ describe('specifier resolution', () => {
   it('leaves bare package specifiers unresolved (external)', () => {
     expect(resolveSpecifier('vitest', join(SRC, 'engine'))).toBeNull();
   });
+
+  it('strips a trailing .js from a relative import (server-side code names the compiled output, same module identity)', () => {
+    expect(resolveSpecifier('./chunk.js', join(SRC, 'engine/grid'))).toBe('engine/grid/chunk');
+    expect(resolveSpecifier('../types.js', join(SRC, 'engine/grid'))).toBe('engine/types');
+    expect(resolveSpecifier('../../shared/types.js', join(SRC, 'server/store'))).toBe('shared/types');
+  });
 });
 
 describe('forbidden globals in src/engine/**', () => {

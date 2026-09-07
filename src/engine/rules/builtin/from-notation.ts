@@ -2,9 +2,9 @@
  * Overlay catalogue metadata on a parsed Life-family rule without losing the
  * notation parser as the single source of B/S/G digits.
  */
-import { SCHEMA_VERSION } from '../schema';
-import { parseRuleNotation } from '../parse';
-import type { BuiltinRuleSet, BuiltinTag } from './types';
+import { SCHEMA_VERSION } from '../schema.js';
+import { parseRuleNotation } from '../parse.js';
+import type { BuiltinRuleSet, BuiltinTag } from './types.js';
 
 export interface LifeMeta {
   readonly id: string;

@@ -2,9 +2,9 @@
  * Compiles a declarative {@link Neighborhood} into flat `Int8Array` offset tables, computed
  * once at rule-compile time and never touched per-cell.
  */
-import type { Neighborhood } from '../types';
-import { RuleValidationError } from '../rules/errors';
-import { type Offset, hexOffsets, mooreOffsets, vonNeumannOffsets } from './offsets';
+import type { Neighborhood } from '../types.js';
+import { RuleValidationError } from '../rules/errors.js';
+import { type Offset, hexOffsets, mooreOffsets, vonNeumannOffsets } from './offsets.js';
 
 export const MAX_CUSTOM_OFFSETS = 48;
 

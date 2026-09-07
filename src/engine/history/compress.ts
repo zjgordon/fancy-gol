@@ -4,7 +4,7 @@
  * costs no dependency. Pages that do not shrink stay raw, tagged, so a 50% soup
  * never pays a 2× expansion.
  */
-import { CHUNK_AREA } from '../grid/coords';
+import { CHUNK_AREA } from '../grid/coords.js';
 
 const TAG_RAW = 0;
 const TAG_RLE = 1;

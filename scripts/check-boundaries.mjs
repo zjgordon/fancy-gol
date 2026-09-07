@@ -56,12 +56,18 @@ export function extractImports(source) {
   return [...specs];
 }
 
-/** Resolve a specifier to a `src/`-relative path, or null if it is an external package. */
+/** Resolve a specifier to a `src/`-relative path, or null if it is an external package. A
+ * trailing `.js` is stripped: server-side code (`src/server/**`, and anything it transitively
+ * reaches under `src/engine/**`/`src/shared/**`) is compiled by plain `tsc` for a real
+ * `node dist/server/index.js` runtime, so its relative imports name the *eventual compiled*
+ * `.js` file, per Node's own ESM resolution rules — the same source module `../foo.ts` and
+ * `../foo.js` both mean here, and this checker's job is layer identity, not literal text. */
 export function resolveSpecifier(spec, fromFileDir) {
   if (spec.startsWith('.')) {
     const abs = resolve(fromFileDir, spec);
     const rel = relative(SRC, abs).split('\\').join('/');
-    return rel.startsWith('..') ? null : rel;
+    if (rel.startsWith('..')) return null;
+    return rel.endsWith('.js') ? rel.slice(0, -3) : rel;
   }
   const alias = ALIASES.find((a) => spec === `@${a}` || spec.startsWith(`@${a}/`));
   if (alias) return spec.replace(`@${alias}`, alias);

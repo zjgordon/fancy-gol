@@ -3,7 +3,7 @@
  * optional year) Phase 2's library UI will filter on. They validate and compile
  * with the same pipeline as a user-authored rule — there is no privileged path.
  */
-import type { RuleSetDocument } from '../schema';
+import type { RuleSetDocument } from '../schema.js';
 
 export type BuiltinTag = 'chaotic' | 'stable' | 'explosive' | 'maze-like' | 'multi-state';
 

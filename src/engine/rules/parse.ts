@@ -11,8 +11,8 @@
  * Not supported (rejected explicitly, not mis-parsed): Hensel/non-totalistic notation
  * ("B2ci/S12"), where letters appear attached to specific neighbour-count digits.
  */
-import type { Neighborhood, RuleSet, StateDef, TransitionSpec } from '../types';
-import { RuleValidationError } from './errors';
+import type { Neighborhood, RuleSet, StateDef, TransitionSpec } from '../types.js';
+import { RuleValidationError } from './errors.js';
 
 const SUPPORTED_FORMS = [
   'B<digits>/S<digits> (e.g. "B3/S23")',

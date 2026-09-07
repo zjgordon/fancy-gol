@@ -2,8 +2,8 @@
  * `Chunk` — one 32x32 page of the grid (ADR-010). Owns its own summary counters so the grid,
  * the stats collector and the Phase 5 density LOD never recount by scanning.
  */
-import { DEAD, type StateId } from '../types';
-import { CHUNK_AREA, CHUNK_SIZE } from './coords';
+import { DEAD, type StateId } from '../types.js';
+import { CHUNK_AREA, CHUNK_SIZE } from './coords.js';
 
 /** Bits of `Chunk.borderMask`: does this edge/corner hold at least one live cell? */
 export const BORDER_N = 1 << 0;

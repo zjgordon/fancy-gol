@@ -4,7 +4,7 @@
  *
  * Citations follow LifeWiki / Golly's standard attributions.
  */
-import { fromNotation } from './from-notation';
+import { fromNotation } from './from-notation.js';
 
 export const CONWAY = fromNotation({
   id: 'conway',

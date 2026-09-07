@@ -6,8 +6,8 @@
  * stable: the liquid-side cell sees sum 14 (3 highland + 5 liquid) and stays
  * liquid; the 11–24 floor of an earlier draft let highland eat the boundary.
  */
-import { SCHEMA_VERSION } from '../schema';
-import type { BuiltinRuleSet } from './types';
+import { SCHEMA_VERSION } from '../schema.js';
+import type { BuiltinRuleSet } from './types.js';
 
 export const HIGHLANDS_LIQUID: BuiltinRuleSet = {
   version: SCHEMA_VERSION,

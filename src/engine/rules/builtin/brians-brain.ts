@@ -2,8 +2,8 @@
  * Brian's Brain — the 3-state totalistic rule that the schema doc expresses with
  * `decayStates: 1` rather than as a Generations string. Same evolution as B2/S/G3.
  */
-import { SCHEMA_VERSION } from '../schema';
-import type { BuiltinRuleSet } from './types';
+import { SCHEMA_VERSION } from '../schema.js';
+import type { BuiltinRuleSet } from './types.js';
 
 export const BRIANS_BRAIN: BuiltinRuleSet = {
   version: SCHEMA_VERSION,

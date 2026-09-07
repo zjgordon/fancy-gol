@@ -18,7 +18,7 @@
  * `ui/tools/select.ts`'s codec — lives in `client/session.ts`, which builds and consumes the
  * `SessionDoc` this file only *describes*.
  */
-import type { RuleSet } from './types';
+import type { RuleSet } from './types.js';
 
 export const CURRENT_SESSION_VERSION = 1;
 

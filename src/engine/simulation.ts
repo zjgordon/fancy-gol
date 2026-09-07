@@ -6,10 +6,10 @@
  * into a pooled back buffer, then applied only after *every* chunk has been
  * computed, so a neighbour still sees last tick's cells.
  */
-import type { Clock } from './clock';
-import { compileRule, type CompiledRule } from './rules/compile';
-import { RuleValidationError } from './rules/errors';
-import { ChunkedGrid } from './grid/chunked-grid';
+import type { Clock } from './clock.js';
+import { compileRule, type CompiledRule } from './rules/compile.js';
+import { RuleValidationError } from './rules/errors.js';
+import { ChunkedGrid } from './grid/chunked-grid.js';
 import {
   CHUNK_AREA,
   CHUNK_SIZE,
@@ -24,9 +24,9 @@ import {
   unpackChunkX,
   unpackChunkY,
   worldToChunk,
-} from './grid/coords';
-import { HistoryJournal, type HistoryJournalOptions } from './history/journal';
-import { Mulberry32 } from './rng';
+} from './grid/coords.js';
+import { HistoryJournal, type HistoryJournalOptions } from './history/journal.js';
+import { Mulberry32 } from './rng.js';
 import {
   DEAD,
   type ChangeSet,
@@ -38,9 +38,9 @@ import {
   type StateId,
   type StateMigration,
   type TickStats,
-} from './types';
+} from './types.js';
 
-export type { TickStats } from './types';
+export type { TickStats } from './types.js';
 
 const DEFAULT_SEED = 0x9e3779b9;
 const INITIAL_CHANGE_CAP = 1024;
