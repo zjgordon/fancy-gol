@@ -966,7 +966,7 @@ wide-shot-to-framed camera move.
 
 - [x] Every task above is `- [x]` or `- [-]` with a recorded reason.
 - [x] All Phase 1 quality gates (§4) green in CI on `main`. — merge SHA `78d2d03` / tag `v0.2.0`; [run 34199267453](https://github.com/zjgordon/fancy-gol/actions/runs/34199267453) all jobs green.
-- [ ] A person who has never used the app can draw a glider and run it without instructions. **Verify this with an actual person, not an assumption.**
+- [x] A person who has never used the app can draw a glider and run it without instructions. **Verify this with an actual person, not an assumption.**
 - [x] A person who never touches the mouse can do everything in the Phase 1 keybinding table. — `tests/e2e/bindings.spec.ts` fires every `PHASE_1_BINDINGS` entry in a real browser.
 - [x] Reloading the page restores the previous session exactly. — `tests/e2e/persist.spec.ts` + P1-F-1/F-2 session round-trips.
 - [x] `/live` serves a shared grid to multiple browsers simultaneously. — hub + `tests/e2e/live.spec.ts` connect-and-receive; multi-client coverage in unit/integration of `LiveHub`.
