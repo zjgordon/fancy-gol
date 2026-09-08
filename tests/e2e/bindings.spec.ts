@@ -47,11 +47,18 @@ async function pressBinding(page: Page, binding: string): Promise<void> {
     const shift = binding.includes('Shift+');
     const raw = binding.slice(binding.lastIndexOf('+') + 1);
     const key = raw.length === 1 ? raw.toLowerCase() : raw;
-    await page.keyboard.down('Control');
+    // Match Keymap's Mod expansion (SYSTEM_IS_MAC). Playwright WebKit on Linux often
+    // reports a Mac platform/UA, so Mod is Cmd — Control alone will not match.
+    const mod = await page.evaluate(() => {
+      const platform = navigator.platform ?? '';
+      const ua = navigator.userAgent ?? '';
+      return /Mac|iPhone|iPad|iPod/.test(platform) || /Mac OS X/.test(ua) ? 'Meta' : 'Control';
+    });
+    await page.keyboard.down(mod);
     if (shift) await page.keyboard.down('Shift');
     await page.keyboard.press(key);
     if (shift) await page.keyboard.up('Shift');
-    await page.keyboard.up('Control');
+    await page.keyboard.up(mod);
     return;
   }
   await page.keyboard.press(playwrightKey(binding));

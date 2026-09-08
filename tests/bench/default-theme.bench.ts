@@ -98,6 +98,9 @@ export const cases: BenchCase[] = [
     name: "Default theme's compiled palette(state, age) call cost (allocation-free O(1) lookup)",
     unit: 'ops/sec',
     higherIsBetter: true,
+    // Pure microbench: GHA shared runners swing >10% easily; absolute "still absurdly fast"
+    // is the real gate (hundreds of millions ops/sec either way).
+    baselineGate: false,
     warmup: 3,
     run() {
       const { palette } = THEME;
