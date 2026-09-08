@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { WebSocket } from 'ws';
 import { attachLiveServer, isLiveEnabled } from '@server/routes/live';
 import type { LiveMessage } from '@shared/live-protocol';
-import { connectLiveViewer, type LiveConnectionState } from '../../../src/client/live-client';
+import { connectLiveViewer, type LiveClientSocket, type LiveConnectionState } from '../../../src/client/live-client';
 
 let server: Server | undefined;
 let liveServer: ReturnType<typeof attachLiveServer> | undefined;
@@ -138,10 +138,13 @@ describe('connectLiveViewer (real client) — server restart does not wedge reco
 
     const states: LiveConnectionState[] = [];
     const messages: LiveMessage[] = [];
+    // Node's global `WebSocket` is stable from 22; on the engines floor (20) use `ws` so the
+    // reconnect path is still exercised for real rather than skipped.
     const viewer = connectLiveViewer({
       url,
       initialBackoffMs: 30,
       maxBackoffMs: 100,
+      socketFactory: (u) => new WebSocket(u) as unknown as LiveClientSocket,
       onStateChange: (s) => states.push(s),
       onMessage: (m) => messages.push(m),
     });

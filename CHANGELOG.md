@@ -381,6 +381,10 @@ Phase 1 — Interaction (*Make it usable.*).
 - `Canvas2DRenderer` reuses its ImageData tile buffer across same-size frames so zooming out
   below `cellSize` 4 no longer reallocates a full 1080p buffer every frame (needed to hold the
   P1-H-3 zoom min-fps budget stably).
+- Pin `undici@8.0.2` via `overrides` so jsdom 30 still boots under Node 20 (undici ≥ 8.0.3
+  needs `worker_threads.markAsUncloneable`, which landed in Node 22). The `/live` reconnect
+  integration test uses `ws` as its socket factory so it is not gated on Node 22's global
+  `WebSocket`.
 
 ## [0.1.0] — 2026-09-04
 

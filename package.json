@@ -47,5 +47,8 @@
     "typescript-eslint": "^8.69.0",
     "vite": "^8.2.2",
     "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "undici": "8.0.2"
   }
 }
