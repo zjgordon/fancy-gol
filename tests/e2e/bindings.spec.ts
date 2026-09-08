@@ -28,17 +28,16 @@ async function pressBinding(page: Page, binding: string): Promise<void> {
     const key = /^[a-zA-Z]$/.test(raw) ? (shift ? raw.toUpperCase() : raw.toLowerCase()) : raw;
     await page.evaluate(
       ({ k, sh }) => {
-        window.dispatchEvent(
-          new KeyboardEvent('keydown', {
-            key: k,
-            code: /^[a-zA-Z]$/.test(k) ? `Key${k.toUpperCase()}` : undefined,
-            ctrlKey: true,
-            metaKey: false,
-            shiftKey: sh,
-            bubbles: true,
-            cancelable: true,
-          }),
-        );
+        const init: KeyboardEventInit = {
+          key: k,
+          ctrlKey: true,
+          metaKey: false,
+          shiftKey: sh,
+          bubbles: true,
+          cancelable: true,
+        };
+        if (/^[a-zA-Z]$/.test(k)) init.code = `Key${k.toUpperCase()}`;
+        window.dispatchEvent(new KeyboardEvent('keydown', init));
       },
       { k: key, sh: shift },
     );
