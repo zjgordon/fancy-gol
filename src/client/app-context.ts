@@ -12,7 +12,7 @@
  * defaults to a no-op so the tools are fully exercisable (selectable, usable, producing correct
  * `PaintOp[]`) without one.
  */
-import type { PaintOp } from '@shared/types';
+import type { GridView, PaintOp } from '@shared/types';
 import { CommandRegistry, type AppCommand, type AppContext } from '@ui/commands/registry';
 import { Brush } from '@ui/tools/brush';
 import { EllipseTool } from '@ui/tools/ellipse';
@@ -27,6 +27,8 @@ import { ToolRegistry } from '@ui/tools/registry';
 export interface CreateAppContextOptions {
   /** Where a tool's finalised ops go once committed. Defaults to a no-op — see the module doc. */
   readonly onPaint?: (ops: readonly PaintOp[]) => void;
+  /** Live grid for fill/select. Forwarded to `ToolRegistry`; omitted until a composition root has a mirror. */
+  readonly getGrid?: () => GridView | undefined;
 }
 
 export interface AppContextBundle {
@@ -62,7 +64,10 @@ function toolSelectCommand(toolId: string, title: string, binding: string): AppC
 
 export function createAppContext(options: CreateAppContextOptions = {}): AppContextBundle {
   const onPaint = options.onPaint ?? (() => {});
-  const toolRegistry = new ToolRegistry({ onCommit: onPaint });
+  const toolRegistry = new ToolRegistry({
+    onCommit: onPaint,
+    ...(options.getGrid ? { getGrid: options.getGrid } : {}),
+  });
 
   toolRegistry.register(new Brush());
   toolRegistry.register(new Eraser());

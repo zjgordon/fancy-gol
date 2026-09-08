@@ -344,6 +344,18 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   Caught a real bug by actually simulating a server kill in a test: `ws`'s `WebSocketServer.close()`
   never closes already-open clients, which left the underlying `http.Server.close()` hanging
   forever — fixed by explicitly `terminate()`-ing every connected socket first. (P1-G-3)
+- Playwright harness (P1-H-1): Chromium, Firefox and WebKit against the production server
+  (`playwright.config.ts`, `tests/e2e/*.spec.ts`), with a `?test=1` flag that seeds the PRNG,
+  skips the intro, disables inertia, starts paused, and publishes `window.__fancyGol` so specs
+  can read cells, camera, commands, theme, share URLs and `/live` without scraping the canvas.
+  Specs cover a hand-drawn glider that translates after 4 steps, ctrl+wheel zoom and middle-drag
+  pan, pinch-zoom about the midpoint (relocated from P1-A-2), every `PHASE_1_BINDINGS` entry in a
+  real browser (relocated from P1-C-2), undo/redo, HighLife switch, theme persistence across
+  reload, a share-link round trip, and `/live` connect-and-receive. Trace on first retry; CI
+  job installs browsers `--with-deps` and runs after `verify`. Vitest excludes `tests/e2e/**`.
+  Wiring the composition root to actually *have* those commands (theme boot, edit stack,
+  session save, `/live` viewer, view/edit/help commands) was in-scope here — no later Phase 1
+  task owns the gap, the same treatment P1-G-3 gave `client/live-client.ts`. (P1-H-1)
 
 ## [0.1.0] — 2026-09-04
 

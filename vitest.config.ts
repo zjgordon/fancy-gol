@@ -30,6 +30,8 @@ export default defineConfig({
           fileParallelism: UNDER_COVERAGE,
           include: ['tests/**/*.spec.ts', 'src/**/*.spec.ts'],
           exclude: [
+            'tests/e2e/**',
+            'tests/visual/**',
             'tests/unit/ui/**',
             'tests/unit/render/**',
             'tests/unit/themes/**',

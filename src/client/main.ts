@@ -47,39 +47,59 @@
  * `capped` flag — the fill has already happened by the time anyone could ask a yes/no question
  * about it, so it's a toast, not a confirmation) shows one via the shared toast region.
  *
- * Deliberately NOT done here, recorded rather than silently skipped:
- *  - `EditStack`/`CommandBus.onUndoableRun` stay unwired. No `AppCommand` is `undoable: true`
- *    yet, and `edit.undo`/`edit.redo` aren't registered commands (their `bindings.ts` table
- *    entries stay silently skipped, exactly as `attachDefaultBindings` was designed to do).
- *    Wiring a real undo stack to live paint commits is genuine, separate scope.
- *  - `ToolContext.grid` (the fill tool's live-grid read) stays unwired — `ToolRegistry` has no
- *    constructor seam for it without widening `ToolRegistryOptions`, out of this task's file
- *    list. Both gaps are already recorded in `tool.ts`/`registry.ts`'s own doc comments.
+ * Deliberately NOT done in P1-D-1, closed here by P1-H-1 (the first task that actually needs
+ * these seams live in a real browser, the same "file list was incomplete, no other task owns
+ * the gap" treatment P1-G-3 already applied to `live-client.ts`):
+ *  - `EditStack` is wired: every tool commit records `{forward, inverse}` from the live mirror
+ *    so `edit.undo`/`edit.redo` reverse *edits*, never ticks.
+ *  - `ToolContext.grid` is supplied from `FrameGridMirror.view()` via `ToolRegistry`'s new
+ *    `getGrid` option, so fill and select can read cells.
+ *  - Theme registry + Default theme activate on boot and persist across reload.
+ *  - Session autosave / share-link restore / `session.save` are composed into boot.
+ *  - `?test=1` freezes the run for Playwright: seeded, paused, no intro, no inertia, and an
+ *    inspect API on `window.__fancyGol`.
  */
 import { BUILTIN_RULESETS, CONWAY, getBuiltin } from '@engine/rules/builtin';
 import { Simulation } from '@engine/simulation';
 import { Canvas2DRenderer } from '@render/canvas2d';
 import type { CompiledTheme, Viewport as RenderViewport } from '@render/types';
 import { CHUNK_AREA, type PaintOp, type RuleSet, type StateId } from '@shared/types';
+import { migrateSessionDoc, type SessionDoc } from '@shared/session';
 import { WorkerClient, type FrameEvent, type WorkerLike } from '@worker/client';
 import { FrameGridMirror } from '@worker/frame-view';
 import { Camera, EASE_OUT_CUBIC } from '@ui/camera';
 import { attachGestures } from '@ui/input/gestures';
 import { attachInputRouter, type ToolEvent, type ToolEventHandlers } from '@ui/input/router';
-import { attachDefaultBindings } from '@ui/input/bindings';
+import { attachDefaultBindings, PHASE_1_BINDINGS } from '@ui/input/bindings';
 import { attachKeymap, Keymap } from '@ui/input/keymap';
 import { CommandBus } from '@ui/commands/bus';
-import type { AppContext, SimControl } from '@ui/commands/registry';
+import { EditStack } from '@ui/commands/edit-stack';
+import type { AppCommand, AppContext, SimControl } from '@ui/commands/registry';
 import { SIM_COMMANDS } from '@ui/commands/builtin/sim';
 import { attachShell } from '@ui/components/shell';
 import { createTransportControls } from '@ui/components/transport';
 import { createSpeedControl, TpsMeter } from '@ui/components/speed';
 import { createStatusBar, STATUS_THROTTLE_MS, zoomPercent } from '@ui/components/statusbar';
 import { attachRulesetPicker, type RulesetSummary } from '@ui/components/ruleset-picker';
-import { confirmDialog } from '@ui/components/dialog';
+import { confirmDialog, openDialog } from '@ui/components/dialog';
 import { createToastRegion } from '@ui/components/toast';
 import type { FillTool } from '@ui/tools/fill';
+import type { Brush } from '@ui/tools/brush';
+import type { SelectTool } from '@ui/tools/select';
+import { ThemeRegistry } from '@themes/registry';
+import { DEFAULT_THEME } from '@themes/default/theme';
 import { createAppContext } from './app-context';
+import { connectLiveViewer, type LiveConnectionState } from './live-client';
+import { isTestMode, type FancyGolHarness } from './harness';
+import {
+  applySessionDoc,
+  buildSessionDoc,
+  buildShareLink,
+  createAutosave,
+  loadSession,
+  resolveShareFragment,
+  type RestoredSession,
+} from './session';
 
 /**
  * `WorkerClient` targets the structural {@link WorkerLike} surface, not `Worker` itself, so it
@@ -216,11 +236,12 @@ const THUMBNAIL_STEP_EVERY_N_FRAMES = 30;
 const THUMBNAIL_BATCH_SIZE = 4;
 
 const bootStart = performance.now();
-// Exposed for tooling (P1-H-1's Playwright harness, once it exists, is the eventual real
-// consumer — same interim substitution P0-I-1's own note already recorded for this exact field).
+// Exposed for tooling (P1-H-1's Playwright harness reads `__fancyGol`; `__fancyGolFirstFrameMs`
+// remains for the cold-load bench).
 declare global {
   interface Window {
     __fancyGolFirstFrameMs?: number;
+    __fancyGol?: FancyGolHarness;
   }
 }
 
@@ -235,9 +256,13 @@ function reducedMotion(): boolean {
 }
 
 function main(): void {
+  const testMode = isTestMode();
   const canvas = requireElement<HTMLCanvasElement>('#scene');
 
-  const shell = attachShell({ root: document });
+  const shell = attachShell({
+    root: document,
+    ...(testMode ? { reducedMotion: () => true } : {}),
+  });
 
   const renderer = new Canvas2DRenderer();
   const mirror = new FrameGridMirror();
@@ -267,6 +292,20 @@ function main(): void {
   /** The live ruleset (P1-D-4 can change this). Everywhere this file used to assume `CONWAY`
    * (the status bar's chips/cell lookup, the curated demo's painted state) reads this instead. */
   let activeRuleset: RuleSet = CONWAY;
+  let sessionSeed = SEED;
+  const editStack = new EditStack();
+  const commandLog: string[] = [];
+  let lastShareUrl: string | null = null;
+  let liveState: LiveConnectionState | null = null;
+  let liveMessageCount = 0;
+  let harnessReady = false;
+
+  function motionReduced(): boolean {
+    return testMode || reducedMotion();
+  }
+
+  const themeRegistry = new ThemeRegistry();
+  themeRegistry.register(DEFAULT_THEME);
 
   function toRenderViewport(): RenderViewport {
     const dpr = window.devicePixelRatio || 1;
@@ -326,10 +365,26 @@ function main(): void {
   }
 
   const toasts = createToastRegion();
+  const autosave = createAutosave({
+    buildDoc: snapshotDoc,
+    notify: (message) => toasts.show(message),
+  });
+
+  function commitPaint(ops: readonly PaintOp[], record = true): void {
+    if (ops.length === 0) return;
+    if (record) {
+      const grid = mirror.view();
+      const inverse = ops.map((op) => ({ x: op.x, y: op.y, state: grid.get(op.x, op.y) }));
+      editStack.record({ forward: ops, inverse });
+    }
+    void client.send({ cmd: 'paint', ops });
+    autosave.scheduleSave();
+  }
 
   const { context: toolContext, registry } = createAppContext({
+    getGrid: () => mirror.view(),
     onPaint: (ops) => {
-      void client.send({ cmd: 'paint', ops });
+      commitPaint(ops);
       // "Every long-running or destructive action ... routes through" the shared toast/dialog
       // primitives (P1-D-5) — a flood fill has already happened by the time anyone could ask a
       // yes/no question about it (`fill.ts`'s own doc comment), so a capped one gets a toast,
@@ -345,7 +400,7 @@ function main(): void {
   for (const cmd of SIM_COMMANDS) registry.register(cmd);
 
   const tpsMeter = new TpsMeter();
-  let simRunning = true;
+  let simRunning = !testMode;
   let targetTps = RUN_TPS;
   const simControl: SimControl = {
     get running() {
@@ -394,7 +449,7 @@ function main(): void {
       })();
     },
     randomSoup() {
-      void client.send({ cmd: 'seedRandom', density: 0.3, seed: Math.floor(Math.random() * 0xffffffff) >>> 0 });
+      void client.send({ cmd: 'seedRandom', density: 0.3, seed: testMode ? sessionSeed : Math.floor(Math.random() * 0xffffffff) >>> 0 });
     },
     setSpeed(tps: number) {
       targetTps = tps;
@@ -405,7 +460,7 @@ function main(): void {
   };
   const context: AppContext = { ...toolContext, sim: simControl };
 
-  const gestures = attachGestures(camera, canvas, { reducedMotion: () => reducedMotion() });
+  const gestures = attachGestures(camera, canvas, { reducedMotion: () => motionReduced() });
 
   // Closes P1-B-1's own documented seam: router.ts starts a tool stroke on any primary-button
   // pointerdown and has no visibility into gestures.ts's Space-held state, so a Space+left-drag
@@ -440,8 +495,128 @@ function main(): void {
   attachInputRouter(camera, canvas, gatedToolHandlers);
   context.toolRegistry.attachEscapeHandling(window);
 
+  function currentBrush(): Brush {
+    return context.toolRegistry.get('brush') as Brush;
+  }
+  function currentSelect(): SelectTool {
+    return context.toolRegistry.get('select') as SelectTool;
+  }
+  function currentThemeId(): string {
+    return themeRegistry.getPersistedId() ?? 'default';
+  }
+
+  const extraCommands: readonly AppCommand<number | void>[] = [
+    {
+      id: 'view.zoomIn',
+      title: 'Zoom in',
+      category: 'View',
+      defaultBinding: '+',
+      run: () => camera.zoomAt(camera.widthPx / 2, camera.heightPx / 2, 1.1),
+    },
+    {
+      id: 'view.zoomOut',
+      title: 'Zoom out',
+      category: 'View',
+      defaultBinding: '-',
+      run: () => camera.zoomAt(camera.widthPx / 2, camera.heightPx / 2, 1 / 1.1),
+    },
+    {
+      id: 'view.zoomToFit',
+      title: 'Zoom to fit',
+      category: 'View',
+      defaultBinding: '0',
+      run: () => camera.fitTo(WIDE_SHOT_RECT, 40),
+    },
+    {
+      id: 'edit.undo',
+      title: 'Undo',
+      category: 'Edit',
+      defaultBinding: 'Mod+Z',
+      isEnabled: () => editStack.canUndo,
+      run: () => {
+        const ops = editStack.undo();
+        if (ops) commitPaint(ops, false);
+      },
+    },
+    {
+      id: 'edit.redo',
+      title: 'Redo',
+      category: 'Edit',
+      defaultBinding: 'Mod+Shift+Z',
+      isEnabled: () => editStack.canRedo,
+      run: () => {
+        const ops = editStack.redo();
+        if (ops) commitPaint(ops, false);
+      },
+    },
+    {
+      id: 'edit.copy',
+      title: 'Copy',
+      category: 'Edit',
+      defaultBinding: 'Mod+C',
+      run: () => currentSelect().copy(),
+    },
+    {
+      id: 'edit.cut',
+      title: 'Cut',
+      category: 'Edit',
+      defaultBinding: 'Mod+X',
+      run: () => commitPaint(currentSelect().cut()),
+    },
+    {
+      id: 'edit.paste',
+      title: 'Paste',
+      category: 'Edit',
+      defaultBinding: 'Mod+V',
+      run: () => currentSelect().paste(),
+    },
+    {
+      id: 'session.save',
+      title: 'Save session',
+      category: 'Edit',
+      defaultBinding: 'Mod+S',
+      run: () => {
+        void saveAndShare();
+      },
+    },
+    {
+      id: 'brush.setSize',
+      title: 'Set brush size',
+      category: 'Tools',
+      defaultBinding: '1',
+      run: (_ctx, arg) => {
+        const size = typeof arg === 'number' ? arg : 1;
+        currentBrush().size = size;
+        const eraser = context.toolRegistry.get('eraser') as { size: number } | undefined;
+        if (eraser) eraser.size = size;
+      },
+    },
+    {
+      id: 'help.cheatsheet',
+      title: 'Shortcut cheat sheet',
+      category: 'Help',
+      defaultBinding: '?',
+      run: () => {
+        const handle = openDialog({ title: 'Keyboard shortcuts' });
+        const list = document.createElement('dl');
+        list.className = 'dialog-message';
+        for (const entry of PHASE_1_BINDINGS) {
+          if (entry.commandId === 'brush.setSize' && entry.arg !== 1) continue;
+          const dt = document.createElement('dt');
+          dt.textContent = entry.binding;
+          const dd = document.createElement('dd');
+          dd.textContent = entry.commandId;
+          list.append(dt, dd);
+        }
+        handle.panel.append(list);
+      },
+    },
+  ];
+  for (const cmd of extraCommands) registry.register(cmd);
+
   const bus = new CommandBus(registry, context, {
     onRun: (id) => {
+      commandLog.push(id);
       if (!id.startsWith('tool.select.')) return;
       canvas.style.cursor = context.toolRegistry.active?.cursor ?? 'default';
     },
@@ -500,7 +675,7 @@ function main(): void {
         id: s.id,
         name: s.name,
         count: lastPerState[s.id] ?? 0,
-        color: THEME.palette(s.id, 0),
+        color: (themeRegistry.getCompiledTheme() ?? THEME).palette(s.id, 0),
       })),
       cursor: cursorWorld,
       cellUnderCursor,
@@ -598,32 +773,238 @@ function main(): void {
         activeRuleset = target;
         lastPerState = new Uint32Array(target.states.length);
         rulesetPicker.setActive(id);
+        autosave.scheduleSave();
       })();
     },
   });
   shell.toolbar.appendChild(rulesetPicker.root);
 
+  function snapshotDoc(): SessionDoc {
+    return buildSessionDoc({
+      ruleset: { kind: 'builtin', id: activeRuleset.id },
+      grid: mirror.view(),
+      tick: lastTick,
+      seed: sessionSeed,
+      camera: { originX: camera.originX, originY: camera.originY, cellSize: camera.cellSize },
+      theme: currentThemeId(),
+      activeToolId: context.toolRegistry.active?.id ?? 'brush',
+    });
+  }
+
+  async function saveAndShare(): Promise<void> {
+    autosave.saveNow();
+    const result = await buildShareLink(snapshotDoc(), {
+      baseUrl: `${window.location.origin}${window.location.pathname}`,
+      postServerSession: async (doc) => {
+        const response = await fetch('/api/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(doc),
+        });
+        if (!response.ok) throw new Error(`session save failed: ${response.status}`);
+        return (await response.json()) as { id: string; shareUrl: string };
+      },
+    });
+    lastShareUrl = result.url;
+    const hash = new URL(result.url).hash;
+    if (hash) history.replaceState(null, '', hash);
+    toasts.show('Session saved — share the URL to restore it.');
+  }
+
+  async function resolveBootSession(): Promise<RestoredSession | null> {
+    const shareDoc = await resolveShareFragment(window.location.hash, {
+      hasExistingAutosave: loadSession() !== null,
+      confirmOverwrite: () =>
+        testMode
+          ? true
+          : confirmDialog({
+              title: 'Load shared session?',
+              message: 'This will replace your current autosave.',
+              confirmLabel: 'Load',
+            }),
+      fetchServerSession: async (id) => {
+        const response = await fetch(`/api/sessions/${encodeURIComponent(id)}`);
+        if (!response.ok) return null;
+        return migrateSessionDoc(await response.json());
+      },
+    });
+    if (shareDoc) {
+      try {
+        return applySessionDoc(shareDoc);
+      } catch {
+        return null;
+      }
+    }
+    const saved = loadSession();
+    if (!saved) return null;
+    try {
+      return applySessionDoc(saved);
+    } catch {
+      return null;
+    }
+  }
+
+  function connectLiveIfNeeded(): void {
+    if (window.location.pathname !== '/live') return;
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    connectLiveViewer({
+      url: `${protocol}://${window.location.host}/live`,
+      onStateChange: (state) => {
+        liveState = state;
+      },
+      onMessage: () => {
+        liveMessageCount += 1;
+      },
+    });
+  }
+
+  function publishHarness(): void {
+    if (!testMode) return;
+    const harness: FancyGolHarness = {
+      get ready() {
+        return harnessReady;
+      },
+      get tick() {
+        return lastTick;
+      },
+      get population() {
+        return lastPopulation;
+      },
+      get running() {
+        return simRunning;
+      },
+      get targetTps() {
+        return targetTps;
+      },
+      get cellSize() {
+        return camera.cellSize;
+      },
+      get originX() {
+        return camera.originX;
+      },
+      get originY() {
+        return camera.originY;
+      },
+      get widthPx() {
+        return camera.widthPx;
+      },
+      get heightPx() {
+        return camera.heightPx;
+      },
+      get activeToolId() {
+        return context.toolRegistry.active?.id ?? null;
+      },
+      get rulesetId() {
+        return activeRuleset.id;
+      },
+      get themeId() {
+        return currentThemeId();
+      },
+      get brushSize() {
+        return currentBrush().size;
+      },
+      get canUndo() {
+        return editStack.canUndo;
+      },
+      get canRedo() {
+        return editStack.canRedo;
+      },
+      get lastCommands() {
+        return commandLog;
+      },
+      get liveState() {
+        return liveState;
+      },
+      get liveMessageCount() {
+        return liveMessageCount;
+      },
+      get lastShareUrl() {
+        return lastShareUrl;
+      },
+      getCell: (x, y) => mirror.view().get(x, y),
+      worldToScreen: (x, y) => camera.worldToScreen(x, y),
+      screenToWorld: (px, py) => camera.screenToWorld(px, py),
+    };
+    window.__fancyGol = harness;
+  }
+
   async function boot(): Promise<void> {
+    const restored = await resolveBootSession();
+    const themeId = restored?.theme ?? themeRegistry.getPersistedId() ?? 'default';
+    try {
+      themeRegistry.activate(themeId);
+    } catch {
+      themeRegistry.activate('default');
+    }
+    const compiled = themeRegistry.getCompiledTheme();
+    if (compiled) renderer.setTheme(compiled);
+    themeRegistry.subscribe(({ compiled: next }) => {
+      renderer.setTheme(next);
+      if (hasFrame) {
+        renderer.setViewport(toRenderViewport());
+        renderer.draw({ cells: mirror.view(), dirty: null, tick: lastTick });
+      }
+    });
+
     await renderer.init(canvas);
-    renderer.setTheme(THEME);
     applyViewport();
     requestAnimationFrame(cameraRedrawLoop);
     setInterval(syncStatusBar, STATUS_THROTTLE_MS);
 
-    client.onFrame(renderFrame);
+    client.onFrame((frame) => {
+      renderFrame(frame);
+      if (!harnessReady) {
+        harnessReady = true;
+        publishHarness();
+      }
+    });
 
-    await client.send({ cmd: 'init', ruleset: CONWAY, width: WORLD_WIDTH, height: WORLD_HEIGHT, seed: SEED });
-    await client.send({ cmd: 'paint', ops: gunOps(20, 20, primaryLiveState(activeRuleset)) });
-    await client.send({ cmd: 'run', tps: RUN_TPS });
+    if (restored) {
+      activeRuleset = restored.ruleset;
+      sessionSeed = restored.seed;
+      lastPerState = new Uint32Array(restored.ruleset.states.length);
+      rulesetPicker.setActive(restored.ruleset.id);
+      await client.send({
+        cmd: 'init',
+        ruleset: restored.ruleset,
+        width: WORLD_WIDTH,
+        height: WORLD_HEIGHT,
+        seed: restored.seed,
+      });
+      if (restored.paintOps.length > 0) {
+        await client.send({ cmd: 'paint', ops: restored.paintOps });
+      }
+      camera.originX = restored.camera.originX;
+      camera.originY = restored.camera.originY;
+      camera.cellSize = restored.camera.cellSize;
+      if (context.toolRegistry.get(restored.activeToolId)) {
+        context.toolRegistry.activate(restored.activeToolId);
+        canvas.style.cursor = context.toolRegistry.active?.cursor ?? 'default';
+      }
+    } else {
+      await client.send({ cmd: 'init', ruleset: CONWAY, width: WORLD_WIDTH, height: WORLD_HEIGHT, seed: sessionSeed });
+      await client.send({ cmd: 'paint', ops: gunOps(20, 20, primaryLiveState(activeRuleset)) });
+    }
 
-    playIntro();
+    if (!testMode) {
+      await client.send({ cmd: 'run', tps: RUN_TPS });
+      playIntro();
+    } else {
+      camera.originX = restored?.camera.originX ?? framedTarget.originX;
+      camera.originY = restored?.camera.originY ?? framedTarget.originY;
+      camera.cellSize = restored?.camera.cellSize ?? framedTarget.cellSize;
+      void shell.playIntro();
+      publishHarness();
+    }
+
+    connectLiveIfNeeded();
   }
 
   /** The cold-start choreography: chrome fades in (`shell.playIntro`) while the camera animates
    * wide-shot-to-framed, together taking ~1.2 s — skipped under reduced motion, cancelled
    * instantly by any real input either way. */
   function playIntro(): void {
-    if (reducedMotion()) {
+    if (motionReduced()) {
       camera.originX = framedTarget.originX;
       camera.originY = framedTarget.originY;
       camera.cellSize = framedTarget.cellSize;

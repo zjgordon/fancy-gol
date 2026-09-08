@@ -9,13 +9,21 @@
  * here, not to a future task, because it's meaningless without already knowing which tool is
  * active — the one piece of state only this module has.
  */
-import type { PaintOp } from '@shared/types';
+import type { GridView, PaintOp } from '@shared/types';
 import type { ToolEvent, ToolEventHandlers } from '@ui/input/router';
 import type { Tool, ToolContext } from './tool';
 
 export interface ToolRegistryOptions {
   /** Called with a tool's finalised ops from `onUp`. Never called with an empty array. */
   readonly onCommit?: (ops: readonly PaintOp[]) => void;
+  /**
+   * Live grid the tools that *read* cells (fill, select) see on every event. Optional: generative
+   * tools never ask for it, and a registry constructed without one (unit tests, `createAppContext`
+   * before a worker mirror exists) leaves `ToolContext.grid` undefined — fill no-ops, select
+   * finalises an empty pattern. P1-H-1's composition root is the first caller that actually
+   * supplies one, closing the seam `tool.ts` left open.
+   */
+  readonly getGrid?: () => GridView | undefined;
 }
 
 /** The minimal keyboard surface `attachEscapeHandling` needs — real `Window`/`Element` shaped. */
@@ -28,9 +36,11 @@ export class ToolRegistry {
   private readonly tools = new Map<string, Tool>();
   private activeId: string | null = null;
   private readonly onCommit: (ops: readonly PaintOp[]) => void;
+  private readonly getGrid: () => GridView | undefined;
 
   constructor(options: ToolRegistryOptions = {}) {
     this.onCommit = options.onCommit ?? (() => {});
+    this.getGrid = options.getGrid ?? (() => undefined);
   }
 
   /** Registers a tool. The first tool ever registered becomes active automatically. */
@@ -70,6 +80,10 @@ export class ToolRegistry {
 
   /** Pass directly to `attachInputRouter` — relays every phase to whichever tool is active. */
   get handlers(): ToolEventHandlers {
+    const toContext = (event: ToolEvent): ToolContext => {
+      const grid = this.getGrid();
+      return grid ? { event, grid } : { event };
+    };
     return {
       onDown: (e: ToolEvent) => this.active?.onDown(toContext(e)),
       onMove: (e: ToolEvent) => this.active?.onMove(toContext(e)),
@@ -89,8 +103,4 @@ export class ToolRegistry {
     target.addEventListener('keydown', onKeyDown);
     return () => target.removeEventListener('keydown', onKeyDown);
   }
-}
-
-function toContext(event: ToolEvent): ToolContext {
-  return { event };
 }

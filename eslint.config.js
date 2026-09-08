@@ -21,7 +21,7 @@ const ENGINE_FORBIDDEN_GLOBALS = [
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'coverage/**', 'node_modules/**', '.agents/**'],
+    ignores: ['dist/**', 'coverage/**', 'node_modules/**', '.agents/**', 'playwright-report/**', 'test-results/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,

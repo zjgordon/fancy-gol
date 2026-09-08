@@ -161,6 +161,31 @@ describe('ToolRegistry', () => {
         registry.handlers.onUp?.(toolEvent('up', 1, 1));
       }).not.toThrow();
     });
+
+    it('supplies ToolContext.grid from getGrid when the option is given', () => {
+      const sim = new Simulation({ ruleset: CONWAY, width: 32, height: 32, seed: 1 });
+      sim.paint([{ x: 2, y: 3, state: 1 }]);
+      const seen: Array<number | undefined> = [];
+      class GridReader implements Tool {
+        readonly id = 'reader';
+        readonly cursor = 'crosshair';
+        onDown(ctx: ToolContext): void {
+          seen.push(ctx.grid?.get(2, 3));
+        }
+        onMove(): void {}
+        onUp(): readonly PaintOp[] {
+          return [];
+        }
+        onCancel(): void {}
+        preview(): readonly PaintOp[] {
+          return [];
+        }
+      }
+      const registry = new ToolRegistry({ getGrid: () => sim.view() });
+      registry.register(new GridReader());
+      registry.handlers.onDown?.(toolEvent('down', 2, 3));
+      expect(seen).toEqual([1]);
+    });
   });
 
   describe('Escape cancels the active tool, leaving the grid byte-identical (P1-B-2)', () => {
