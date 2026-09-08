@@ -921,7 +921,7 @@ wide-shot-to-framed camera move.
 - [x] A deliberate 2 px padding change is caught — `tests/visual/padding.spec.ts` screenshots, injects `#chrome-transport { padding: 2px }`, and asserts the buffers differ.
 - [x] Rendering is pixel-identical at `dpr` 1 and 2 modulo scale — relocated from P0-H-2 (2026-09-03). `tests/visual/dpr.spec.ts` reads the real `#scene` backing store at `deviceScaleFactor` 1 (1280×720) and 2 (2560×1440), averages dpr 2 2×2 into CSS pixels, and requires ≤ 0.1% differing pixels. Chrome is Tab-hidden so this is the renderer, not the compositor HUD. Not `CanvasRecorder`.
 
-#### - [ ] P1-H-3 · Interaction performance budgets
+#### - [~] P1-H-3 · Interaction performance budgets — @cursor, started 2026-09-08
 **Depends on:** P1-B-3, P0-I-4 (bench harness) · **Files:** `tests/bench/interaction.bench.ts`
 **Acceptance criteria**
 - [ ] Input-to-pixel latency for a paint stroke ≤ 32 ms at the 95th percentile (measured via the recorder + injected clock).
