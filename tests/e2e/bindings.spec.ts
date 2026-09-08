@@ -7,7 +7,12 @@ function playwrightKey(binding: string): string {
   return binding.replace(/^Mod\+/, 'ControlOrMeta+');
 }
 
-/** Fire a binding the way a real keydown looks to `attachKeymap` (it matches `event.key`). */
+/**
+ * Fire a binding the way a real keydown looks to `attachKeymap` (it matches `event.key`).
+ * Mod chords are synthesized with *only* Ctrl (Linux CI) so they canonicalise to `Ctrl+…`,
+ * matching `Mod+…` registration — setting both ctrl+meta produces `Ctrl+Cmd+…` and misses.
+ * Real ControlOrMeta chords are also intercepted by WebKit/Chromium chrome (Save/Undo).
+ */
 async function pressBinding(page: Page, binding: string): Promise<void> {
   if (binding === '+' || binding === '?') {
     // Playwright has no portable physical key for `+`/`?` across layouts. The keymap
@@ -17,19 +22,18 @@ async function pressBinding(page: Page, binding: string): Promise<void> {
     }, binding);
     return;
   }
-  if (binding === 'Mod+S' || binding === 'Mod+Z' || binding === 'Mod+Shift+Z') {
-    // WebKit on Linux CI intercepts the real ControlOrMeta chords (Save / Undo / Redo).
-    // Synthesize a cancelable keydown the keymap still matches, without the browser chrome.
-    const shift = binding.includes('Shift');
-    const key = binding.endsWith('+Z') || binding.endsWith('Z') ? (shift ? 'Z' : 'z') : 's';
+  if (binding.startsWith('Mod+')) {
+    const shift = binding.includes('Shift+');
+    const raw = binding.slice(binding.lastIndexOf('+') + 1);
+    const key = /^[a-zA-Z]$/.test(raw) ? (shift ? raw.toUpperCase() : raw.toLowerCase()) : raw;
     await page.evaluate(
       ({ k, sh }) => {
         window.dispatchEvent(
           new KeyboardEvent('keydown', {
             key: k,
-            code: k.toUpperCase() === 'S' ? 'KeyS' : 'KeyZ',
+            code: /^[a-zA-Z]$/.test(k) ? `Key${k.toUpperCase()}` : undefined,
             ctrlKey: true,
-            metaKey: true,
+            metaKey: false,
             shiftKey: sh,
             bubbles: true,
             cancelable: true,
@@ -53,6 +57,11 @@ test.describe('Phase 1 keybindings', () => {
     await clickWorld(page, cell.x, cell.y);
     await waitForCell(page, cell.x, cell.y, 1);
 
+    // Undo/redo must fire while the edit stack still has the paint — later sim.clear /
+    // reset / soup would disable them and bus.run would no-op without recording.
+    await pressBinding(page, 'Mod+Z');
+    await pressBinding(page, 'Mod+Shift+Z');
+
     const seen = new Set<string>();
     for (const entry of PHASE_1_BINDINGS) {
       if (entry.commandId === 'sim.toggleRun') continue;
@@ -64,8 +73,6 @@ test.describe('Phase 1 keybindings', () => {
       seen.add(entry.commandId);
     }
 
-    await pressBinding(page, 'Mod+Z');
-    await pressBinding(page, 'Mod+Shift+Z');
     await page.keyboard.press('Space');
 
     const commands = await lastCommands(page);
