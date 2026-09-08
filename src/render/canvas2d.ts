@@ -130,6 +130,10 @@ export class Canvas2DRenderer implements Renderer {
     this.touchedChunks.add(`${chunk.cx},${chunk.cy}`);
     this.collectRuns(chunk, this.vectorClipRect);
   };
+  // Reused across tile-path frames of the same CSS size. Zooming out to `cellSize` < 4 used to
+  // `createImageData(1920, 1080)` every frame (~8 MB) and blow the P1-H-3 zoom min-fps budget
+  // on allocation alone; grow-only reuse matches the run-pool discipline above.
+  private tileImage: ImageData | null = null;
 
   /** `Promise<void>` per ADR-005's `Renderer` contract (WebGL2's `init` needs shader compilation; Canvas2D's doesn't — nothing here is genuinely asynchronous). Failure is a rejection, not a synchronous throw, matching that contract. */
   init(canvas: CanvasLike): Promise<void> {
@@ -212,6 +216,16 @@ export class Canvas2DRenderer implements Renderer {
     this.touchedChunks.clear();
     this.runPoolCount = 0;
     for (const bucket of this.stateBuckets) bucket.length = 0;
+    this.tileImage = null;
+  }
+
+  /** Grow-only tile buffer: allocate only when dimensions change. */
+  private acquireTileImage(ctx: Canvas2DContext, w: number, h: number): ImageData {
+    if (this.tileImage && this.tileImage.width === w && this.tileImage.height === h) {
+      return this.tileImage;
+    }
+    this.tileImage = ctx.createImageData(w, h);
+    return this.tileImage;
   }
 
   /** The next reusable `Run` slot from the pool, growing it (once, permanently) only the first time a frame needs more than it currently holds. */
@@ -333,7 +347,7 @@ export class Canvas2DRenderer implements Renderer {
     const py0 = Math.round(pixelRect.y);
     const w = Math.max(1, Math.round(pixelRect.x + pixelRect.width) - px0);
     const h = Math.max(1, Math.round(pixelRect.y + pixelRect.height) - py0);
-    const image = ctx.createImageData(w, h);
+    const image = this.acquireTileImage(ctx, w, h);
     const data = image.data;
 
     const bg = this.resolveColor(theme.background);

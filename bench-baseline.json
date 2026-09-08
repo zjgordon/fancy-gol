@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "recorded": "2026-09-06",
+  "recorded": "2026-09-08",
   "node": "v24.20.0",
   "platform": "linux x64",
-  "note": "Real machine run. Medians of 7 after per-case warmup. Updating this file is a reviewed commit, never a reflex. 2026-09-04 (P1-D-1): client-js-gzip jumped 21.90kB -> 31.33kB (+43%, still well under the 120kB budget) now that main.ts genuinely imports the whole Phase 1 interaction layer it was built to use -- Camera, gestures, the input router, the tool registry and all eight tools, the command bus, keymap/bindings, and the layout shell -- none of which any prior client entry point pulled in. Every other case moved within noise. 2026-09-05 (P1-D-4): client-js-gzip jumped again, 31.33kB -> 44.35kB (+42%, still well under the 120kB budget, now 37% of it): main.ts imports engine/simulation.ts's Simulation class directly for the first time (previously bundled only into the worker chunk, now duplicated into the main chunk too, since Vite doesn't share modules across separate entry bundles) plus the full BUILTIN_RULESETS catalogue (all 14 rulesets' definitions, including WireWorld's generated-at-load transition table's own source code) for the ruleset picker's live thumbnails and entry list. Every other case moved within noise. 2026-09-06 (P1-E-3): added default-theme-render-frame and default-theme-palette-lookup. The former re-runs render-frame-cpu's exact scenario with the real compiled Default theme swapped in for that file's ad hoc stub palette (12.03ms vs render-frame-cpu's 11.90ms -- the real palette costs about as much as the trivial stub, i.e. effectively nothing extra), gated at the same 16.6ms Phase 0 floor rather than the task's literal <=10ms figure, which is a real-browser GPU-raster budget this CPU-only CanvasRecorder path cannot honestly measure (render-frame-cpu's own committed baseline is already ~11.9ms on this harness); relocated to Playwright/P1-H-3 once it exists. The latter measures the palette function alone (~220M calls/sec) to prove it is genuinely a zero-allocation O(1) lookup, immune to the GPU/sandbox variance the frame-time case isn't. Every pre-existing case's own median is unchanged from 2026-09-05's committed run -- this update only adds the two new entries, re-measuring the rest would have replaced real numbers with same-machine noise for no reason.",
+  "note": "Real machine run. Medians of 7 after per-case warmup. Updating this file is a reviewed commit, never a reflex. 2026-09-04 (P1-D-1): client-js-gzip jumped 21.90kB -> 31.33kB (+43%, still well under the 120kB budget) now that main.ts genuinely imports the whole Phase 1 interaction layer it was built to use -- Camera, gestures, the input router, the tool registry and all eight tools, the command bus, keymap/bindings, and the layout shell -- none of which any prior client entry point pulled in. Every other case moved within noise. 2026-09-05 (P1-D-4): client-js-gzip jumped again, 31.33kB -> 44.35kB (+42%, still well under the 120kB budget, now 37% of it): main.ts imports engine/simulation.ts's Simulation class directly for the first time (previously bundled only into the worker chunk, now duplicated into the main chunk too, since Vite doesn't share modules across separate entry bundles) plus the full BUILTIN_RULESETS catalogue (all 14 rulesets' definitions, including WireWorld's generated-at-load transition table's own source code) for the ruleset picker's live thumbnails and entry list. Every other case moved within noise. 2026-09-06 (P1-E-3): added default-theme-render-frame and default-theme-palette-lookup. The former re-runs render-frame-cpu's exact scenario with the real compiled Default theme swapped in for that file's ad hoc stub palette (12.03ms vs render-frame-cpu's 11.90ms -- the real palette costs about as much as the trivial stub, i.e. effectively nothing extra), gated at the same 16.6ms Phase 0 floor rather than the task's literal <=10ms figure, which is a real-browser GPU-raster budget this CPU-only CanvasRecorder path cannot honestly measure (render-frame-cpu's own committed baseline is already ~11.9ms on this harness); relocated to Playwright/P1-H-3 once it exists. The latter measures the palette function alone (~220M calls/sec) to prove it is genuinely a zero-allocation O(1) lookup, immune to the GPU/sandbox variance the frame-time case isn't. Every pre-existing case's own median is unchanged from 2026-09-05's committed run -- this update only adds the two new entries, re-measuring the rest would have replaced real numbers with same-machine noise for no reason. 2026-09-08 (P1-H-3): added paint-stroke-latency-p95, pan-1000pxs-1080p, zoom-32-0.5-32-min-fps. Absolute budgets only (baselineGate false — same policy as render-frame-cpu). Canvas2DRenderer now reuses the ImageData tile buffer across same-size frames so zoom-out no longer reallocates a full 1080p buffer every frame. Pre-existing case medians unchanged.",
   "tolerance": 0.1,
   "cases": {
     "client-js-gzip": {
@@ -80,6 +80,24 @@
       "unit": "ms",
       "budget": 4,
       "higherIsBetter": false
+    },
+    "paint-stroke-latency-p95": {
+      "median": 0.03114999999996826,
+      "unit": "ms",
+      "budget": 32,
+      "higherIsBetter": false
+    },
+    "pan-1000pxs-1080p": {
+      "median": 210.9336145369047,
+      "unit": "fps",
+      "budget": 55,
+      "higherIsBetter": true
+    },
+    "zoom-32-0.5-32-min-fps": {
+      "median": 40.335408280852036,
+      "unit": "fps",
+      "budget": 30,
+      "higherIsBetter": true
     }
   }
 }
