@@ -141,6 +141,9 @@ export const cases: BenchCase[] = [
     name: 'snapshot then restore a 512² soup',
     unit: 'ms',
     higherIsBetter: false,
+    // Sub-millisecond-adjacent timer: a 10% band is smaller than CI scheduling noise
+    // (same treatment as seek-4000 / stats-overhead).
+    baselineGate: false,
     warmup: 2,
     setup() {
       snapSim = soup(512, 512, 0.5);

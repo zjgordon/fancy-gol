@@ -36,4 +36,6 @@ export interface FancyGolHarness {
   screenToWorld(px: number, py: number): { x: number; y: number };
   /** Test-only camera pose. Omitted fields keep their current value. */
   setCamera(pose: { originX?: number; originY?: number; cellSize?: number }): void;
+  /** Run a registered command by id (avoids browser-reserved shortcuts like Mod+S on WebKit). */
+  runCommand(id: string): Promise<void> | void;
 }

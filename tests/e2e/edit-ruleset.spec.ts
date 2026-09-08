@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { clickWorld, confirmClear, gotoApp, viewportCenterCell, waitForCell } from './helpers';
+import { clickWorld, confirmClear, gotoApp, runCommand, viewportCenterCell, waitForCell } from './helpers';
 
 test.describe('undo, redo, and ruleset switch', () => {
   test('undo restores a painted cell and redo puts it back', async ({ page }) => {
@@ -10,11 +10,11 @@ test.describe('undo, redo, and ruleset switch', () => {
     await clickWorld(page, cell.x, cell.y);
     await waitForCell(page, cell.x, cell.y, 1);
 
-    await page.keyboard.press('ControlOrMeta+z');
+    await runCommand(page, 'edit.undo');
     await waitForCell(page, cell.x, cell.y, 0);
     expect(await page.evaluate(() => window.__fancyGol?.canRedo)).toBe(true);
 
-    await page.keyboard.press('ControlOrMeta+Shift+z');
+    await runCommand(page, 'edit.redo');
     await waitForCell(page, cell.x, cell.y, 1);
   });
 

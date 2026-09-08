@@ -47,19 +47,25 @@ export async function clickWorld(page: Page, x: number, y: number): Promise<void
   const point = await page.evaluate(
     ({ wx, wy }) => {
       const api = window.__fancyGol;
-      const canvas = document.querySelector('#scene');
-      if (!api || !(canvas instanceof HTMLCanvasElement)) {
-        throw new Error('canvas or harness missing');
-      }
-      const rect = canvas.getBoundingClientRect();
+      if (!api) throw new Error('window.__fancyGol is missing');
       // Brush/status-bar use `Math.round`. The geometric centre of cell `n` is `n + 0.5`,
       // which rounds *up* to `n + 1` — so aim inside the cell, not at the far edge.
-      const screen = api.worldToScreen(wx + 0.25, wy + 0.25);
-      return { x: rect.left + screen.px, y: rect.top + screen.py };
+      return api.worldToScreen(wx + 0.25, wy + 0.25);
     },
     { wx: x, wy: y },
   );
-  await page.mouse.click(point.x, point.y);
+  // Click relative to the canvas element (not page mouse coords). WebKit on CI is flaky when
+  // the page-level mouse path and getBoundingClientRect disagree about chrome insets.
+  await page.locator('#scene').click({ position: { x: point.px, y: point.py } });
+}
+
+/** Run a command by id — preferred over reserved browser shortcuts (Mod+S, etc.) on WebKit. */
+export async function runCommand(page: Page, id: string): Promise<void> {
+  await page.evaluate(async (commandId) => {
+    const api = window.__fancyGol;
+    if (!api) throw new Error('window.__fancyGol is missing');
+    await api.runCommand(commandId);
+  }, id);
 }
 
 export async function waitForCell(page: Page, x: number, y: number, state: number): Promise<void> {

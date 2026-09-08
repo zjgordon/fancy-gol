@@ -929,6 +929,7 @@ function main(): void {
         if (pose.originY !== undefined) camera.originY = pose.originY;
         if (pose.cellSize !== undefined) camera.cellSize = pose.cellSize;
       },
+      runCommand: (id) => bus.run(id),
     };
     window.__fancyGol = harness;
   }

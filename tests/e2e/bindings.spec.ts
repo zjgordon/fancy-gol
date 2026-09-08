@@ -17,6 +17,29 @@ async function pressBinding(page: Page, binding: string): Promise<void> {
     }, binding);
     return;
   }
+  if (binding === 'Mod+S' || binding === 'Mod+Z' || binding === 'Mod+Shift+Z') {
+    // WebKit on Linux CI intercepts the real ControlOrMeta chords (Save / Undo / Redo).
+    // Synthesize a cancelable keydown the keymap still matches, without the browser chrome.
+    const shift = binding.includes('Shift');
+    const key = binding.endsWith('+Z') || binding.endsWith('Z') ? (shift ? 'Z' : 'z') : 's';
+    await page.evaluate(
+      ({ k, sh }) => {
+        window.dispatchEvent(
+          new KeyboardEvent('keydown', {
+            key: k,
+            code: k.toUpperCase() === 'S' ? 'KeyS' : 'KeyZ',
+            ctrlKey: true,
+            metaKey: true,
+            shiftKey: sh,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      },
+      { k: key, sh: shift },
+    );
+    return;
+  }
   await page.keyboard.press(playwrightKey(binding));
 }
 

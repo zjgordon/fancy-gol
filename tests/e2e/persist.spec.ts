@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { clickWorld, confirmClear, gotoApp, viewportCenterCell, waitForCell, waitForHarness } from './helpers';
+import { clickWorld, confirmClear, gotoApp, runCommand, viewportCenterCell, waitForCell, waitForHarness } from './helpers';
 
 test.describe('theme persistence and share-link round trip', () => {
   test('theme id survives a reload', async ({ page }) => {
@@ -24,7 +24,8 @@ test.describe('theme persistence and share-link round trip', () => {
     await clickWorld(page, cell.x, cell.y);
     await waitForCell(page, cell.x, cell.y, 1);
 
-    await page.keyboard.press('ControlOrMeta+s');
+    // Avoid ControlOrMeta+S — WebKit/CI treat it as the browser "Save Page" chord.
+    await runCommand(page, 'session.save');
     await page.waitForFunction(() => Boolean(window.__fancyGol?.lastShareUrl), null, { timeout: 15_000 });
     const url = await page.evaluate(() => window.__fancyGol?.lastShareUrl);
     expect(url).toBeTruthy();
