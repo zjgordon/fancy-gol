@@ -221,13 +221,15 @@ main ──●──────────────────────
 
 ### Next branch
 
-Phase 0 lives on `phase/0-foundation`. After that branch merges to `main` and is tagged
-`v0.1.0`, start Phase 1 with:
+Phase 1 lives on `phase/1-interaction` and ships as `v0.2.0`. After that merge and tag, start
+Phase 2 with:
 
 ```bash
 git checkout main && git pull
-git checkout -b phase/1-interaction
+git checkout -b phase/2-library-and-stats
 ```
+
+Confirm the next task in `.agents/dashboard.html` before cutting the branch.
 
 **Do not commit implementation code to `main`.** Merge a phase only when its gates are green,
 then tag.

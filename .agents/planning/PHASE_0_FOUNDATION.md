@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| **Status** | Complete on `phase/0-foundation` — merge to `main` and tag `v0.1.0` to ship |
+| **Status** | Complete on `phase/0-foundation` — shipped as `v0.1.0` on `main` |
 | **Ships version** | `0.1.0` |
 | **Prerequisites** | None. This is the first phase. |
 | **Theme of the phase** | **Make it correct.** |

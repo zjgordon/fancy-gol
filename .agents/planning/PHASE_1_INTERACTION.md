@@ -5,7 +5,7 @@
 
 | | |
 |---|---|
-| **Status** | ☐ Not started |
+| **Status** | Complete on `phase/1-interaction` — merge to `main` and tag `v0.2.0` to ship |
 | **Ships version** | `0.2.0` |
 | **Prerequisites** | Phase 0 complete and tagged `v0.1.0`. |
 | **Theme of the phase** | **Make it usable.** |

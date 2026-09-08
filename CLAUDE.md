@@ -30,8 +30,8 @@ it is not done. That rule is named **Agit-Prop** in the inception document and i
 
 ## Current state
 
-- Phase 0 is complete on `phase/0-foundation`. Next: merge to `main`, tag `v0.1.0`, then
-  `phase/1-interaction`. Confirm in `.agents/dashboard.html`.
+- Phase 1 is complete on `phase/1-interaction` (merge to `main`, tag `v0.2.0`). Confirm the
+  next task in `.agents/dashboard.html` before cutting `phase/2-library-and-stats`.
 - **Do not commit implementation code to `main`.**
 
 ## Branching — important
@@ -41,7 +41,7 @@ own branch and merged back when all of that phase's gates are green.
 
 ```bash
 git checkout main && git pull
-git checkout -b phase/1-interaction     # ← after v0.1.0 is on main
+git checkout -b phase/2-library-and-stats   # ← after v0.2.0 is on main
 ```
 
 Branch names: `phase/0-foundation`, `phase/1-interaction`, `phase/2-library-and-stats`,
