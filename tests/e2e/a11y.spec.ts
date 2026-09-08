@@ -5,6 +5,19 @@ import { gotoApp } from './helpers';
 const require = createRequire(import.meta.url);
 const AXE_PATH = require.resolve('axe-core/axe.min.js');
 
+interface AxeResults {
+  readonly violations: readonly unknown[];
+}
+
+interface AxeWindow {
+  axe: {
+    run: (
+      context: Element,
+      options: { rules: Record<string, { enabled: boolean }> },
+    ) => Promise<AxeResults>;
+  };
+}
+
 test.describe('shell accessibility', () => {
   test('axe-core reports zero violations on the live chrome', async ({ page }) => {
     await gotoApp(page);
@@ -15,14 +28,7 @@ test.describe('shell accessibility', () => {
     await page.addScriptTag({ path: AXE_PATH });
 
     const results = await page.evaluate(async () => {
-      // axe is injected via addScriptTag above
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const axe = (window as any).axe as {
-        run: (
-          context: Element,
-          options: { rules: Record<string, { enabled: boolean }> },
-        ) => Promise<{ violations: unknown[] }>;
-      };
+      const { axe } = window as unknown as AxeWindow;
       const root = document.getElementById('chrome') ?? document.body;
       return axe.run(root, {
         // Canvas pixels are out of axe's reach; HUD colour-contrast is covered by the Default

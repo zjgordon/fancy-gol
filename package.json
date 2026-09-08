@@ -1,6 +1,6 @@
 {
   "name": "fancy-gol",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "A cellular automata simulator with absolutely too much time spent on what's essentially a toy. But this toy doesn't care, it wants to be fabulous!",
   "type": "module",

@@ -7,7 +7,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-Phase 1 — Interaction (*Make it usable.*), in progress.
+## [0.2.0] — 2026-09-08
+
+Phase 1 — Interaction (*Make it usable.*).
 
 ### Added
 
@@ -366,6 +368,19 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   averaged 2×2 into CSS pixels and must match dpr 1 within 0.1% — a browser raster, not
   `CanvasRecorder`. Baselines live next to the specs; CI installs DejaVu/Liberation fonts so
   the chrome shots are not a font lottery. (P1-H-2)
+- Interaction performance budgets (P1-H-3): `tests/bench/interaction.bench.ts` gates paint-stroke
+  input-to-pixel latency p95 (≤ 32 ms), pan at 1000 px/s (≥ 55 fps @ 1080p), and zoom
+  `cellSize` 32 → 0.5 → 32 (min ≥ 30 fps) via the CanvasRecorder + injected-clock path. Numbers
+  live in `bench-baseline.json` and fail CI on a missed absolute budget. (P1-H-3)
+- Playwright axe-core sweep of the live `#chrome` shell (zero violations, colour-contrast
+  deferred to tokens + visual baselines). CI splits functional e2e (3 browsers) from Chromium
+  visual jobs and also runs on `phase/**` pushes.
+
+### Changed
+
+- `Canvas2DRenderer` reuses its ImageData tile buffer across same-size frames so zooming out
+  below `cellSize` 4 no longer reallocates a full 1080p buffer every frame (needed to hold the
+  P1-H-3 zoom min-fps budget stably).
 
 ## [0.1.0] — 2026-09-04
 
@@ -703,5 +718,6 @@ renderer and canvas bridge (H), client shell · Express · Docker · CI · this 
   known limitation (P0-H-3). Fixed locally: the reset handler now forces one full `draw()` right
   after resetting the mirror, before repainting the gun. (P0-I-1)
 
-[Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/ZJGordon/fancy-gol/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/ZJGordon/fancy-gol/releases/tag/v0.1.0
