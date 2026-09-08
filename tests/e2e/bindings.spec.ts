@@ -7,40 +7,51 @@ function playwrightKey(binding: string): string {
   return binding.replace(/^Mod\+/, 'ControlOrMeta+');
 }
 
+/** Install once: stop browser chrome from eating Ctrl+S / Ctrl+Z before our keymap. */
+async function ensureModGuard(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const w = window as Window & { __fancyGolModGuard?: boolean };
+    if (w.__fancyGolModGuard) return;
+    w.__fancyGolModGuard = true;
+    // Capture phase so we mark the event before WebKit's default Save/Undo handling.
+    // Other listeners (including attachKeymap) still run — preventDefault does not stop them.
+    window.addEventListener(
+      'keydown',
+      (e) => {
+        if (!(e.ctrlKey || e.metaKey)) return;
+        const k = e.key.toLowerCase();
+        if (k === 's' || k === 'z') e.preventDefault();
+      },
+      true,
+    );
+  });
+}
+
 /**
  * Fire a binding the way a real keydown looks to `attachKeymap` (it matches `event.key`).
- * Mod chords are synthesized with *only* Ctrl (Linux CI) so they canonicalise to `Ctrl+…`,
- * matching `Mod+…` registration — setting both ctrl+meta produces `Ctrl+Cmd+…` and misses.
- * Real ControlOrMeta chords are also intercepted by WebKit/Chromium chrome (Save/Undo).
+ * Mod chords use Playwright's trusted keyboard API — WebKit ignores ctrlKey/metaKey on
+ * synthetic `new KeyboardEvent(...)` (untrusted), so page.evaluate dispatch never matches
+ * `Mod+…` there. A capture-phase guard blocks browser Save/Undo chrome from swallowing them.
  */
 async function pressBinding(page: Page, binding: string): Promise<void> {
   if (binding === '+' || binding === '?') {
     // Playwright has no portable physical key for `+`/`?` across layouts. The keymap
-    // canonicalises on `event.key`, so synthesize that.
+    // canonicalises on `event.key`, so synthesize that (no modifiers — WebKit-safe).
     await page.evaluate((key) => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
     }, binding);
     return;
   }
   if (binding.startsWith('Mod+')) {
+    await ensureModGuard(page);
     const shift = binding.includes('Shift+');
     const raw = binding.slice(binding.lastIndexOf('+') + 1);
-    const key = /^[a-zA-Z]$/.test(raw) ? (shift ? raw.toUpperCase() : raw.toLowerCase()) : raw;
-    await page.evaluate(
-      ({ k, sh }) => {
-        const init: KeyboardEventInit = {
-          key: k,
-          ctrlKey: true,
-          metaKey: false,
-          shiftKey: sh,
-          bubbles: true,
-          cancelable: true,
-        };
-        if (/^[a-zA-Z]$/.test(k)) init.code = `Key${k.toUpperCase()}`;
-        window.dispatchEvent(new KeyboardEvent('keydown', init));
-      },
-      { k: key, sh: shift },
-    );
+    const key = raw.length === 1 ? raw.toLowerCase() : raw;
+    await page.keyboard.down('Control');
+    if (shift) await page.keyboard.down('Shift');
+    await page.keyboard.press(key);
+    if (shift) await page.keyboard.up('Shift');
+    await page.keyboard.up('Control');
     return;
   }
   await page.keyboard.press(playwrightKey(binding));
