@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'phase/**']
   pull_request:
 
 concurrency:
@@ -14,6 +14,8 @@ env:
   NODE_CURRENT: '22'
   NODE_PREVIOUS: '20'
   PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+  # Node 20 is still our engines floor; GHA is deprecating the Node 20 action runtime.
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
 jobs:
   verify:
@@ -146,7 +148,41 @@ jobs:
     name: e2e (playwright)
     runs-on: ubuntu-latest
     needs: verify
-    timeout-minutes: 15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_CURRENT }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - run: npm run build
+
+      - name: Run functional e2e (Chromium, Firefox, WebKit)
+        run: npx playwright test --project=chromium --project=firefox --project=webkit
+        env:
+          E2E_SKIP_BUILD: '1'
+          CI: 'true'
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-e2e
+          path: playwright-report/
+          retention-days: 14
+
+  visual:
+    name: visual (playwright)
+    runs-on: ubuntu-latest
+    needs: verify
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -160,13 +196,13 @@ jobs:
       - name: Install screenshot fonts
         run: sudo apt-get update && sudo apt-get install -y fonts-dejavu-core fonts-liberation
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium firefox webkit
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
 
       - run: npm run build
 
-      - name: Run Playwright suite
-        run: npm run e2e
+      - name: Run visual regression (Chromium only)
+        run: npx playwright test --project=visual
         env:
           E2E_SKIP_BUILD: '1'
           CI: 'true'
@@ -175,6 +211,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-visual
           path: playwright-report/
           retention-days: 14

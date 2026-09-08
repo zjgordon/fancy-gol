@@ -7,7 +7,8 @@
  * split `worker/handler.ts`/`worker/sim.worker.ts` already established.
  *
  * `/api/sessions` (ADR-002, P1-F-2), `/api/rulesets` (ADR-002, P1-G-1) and `/api/patterns`
- * (ADR-002, P1-G-2) are the real routes so far; `/live` is still a Phase 1 follow-up.
+ * (ADR-002, P1-G-2) are the HTTP routes; `/live` is a WebSocket upgrade attached after
+ * `listen()` in `index.ts` (ADR-002, P1-G-3) — not an Express middleware.
  */
 import { readFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
@@ -87,9 +88,8 @@ export function createApp(opts: CreateAppOptions = {}): Express {
     }),
   );
 
-  // Anything under /api/ that isn't a real route (/live is still to come) is a JSON 404, never
-  // the SPA shell — an API client checking `err.response.data.error` shouldn't have to sniff
-  // HTML.
+  // Anything under /api/ that isn't a real route is a JSON 404, never the SPA shell — an API
+  // client checking `err.response.data.error` shouldn't have to sniff HTML.
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'not found' });
   });

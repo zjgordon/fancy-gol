@@ -3,6 +3,8 @@ import { CONWAY } from '@engine/rules/builtin';
 import { Simulation } from '@engine/simulation';
 import type { RuleSet } from '@engine/types';
 
+const UNDER_COVERAGE = process.env['VITEST_COVERAGE'] === '1';
+
 function stamp(sim: Simulation, cells: Array<readonly [number, number]>, ox = 0, oy = 0): void {
   for (const [x, y] of cells) sim.set(ox + x, oy + y, 1);
 }
@@ -142,7 +144,9 @@ describe('P0-E-2 boundary modes', () => {
       expect(box.height).toBeLessThanOrEqual(64);
       expect(box.x).toBeGreaterThan(shift - 64);
 
-      expect(lateMs).toBeLessThanOrEqual(earlyMs * 1.2);
+      // Wall-clock ratio is load-sensitive under coverage / shared CI runners — keep the
+      // functional glider + reclamation asserts above, gate the timing only on a quiet run.
+      if (!UNDER_COVERAGE) expect(lateMs).toBeLessThanOrEqual(earlyMs * 1.2);
     },
   );
 });

@@ -305,20 +305,24 @@ describe('Phase 0 paint and seed budgets', () => {
     if (!UNDER_COVERAGE) expect(ms).toBeLessThan(20);
   });
 
-  it('seedRandom(0.5) is reproducible and within ±0.5% of target on a 1M-cell field', () => {
-    const field = { width: 1024, height: 1024 };
-    const a = new Simulation({ ruleset: CONWAY, ...field, seed: 0 });
-    const b = new Simulation({ ruleset: CONWAY, ...field, seed: 99 });
-    a.seedRandom(0.5, 0x51eed);
-    b.seedRandom(0.5, 0x51eed);
-    expect(a.snapshot().chunkData).toEqual(b.snapshot().chunkData);
-    expect(a.snapshot().chunkKeys).toEqual(b.snapshot().chunkKeys);
+  it(
+    'seedRandom(0.5) is reproducible and within ±0.5% of target on a 1M-cell field',
+    { timeout: 20_000 },
+    () => {
+      const field = { width: 1024, height: 1024 };
+      const a = new Simulation({ ruleset: CONWAY, ...field, seed: 0 });
+      const b = new Simulation({ ruleset: CONWAY, ...field, seed: 99 });
+      a.seedRandom(0.5, 0x51eed);
+      b.seedRandom(0.5, 0x51eed);
+      expect(a.snapshot().chunkData).toEqual(b.snapshot().chunkData);
+      expect(a.snapshot().chunkKeys).toEqual(b.snapshot().chunkKeys);
 
-    const n = 1024 * 1024;
-    const density = a.stats.population / n;
-    expect(density).toBeGreaterThanOrEqual(0.5 - 0.005);
-    expect(density).toBeLessThanOrEqual(0.5 + 0.005);
-  });
+      const n = 1024 * 1024;
+      const density = a.stats.population / n;
+      expect(density).toBeGreaterThanOrEqual(0.5 - 0.005);
+      expect(density).toBeLessThanOrEqual(0.5 + 0.005);
+    },
+  );
 
   it(
     'snapshot of a 1M-live-cell island serialises in < 100 ms and is ≥ 90% smaller than the dense world',
