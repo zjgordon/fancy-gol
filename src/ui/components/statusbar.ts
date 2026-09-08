@@ -92,8 +92,11 @@ export function createStatusBar(): StatusBar {
   const cell = row('cell');
   const zoom = row('zoom');
   const fps = row('fps');
+  fps.el.dataset['mask'] = 'volatile';
   const step = row('step');
+  step.el.dataset['mask'] = 'volatile';
   const render = row('render');
+  render.el.dataset['mask'] = 'volatile';
   const memory = row('mem');
 
   const chipsRow = document.createElement('div');

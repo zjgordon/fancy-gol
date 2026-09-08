@@ -34,4 +34,6 @@ export interface FancyGolHarness {
   getCell(x: number, y: number): number;
   worldToScreen(x: number, y: number): { px: number; py: number };
   screenToWorld(px: number, py: number): { x: number; y: number };
+  /** Test-only camera pose. Omitted fields keep their current value. */
+  setCamera(pose: { originX?: number; originY?: number; cellSize?: number }): void;
 }

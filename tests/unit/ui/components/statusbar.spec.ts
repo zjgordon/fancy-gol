@@ -61,6 +61,14 @@ describe('createStatusBar', () => {
     expect(valueOf(bar.root, 'mem')).toBe('~2.0 KB');
   });
 
+  it('marks fps/step/render rows as volatile so visual regression can mask them', () => {
+    const bar = createStatusBar();
+    for (const label of ['fps', 'step', 'render']) {
+      const row = [...bar.root.querySelectorAll('.row')].find((r) => r.querySelector('.label')?.textContent === label)!;
+      expect(row.getAttribute('data-mask')).toBe('volatile');
+    }
+  });
+
   it('every numeric readout is a fixed-width column, so a digit-count change never shifts its label', () => {
     const bar = createStatusBar();
     bar.update(baseState());

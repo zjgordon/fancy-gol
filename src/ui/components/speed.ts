@@ -122,6 +122,7 @@ export function createSpeedControl(onSetSpeed: (tps: number) => void): SpeedCont
   const targetLabel = document.createElement('span');
   targetLabel.className = 'label';
   const actualValue = document.createElement('span');
+  actualValue.dataset['mask'] = 'volatile';
   row.append(targetLabel, actualValue);
 
   const sliderRow = document.createElement('div');

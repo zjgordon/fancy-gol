@@ -356,6 +356,16 @@ Phase 1 — Interaction (*Make it usable.*), in progress.
   Wiring the composition root to actually *have* those commands (theme boot, edit stack,
   session save, `/live` viewer, view/edit/help commands) was in-scope here — no later Phase 1
   task owns the gap, the same treatment P1-G-3 gave `client/live-client.ts`. (P1-H-1)
+- Visual regression baseline (P1-H-2): Chromium screenshots of the shell, toolbar, transport,
+  status bar, confirm-clear dialog, and the rendered grid at three zoom levels (`cellSize` 4 /
+  16 / 32), in Default light and dark. fps/step/render (and the speed "actual" readout) are
+  marked `data-mask="volatile"` and masked so a 10 Hz status tick cannot flake a baseline.
+  Tolerance is the phase doc's ≤ 0.1% pixels. A padding spec proves a deliberate 2 px change
+  on the transport is caught. The relocated P0-H-2 dpr claim compares the real canvas backing
+  store at `deviceScaleFactor` 1 vs 2 (same 1280×720 CSS viewport, chrome hidden): dpr 2 is
+  averaged 2×2 into CSS pixels and must match dpr 1 within 0.1% — a browser raster, not
+  `CanvasRecorder`. Baselines live next to the specs; CI installs DejaVu/Liberation fonts so
+  the chrome shots are not a font lottery. (P1-H-2)
 
 ## [0.1.0] — 2026-09-04
 

@@ -924,6 +924,11 @@ function main(): void {
       getCell: (x, y) => mirror.view().get(x, y),
       worldToScreen: (x, y) => camera.worldToScreen(x, y),
       screenToWorld: (px, py) => camera.screenToWorld(px, py),
+      setCamera: (pose) => {
+        if (pose.originX !== undefined) camera.originX = pose.originX;
+        if (pose.originY !== undefined) camera.originY = pose.originY;
+        if (pose.cellSize !== undefined) camera.cellSize = pose.cellSize;
+      },
     };
     window.__fancyGol = harness;
   }
