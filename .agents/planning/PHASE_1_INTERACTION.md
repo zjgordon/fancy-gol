@@ -5,7 +5,7 @@
 
 | | |
 |---|---|
-| **Status** | Complete on `phase/1-interaction` — merge to `main` and tag `v0.2.0` to ship |
+| **Status** | Shipped on `main` as `v0.2.0` |
 | **Ships version** | `0.2.0` |
 | **Prerequisites** | Phase 0 complete and tagged `v0.1.0`. |
 | **Theme of the phase** | **Make it usable.** |
@@ -965,7 +965,7 @@ wide-shot-to-framed camera move.
 ## 6. Definition of Done — Phase 1
 
 - [x] Every task above is `- [x]` or `- [-]` with a recorded reason.
-- [ ] All Phase 1 quality gates (§4) green in CI on `main`. — tick after the merge-run is green.
+- [x] All Phase 1 quality gates (§4) green in CI on `main`. — merge SHA `78d2d03` / tag `v0.2.0`; [run 34199267453](https://github.com/zjgordon/fancy-gol/actions/runs/34199267453) all jobs green.
 - [ ] A person who has never used the app can draw a glider and run it without instructions. **Verify this with an actual person, not an assumption.**
 - [x] A person who never touches the mouse can do everything in the Phase 1 keybinding table. — `tests/e2e/bindings.spec.ts` fires every `PHASE_1_BINDINGS` entry in a real browser.
 - [x] Reloading the page restores the previous session exactly. — `tests/e2e/persist.spec.ts` + P1-F-1/F-2 session round-trips.
