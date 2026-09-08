@@ -89,6 +89,9 @@ jobs:
 
       - run: npm ci
 
+      # client-js-gzip reads dist/client/assets — build before measuring.
+      - run: npm run build
+
       # Compares against the committed bench-baseline.json; fails on a missed
       # absolute budget or a >10% regression, printing a before/after table.
       - run: npm run bench
