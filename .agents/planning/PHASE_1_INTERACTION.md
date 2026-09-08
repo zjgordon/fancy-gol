@@ -905,7 +905,7 @@ wide-shot-to-framed camera move.
 
 ### Workstream H — Testing & gates
 
-#### - [ ] P1-H-1 · Playwright harness
+#### - [~] P1-H-1 · Playwright harness — @cursor, started 2026-09-08
 **Depends on:** P1-D-1 · **Files:** `playwright.config.ts`, `tests/e2e/*.spec.ts`
 **Implementation notes** Chromium + Firefox + WebKit. Deterministic runs: seed the PRNG, freeze the clock, disable the intro choreography and inertia via a `?test=1` flag. Trace on first retry. Add the job to CI.
 **Acceptance criteria**
