@@ -173,12 +173,12 @@ checker change (`engine → shared/`, scan `shared/**`), the canonical syntactic
 - [x] Encoded multi-state patterns re-import correctly into the decoder and produce identical grids.
 - [x] Output line length never exceeds 70 characters.
 
-#### - [ ] P2-A-3 · Plaintext & Life 1.06 codecs
+#### - [x] P2-A-3 · Plaintext & Life 1.06 codecs — @cursor, started 2026-09-11
 **Depends on:** P2-A-1 · **Files:** `src/engine/patterns/{plaintext,life106}.ts`
 **Acceptance criteria**
-- [ ] `.cells` files with `!Name:` headers decode correctly, including trailing-whitespace-trimmed rows.
-- [ ] Life 1.06 coordinate lists round-trip, including negative coordinates.
-- [ ] Format sniffing picks the right decoder for all fixtures without an extension hint.
+- [x] `.cells` files with `!Name:` headers decode correctly, including trailing-whitespace-trimmed rows.
+- [x] Life 1.06 coordinate lists round-trip, including negative coordinates.
+- [x] Format sniffing picks the right decoder for all fixtures without an extension hint.
 
 #### - [ ] P2-A-4 · Pattern normalisation & identity
 **Depends on:** P2-A-1 · **Files:** `src/engine/patterns/normalize.ts`
