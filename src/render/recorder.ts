@@ -74,6 +74,10 @@ export class CanvasRecorder {
     return [this.pixels[idx]!, this.pixels[idx + 1]!, this.pixels[idx + 2]!, this.pixels[idx + 3]!];
   }
 
+  snapshot(): Uint8ClampedArray {
+    return this.pixels.slice();
+  }
+
   /** Clears the log and allocation count for the next frame — the pixel buffer is left alone (a real canvas persists across frames too). */
   resetLog(): void {
     this.calls.length = 0;

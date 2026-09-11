@@ -210,13 +210,13 @@ checker change (`engine → shared/`, scan `shared/**`), the canonical syntactic
 - [x] Every entry has a `source`; catalogue descriptions are original (no pasted wiki prose).
 - [x] Declared `speed` values are verified by simulation for all spaceships in the seed set.
 
-#### - [ ] P2-B-2 · Thumbnail generation
+#### - [x] P2-B-2 · Thumbnail generation — @cursor, started 2026-09-11
 **Depends on:** P2-B-1 · **Files:** `scripts/gen-thumbnails.mjs`
-**Implementation notes** Build-time, headless, using the real engine and the `recorder`-style rasteriser: render one period (or 60 generations for aperiodic patterns) to an animated WebP, plus a static PNG poster. Size to 128×128, theme-neutral (rendered with a token-derived greyscale so it reads in every theme). Committed to the repo so the client needs no runtime generation. Re-run when **P2-B-5** adds patterns.
+**Implementation notes** Build-time, headless, using the real engine and the `recorder`-style rasteriser: render one period (or 60 generations for aperiodic patterns) to an animated APNG, plus a static PNG poster. Size to 128×128, theme-neutral (rendered with a token-derived greyscale so it reads in every theme). Committed to the repo so the client needs no runtime generation. Re-run when **P2-B-5** adds patterns. Architecture §2.1 allows APNG/WebP; this task emits **PNG + APNG** because zlib is already in Node and a VP8 WebP encoder is not fifty lines of TypeScript.
 **Acceptance criteria**
-- [ ] All thumbnails regenerate deterministically — running the script twice produces byte-identical files.
-- [ ] Total thumbnail payload < 3 MB for the full catalogue (asserted again after P2-B-5).
-- [ ] Animated thumbnails loop seamlessly for periodic patterns (first frame === frame `period`).
+- [x] All thumbnails regenerate deterministically — running the script twice produces byte-identical files.
+- [x] Total thumbnail payload < 3 MB for the full catalogue (asserted again after P2-B-5).
+- [x] Animated thumbnails loop seamlessly for periodic patterns (first frame === frame `period`).
 
 #### - [ ] P2-B-3 · Library panel UI
 **Depends on:** P2-B-2, P2-G-2, P1-D-1 · **Files:** `src/ui/panels/library/*`, `src/ui/search/fuzzy.ts` (or equivalent shared home)

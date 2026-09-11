@@ -57,4 +57,15 @@ describe('CanvasRecorder', () => {
     expect(rec.bufferAllocations).toBe(0);
     expect(rec.pixelAt(0, 0)).toEqual([255, 255, 255, 255]); // still painted from before
   });
+
+  it('snapshot returns an independent copy of the backing buffer', () => {
+    const rec = new CanvasRecorder(2, 1);
+    rec.fillStyle = '#112233';
+    rec.fillRect(0, 0, 1, 1);
+    const a = rec.snapshot();
+    rec.fillStyle = '#ffffff';
+    rec.fillRect(0, 0, 2, 1);
+    expect([...a.subarray(0, 4)]).toEqual([0x11, 0x22, 0x33, 255]);
+    expect(rec.pixelAt(0, 0)).toEqual([255, 255, 255, 255]);
+  });
 });
