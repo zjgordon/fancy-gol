@@ -22,6 +22,10 @@ and not in a chat log.
 - **2026-09-11 — Changelog shape (§3.7 / §9 Q4):** Trim to user-visible + task ID from the
   `v0.3.0` boundary; reasoning stays in phase docs and module comments. Declared in
   `AGENTS.md` §2.6. Existing entries untouched.
+- **2026-09-11 — Phase 2 sequencing (§9 Q5) + remaining recommended actions:** All open retro
+  proposals landed in planning on `main` before cutting `phase/2-library-and-stats`. New task IDs:
+  **P2-B-5**, **P2-C-6**, **P2-F-2**, **P2-F-3**, **P2-G-1**, **P2-G-2**. Agents should follow
+  phase docs / ADRs / `planning/README.md` — not this retro — for implementation.
 
 > This is **not** `.agents/docs/RETROSPECTIVE.md`. That one is written at `1.0.0` and closes the
 > whole experiment (Phase 6). This is a mid-flight check that the momentum is pointed at the right
@@ -353,8 +357,9 @@ Phase 2 DoD, P6-G-1 notes. No rewrite of `CHANGELOG.md` in this pass.
 
 ## 5. Trajectory review — Phase 2, before the branch is cut
 
-Phase 2 is 22 tasks (was 21; **P2-F-1** appended) and it is well specified. Three things from the
-original four gaps are still open or partial, and all are cheapest to fix before code starts.
+Phase 2 is **28 tasks** after the 2026-09-11 planning append (catalogue split, statsWindow,
+panel host, composition refactor, bench/gate-history/snapshot tasks). All Phase 0–1 retro
+operator questions are closed; remaining work is implementation on `phase/2-library-and-stats`.
 
 ### 5.1 There is no way for the UI to read the stat series — an ADR-006 gap
 
@@ -498,38 +503,39 @@ and honestly.
 
 ## 7. Recommended actions
 
-Items marked **done (planning)** have an accepted decision landed in the named document; code may
-still be outstanding until the owning Phase 2 task runs.
+**All items below are done (planning) as of 2026-09-11.** Implementation waits for the named
+Phase 2 / Phase 3 tasks on `phase/2-library-and-stats` (and later). Agents must not need this
+retro to discover work — the phase docs, ADRs, and `planning/README.md` are the source of truth.
 
 ### Before cutting `phase/2-library-and-stats`
 
-| # | Action | Lands in | Why now | Status |
-|---|---|---|---|---|
-| 1 | Pure-logic lane: `shared/` is pure; reject `ui/ → engine/` (§3.4) | ADR-009 amendment, `README` §3.1, **P2-A-1** | P2-A-1 is blocked on it and will otherwise decide it narrowly | **done (planning) 2026-09-11** — checker/moves are P2-A-1 |
-| 2 | Amend ADR-006 with the stats window query (§5.1) and give the worker→main plumbing an owning task | `ARCHITECTURE_DECISIONS.md`, `PHASE_2_*.md` | P2-C-5 and P2-D-1 both assume it exists | open |
-| 3 | Licence: MIT for code; per-item pattern provenance + SPDX gate (§5.3) | `planning/README.md` §3.9, `PHASE_2` P2-B-1/B-3, `AGENTS.md` §9 | Third-party content arrives in P2-B-1 | **done (planning) 2026-09-11** — implement under P2-B-1 |
-| 4 | Append a panel-host/dock task and make the three panel tasks depend on it (§5.2) | `PHASE_2_*.md` | Three panels otherwise define three contracts | open |
-| 5 | Three-class bench gate + calibration; soften claims meantime (§3.1) | `planning/README.md` §3.6, ADR-004, AGENTS/CLAUDE, **P2-F-1** | Phase 5 rests on it; the honesty rule applies to us | **done (planning) 2026-09-11** — soft claims landed; harness fix is P2-F-1 |
-| 6 | Fix the dashboard's branch-name derivation; tick Phase 0's DoD CI line; reconcile 470→471 (§3.8) | `build-dashboard.mjs`, `PHASE_0_*.md`, `AGENTS.md`, `CLAUDE.md` | Minutes of work; they misdirect the next agent | open |
+| # | Action | Lands in | Status |
+|---|---|---|---|
+| 1 | Pure-logic lane | ADR-009, README §3.1, **P2-A-1** | **done (planning)** |
+| 2 | ADR-006 `statsWindow` + owning task | ADR-006 amendment, **P2-C-6**, P2-D-1 depends | **done (planning)** |
+| 3 | Licence MIT + pattern provenance | README §3.9, P2-B-1/B-3 | **done (planning)** |
+| 4 | Panel host + panel deps + min-width/axe | **P2-G-2**; B-3/D-3/E-1 depend | **done (planning)** |
+| 5 | Three-class bench gate | README §3.6, **P2-F-1** | **done (planning)** |
+| 6 | Dashboard branch table; Phase 0 DoD CI; stale totals | `build-dashboard.mjs` (`PHASE_BRANCHES`), PHASE_0 DoD ticked, AGENTS points at dashboard | **done (planning)** |
 
-### During Phase 2
+### During Phase 2 (task IDs appended — no renumbering)
 
-| # | Action | Lands in |
-|---|---|---|
-| 7 | Ratchet coverage thresholds toward actuals; add a `src/worker/**` threshold; decide `src/client/**` (§3.5) | `vitest.config.ts`, `planning/README.md` §3.5 |
-| 8 | One `refactor(ui)` task decomposing the composition root, landing before the panels (§3.6) | `PHASE_2_*.md` |
-| 9 | Split P2-B-1 so the catalogue does not block a whole workstream (§5.3 remaining / §9 Q5) | `PHASE_2_*.md` |
-| 10 | Per-panel minimum-width contract + axe assertion in the panel-host acceptance criteria (§5.4) | `PHASE_2_*.md` |
-| 11 | Note in P2-B-3 that its fuzzy matcher is P4-A-1's component (§6.2) | `PHASE_2_*.md` |
-| 12 | Reshape the canvas-bridge snapshot into digest + invariants (§3.3) | `tests/integration/` |
+| # | Action | Lands in | Status |
+|---|---|---|---|
+| 7 | Coverage ratchet + worker threshold + client decision | README §3.5, **P2-F-1** AC, **P2-G-1**, Phase 2 DoD | **done (planning)** |
+| 8 | Composition-root refactor before panels | **P2-G-1** | **done (planning)** |
+| 9 | Split catalogue so seed set unblocks library | **P2-B-1** (seed) + **P2-B-5** (completion) | **done (planning)** |
+| 10 | Per-panel min-width + axe | **P2-G-2** AC | **done (planning)** |
+| 11 | P2-B-3 writes P4-A-1's fuzzy matcher | P2-B-3 notes; P4-A-1 notes | **done (planning)** |
+| 12 | Canvas-bridge snapshot → digest + invariants | **P2-F-2** | **done (planning)** |
 
-### Before Phase 3
+### Before / into Phase 3
 
-| # | Action | Lands in |
-|---|---|---|
-| 13 | Nightly flake-history workflow + a documented "gate-history" criterion class (§3.2) | `.github/workflows/`, `planning/README.md` §3 |
-| 14 | Add a `src/audio/**` coverage threshold with the directory (§6.1) | `vitest.config.ts` |
-| 15 | Changelog shape: user-visible + task ID from `v0.3.0`; declare in AGENTS §2.6 (§3.7) | `AGENTS.md` §2.6, Phase 2 DoD, P6-G-1 | **done (planning) 2026-09-11** — existing CHANGELOG entries untouched |
+| # | Action | Lands in | Status |
+|---|---|---|---|
+| 13 | Gate-history class + nightly flake workflow | README §3.10, **P2-F-3**, P3-D-2 | **done (planning)** |
+| 14 | `src/audio/**` coverage with the directory | README §3.5, **P3-B-1** AC | **done (planning)** |
+| 15 | Changelog shape at `v0.3.0` | AGENTS §2.6, Phase 2 DoD, P6-G-1 | **done (planning)** |
 
 ---
 
@@ -552,31 +558,18 @@ Course-correction has its own failure mode. These are working and should be left
 
 ## 9. Open questions for the operator
 
-1. ~~**Licence.** What licence does fancy-gol ship under, and does it accept CC BY-SA pattern content
-   alongside it? (§5.3 — blocks P2-B-1.)~~
-   **Decided 2026-09-11.** Split into two layers: **MIT for code**; **per-item provenance for
-   `patterns/`** (facts + original descriptions; Classes A/B/C; D omitted; SPDX gate in verify).
-   LifeWiki footer recorded verbatim in §5.3 / `planning/README.md` §3.9. Implementation is P2-B-1,
-   not this retro pass.
-2. ~~**The benchmark gate.** Fix the gate, or amend the documents to describe what the build actually
-   enforces? (§3.1 — either is honest; the current state is not.)~~
-   **Decided 2026-09-11.** **Both:** fix (three classes + calibration ratio; no `baselineGate:
-   false`; every case budget-or-gated-or-deleted; rename transcribed cold-load) **and** soften
-   claims until then. Policy in `planning/README.md` §3.6; ADR-004 amended; task **P2-F-1**.
-   Softened process docs landed with this decision; `bench.mjs` changes wait for P2-F-1.
-3. ~~**The pure-logic lane.** `shared/lib/**` open to every layer, or accept permanent documented
-   duplication in `ui/`? (§3.4 — blocks P2-A-1.)~~
-   **Decided 2026-09-11.** Pure-logic lane adopted. Empirically `shared/**` is already clean →
-   **`shared/` is pure, full stop** (no `shared/lib/` unless impurity appears later). Reject
-   `ui/ → engine/`. RLE in `shared/` stays syntactic. Duplicates deleted. ADR-009 amended;
-   implementation is **P2-A-1**.
-4. ~~**The changelog's shape.** Deliberate narrative record, or user-facing summary with the reasoning
-   in the phase docs? Decidable only at a phase boundary. (§3.7)~~
-   **Decided 2026-09-11 at the `v0.3.0` boundary.** Trim: user-visible statement + task ID;
-   phase doc + module comment keep the *why*; one pointer line per release section. Declared in
-   `AGENTS.md` §2.6. Pre-`0.3.0` entries not rewritten.
-5. **Phase 2 sequencing.** Should the catalogue split (§5.3 remaining) and the panel host (§5.2) be
-   added as new task IDs before the branch is cut, or handled as the first two tasks on the branch?
+1. ~~**Licence.**~~ **Decided 2026-09-11** — see §5.3 / `planning/README.md` §3.9.
+2. ~~**The benchmark gate.**~~ **Decided 2026-09-11** — see §3.1 / `planning/README.md` §3.6 / **P2-F-1**.
+3. ~~**The pure-logic lane.**~~ **Decided 2026-09-11** — see §3.4 / ADR-009 / **P2-A-1**.
+4. ~~**The changelog's shape.**~~ **Decided 2026-09-11** — see §3.7 / `AGENTS.md` §2.6.
+5. ~~**Phase 2 sequencing.** Should the catalogue split (§5.3 remaining) and the panel host (§5.2) be
+   added as new task IDs before the branch is cut, or handled as the first two tasks on the branch?~~
+   **Decided 2026-09-11:** add the IDs on `main` before cutting the branch. Catalogue split =
+   **P2-B-1** (seed) + **P2-B-5** (completion). Panel host = **P2-G-2** (after **P2-G-1**
+   composition refactor). All other recommended actions also landed in planning (§7).
+
+**No open operator questions remain from this retro.** Implementation proceeds from the phase
+documents.
 
 ---
 

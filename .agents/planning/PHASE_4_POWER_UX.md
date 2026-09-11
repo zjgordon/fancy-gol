@@ -105,12 +105,13 @@ src/client/{multi-sim.ts, session-browser.ts}
 ### Workstream A — Command Palette
 
 #### - [ ] P4-A-1 · Fuzzy scorer
-**Depends on:** P2-B-3 · **Files:** `src/ui/palette/scorer.ts`
-**Implementation notes** Promote the Phase 2 library matcher to a shared module. Subsequence match with gap penalties, bonuses for word-boundary and camelCase-boundary hits, an exact-prefix bonus, and a returned match-index array for highlighting. ~80 lines, hand-written per the no-bloat rule.
+**Depends on:** P2-B-3 · **Files:** `src/ui/palette/scorer.ts` (or promote `src/ui/search/fuzzy.ts`)
+**Implementation notes** **P2-B-3 already writes this component** (shared module, ranking tests, match indices). This task promotes/extends it for the palette (category/keyword fields, recents) — do not rewrite a second matcher. Subsequence match with gap penalties, bonuses for word-boundary and camelCase-boundary hits, an exact-prefix bonus, and a returned match-index array for highlighting. ~80 lines, hand-written per the no-bloat rule.
 **Acceptance criteria**
 - [ ] `"tgl"` ranks "Toggle Grid Lines" above "Toggle Chrome" (acronym bonus), asserted in a table-driven test of ≥ 40 query/expectation pairs.
 - [ ] Scoring 1,000 candidates takes < 1 ms.
 - [ ] Returned match indices highlight exactly the matched characters.
+- [ ] Library search and palette share one implementation (no duplicated scorer).
 
 #### - [ ] P4-A-2 · Palette overlay
 **Depends on:** P4-A-1, P1-C-1 · **Files:** `src/ui/palette/overlay.ts`

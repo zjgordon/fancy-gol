@@ -787,7 +787,7 @@ Emit a `CompiledRule` with the strategy selected automatically:
 ## 6. Definition of Done — Phase 0
 
 - [x] Every task above is `- [x]` or `- [-]` with a recorded reason — P0-H-2's dpr visual criterion is `- [-]` relocated to P1-H-2; every other Phase 0 task is `- [x]`.
-- [ ] All Phase 0 quality gates (§4) are green in CI on `main` — workflow is in `.github/workflows/ci.yml` (P0-I-5) and the jobs' commands are green locally. The first Actions run is the merge to `main`.
+- [x] All Phase 0 quality gates (§4) are green in CI on `main` — workflow is in `.github/workflows/ci.yml` (P0-I-5). Merge to `main` ran green: Actions run [34199267453](https://github.com/zjgordon/fancy-gol/actions/runs/34199267453) (ticked 2026-09-11 from Phase 0–1 retro §3.8).
 - [x] `docker compose up` serves a Gosper gun running at 60 fps — proven on `docker/docker-compose.yml` (P0-I-3); published port `:8080`.
 - [x] The headless canvas-bridge test passes and is wired into CI — `tests/integration/canvas-bridge.spec.ts` is in `npm run test` / `coverage`, which the `verify` job runs.
 - [x] `src/engine` contains zero DOM, Node, or I/O references, proven by the boundary checker.

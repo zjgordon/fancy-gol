@@ -142,12 +142,23 @@ Enforced by `vitest --coverage` thresholds in `vitest.config.ts`:
 |---|---|---|---|
 | `src/engine/**` | **95%** | **90%** | **95%** |
 | `src/shared/**` | 95% | 90% | 95% |
+| `src/worker/**` | **95%** (from P2-F-1) | **90%** | **95%** |
 | `src/render/**` | 85% | 75% | 85% |
 | `src/ui/**`, `src/themes/**` | 70% | 60% | 70% |
 | `src/server/**` | 85% | 75% | 85% |
+| `src/audio/**` | **95/90/95 when the directory is created (P3-B-1)** | | |
+| `src/client/**` | see decision below | | |
 
 Thresholds may be **raised** by a phase. They may never be lowered; a phase that would lower one
 must instead delete or fix the untested code.
+
+**Ratchet rule (decided 2026-09-11):** every phase's Definition of Done includes raising thresholds
+toward a few points under measured actuals where slack is large. Do not leave 20+ points of slack
+as a silent permission to ship untested UI.
+
+**`src/client/**` (decided 2026-09-11):** after **P2-G-1** extracts testable wiring, either set a
+modest threshold on the residual `client/**` or keep it excluded **only if** extracted modules sit
+under already-gated paths and `vitest.config.ts` records why. Prefer measuring the residual root.
 
 ### 3.6 Performance budgets (CI-enforced from Phase 0)
 
@@ -301,6 +312,20 @@ pattern as `no-literal-design-tokens`: the policy is a gate, not a convention.
 
 UI (P2-B-3): library cards show discoverer + year with a link to `source`; a Credits dialog lists
 every collection and its recorded terms.
+
+### 3.10 Gate-history criteria (decided 2026-09-11)
+
+Some acceptance criteria cannot be proven inside the task that owns them (e.g. "non-flaky over 10
+consecutive CI runs"). Those are a **gate-history** class:
+
+- Discharged by an **accumulating CI / nightly record**, not by the implementing task.
+- The record's home is named in **P2-F-3** (workflow + path under `docs/gate-history/` or agreed
+  equivalent).
+- A task may cite `gate-history: <record-id> ≥ N green` instead of pretending to run N CI jobs
+  in-process. Phase 3's **P3-D-2** and browser-class benches consume this.
+
+Until P2-F-3 is `- [x]`, criteria that need gate-history keep an honest interim note (local
+repeats + "literal CI streak deferred") — never a silent tick.
 
 ---
 

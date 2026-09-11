@@ -97,12 +97,27 @@ const isDone = (p) => {
 const shipped = phases.filter(isDone);
 const active = phases.find((p) => !isDone(p));
 
+const PHASE_BRANCHES = {
+  0: 'phase/0-foundation',
+  1: 'phase/1-interaction',
+  2: 'phase/2-library-and-stats',
+  3: 'phase/3-theme-engine',
+  4: 'phase/4-power-ux',
+  5: 'phase/5-scale-and-perf',
+  6: 'phase/6-launch',
+};
+
 const state = {
   generated: new Date().toISOString().slice(0, 10),
   repo: {
-    branch: active ? (shipped.length === 0 && active.n === 0 && !active.ws.flatMap((w) => w.tasks).some((t) => t.s !== 'todo')
-      ? 'main'
-      : `phase/${active.n}-${slug(active.name)}`) : 'main',
+    // Branch names come from AGENTS.md §6 — never invent from the phase title slug.
+    branch: active
+      ? (shipped.length === 0 &&
+        active.n === 0 &&
+        !active.ws.flatMap((w) => w.tasks).some((t) => t.s !== 'todo')
+          ? 'main'
+          : (PHASE_BRANCHES[active.n] ?? `phase/${active.n}-${slug(active.name)}`))
+      : 'main',
     version: shipped.length ? shipped[shipped.length - 1].version : '0.0.0',
     target: phases[phases.length - 1].version
   },

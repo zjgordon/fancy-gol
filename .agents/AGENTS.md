@@ -45,7 +45,7 @@ chat transcript. **Here.**
     ├── ARCHITECTURE_DECISIONS.md  ← ADR-001…010. Binding. Read once, in full, before Phase 0.
     ├── PHASE_0_FOUNDATION.md      ← 36 tasks   → v0.1.0
     ├── PHASE_1_INTERACTION.md     ← 28 tasks   → v0.2.0
-    ├── PHASE_2_LIBRARY_AND_STATS.md ← 22 tasks → v0.3.0
+    ├── PHASE_2_LIBRARY_AND_STATS.md ← see dashboard for live task count → v0.3.0
     ├── PHASE_3_THEME_ENGINE.md    ← 19 tasks   → v0.4.0
     ├── PHASE_4_POWER_UX.md        ← 17 tasks   → v0.5.0
     ├── PHASE_5_SCALE_AND_PERF.md  ← 15 tasks   → v0.6.0

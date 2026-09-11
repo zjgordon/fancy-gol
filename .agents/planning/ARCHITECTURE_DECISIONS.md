@@ -300,6 +300,22 @@ counterpart to `snapshot`'s read: `{ id, cmd: 'restore', snapshot: Snapshot }`, 
 full-world `frame`, the same honest "everything changed" shape `clear`/`seedRandom`/`seek` already
 use for non-incremental mutations.
 
+### Amendment — 2026-09-11 · `statsWindow` (Phase 2 charts)
+**Forced by:** Phase 0–1 retrospective §5.1; charts need LTTB-downsampled series without mirroring
+`Series` on the main thread or streaming every sample.
+**Owning task:** `P2-C-6`. `P2-D-1` depends on it.
+**Adds to Command:**
+```ts
+| { id: number; cmd: 'statsWindow'; fromTick: number; toTick: number; maxPoints: number; /* metrics? */ }
+```
+**Adds to Event** (or `ok` result payload — pick one shape in P2-C-6 and keep exhaustiveness tight):
+```ts
+| { id: number; type: 'statsWindow'; tier: number; points: StatSample[]; /* labelled downsampling */ }
+```
+`{ type: 'stats' }` push events may remain unused; do not require a continuous stats stream for
+charts. Tier and aggregation must be labelled on the reply (honesty rule). Does not invalidate
+existing `frame.stats: TickStats` for the status bar.
+
 ---
 
 ## ADR-007 — History is a hybrid keyframe + delta journal

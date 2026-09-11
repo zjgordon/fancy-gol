@@ -24,8 +24,10 @@ npm run e2e         # Playwright (from Phase 1)
 | Path | Stmts | Branch | Funcs |
 |---|---|---|---|
 | `src/engine/**`, `src/shared/**` | **95%** | **90%** | **95%** |
+| `src/worker/**` | **95%** (from P2-F-1) | **90%** | **95%** |
 | `src/render/**`, `src/server/**` | 85% | 75% | 85% |
 | `src/ui/**`, `src/themes/**` | 70% | 60% | 70% |
+| `src/audio/**` | 95/90/95 when created (P3-B-1) | | |
 
 A phase that would lower a threshold must instead delete or fix the untested code.
 

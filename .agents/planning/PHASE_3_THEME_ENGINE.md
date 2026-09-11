@@ -199,12 +199,13 @@ src/audio/
 
 #### - [ ] P3-B-1 · Audio context, mixer, policy
 **Depends on:** Phase 2 · **Files:** `src/audio/{context,mixer,policy}.ts`
-**Implementation notes** Lazy context creation; unlock on the first user gesture; suspend on `visibilitychange` and on simulation pause; a master limiter so no theme can be painfully loud; per-bus gain with smooth ramps (never a click). Persist mute and volume.
+**Implementation notes** Lazy context creation; unlock on the first user gesture; suspend on `visibilitychange` and on simulation pause; a master limiter so no theme can be painfully loud; per-bus gain with smooth ramps (never a click). Persist mute and volume. **When creating `src/audio/**`, add coverage thresholds 95/90/95 to `vitest.config.ts` in the same commit** (`planning/README.md` §3.5) — do not leave the layer unmeasured.
 **Acceptance criteria**
 - [ ] No `AudioContext` is created before a user gesture (no console warnings in any browser).
 - [ ] Muting is instantaneous and silent (ramped, no click).
 - [ ] Tab-hide suspends the context; unhide resumes without a glitch.
 - [ ] Zero audio files in `dist/`.
+- [ ] `vitest.config.ts` gates `src/audio/**` at ≥ 95/90/95 from the commit that creates the directory.
 
 #### - [ ] P3-B-2 · Voice primitives & scheduler
 **Depends on:** P3-B-1 · **Files:** `src/audio/{voices,scheduler}.ts`
@@ -311,10 +312,11 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 - [ ] The active theme survives reload and is encoded in share URLs.
 
 #### - [ ] P3-D-2 · Per-theme visual regression
-**Depends on:** P3-D-1, P1-H-2 · **Files:** `tests/visual/themes/*`
-**Implementation notes** For each of 6 themes × {shell, library panel, statistics panel, dialog, grid at 3 zooms} — 48 baselines. Animations frozen via the test flag, tick pinned, PRNG seeded. Mask fps/ms readouts.
+**Depends on:** P3-D-1, P1-H-2, P2-F-3 · **Files:** `tests/visual/themes/*`
+**Implementation notes** For each of 6 themes × {shell, library panel, statistics panel, dialog, grid at 3 zooms} — 48 baselines. Animations frozen via the test flag, tick pinned, PRNG seeded. Mask fps/ms readouts. Stability across consecutive CI runs is a **gate-history** criterion (`planning/README.md` §3.10 / P2-F-3), not something this task can honestly prove in one PR.
 **Acceptance criteria**
-- [ ] All 48 baselines committed and stable over 3 consecutive CI runs.
+- [ ] All 48 baselines committed.
+- [ ] Gate-history record shows the suite stable across ≥ 3 consecutive scheduled/CI runs (or interim honest note until three nightlies exist).
 - [ ] A deliberate token change in one theme fails only that theme's baselines.
 - [ ] Suite runtime stays under 6 minutes.
 
