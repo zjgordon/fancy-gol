@@ -2,6 +2,7 @@
   "name": "fancy-gol",
   "version": "0.2.0",
   "private": true,
+  "license": "MIT",
   "description": "A cellular automata simulator with absolutely too much time spent on what's essentially a toy. But this toy doesn't care, it wants to be fabulous!",
   "type": "module",
   "engines": {
@@ -22,7 +23,8 @@
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "boundaries": "node scripts/check-boundaries.mjs",
-    "verify": "npm run typecheck && npm run lint && npm run boundaries && npm run test && npm run build",
+    "pattern-licenses": "node scripts/check-pattern-licenses.mjs",
+    "verify": "npm run typecheck && npm run lint && npm run boundaries && npm run pattern-licenses && npm run test && npm run build",
     "prepare": "node -e \"try{require('node:child_process').execSync('git config core.hooksPath .githooks')}catch(e){}\""
   },
   "dependencies": {

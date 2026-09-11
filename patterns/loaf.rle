@@ -1,0 +1,15 @@
+#N Loaf
+#O unknown, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Loaf
+#C verified: fancy-gol P2-B-1, period 1, population 7
+#C ruleset: conway
+#C category: still-life
+#C period: 1
+#C heat: 0
+#C tags: still-life, conway
+#C description: A seven-cell still life with a bite taken out of one
+#C description: corner. Stable, slightly lopsided.
+x = 4, y = 4, rule = B3/S23
+b2o$o2bo$bobo$2bo!

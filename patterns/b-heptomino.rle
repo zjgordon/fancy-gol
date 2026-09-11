@@ -1,0 +1,14 @@
+#N B-heptomino
+#O John H. Conway, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/B-heptomino
+#C verified: fancy-gol P2-B-1, seven cells
+#C ruleset: conway
+#C category: methuselah
+#C period: none
+#C tags: methuselah, conway, heptomino
+#C description: The B-shaped seven. It throws off a block and keeps
+#C description: walking — grandparent of several puffers.
+x = 4, y = 3, rule = B3/S23
+ob2o$3o$bo!

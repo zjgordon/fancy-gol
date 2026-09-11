@@ -1,0 +1,15 @@
+#N Pond
+#O unknown, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Pond
+#C verified: fancy-gol P2-B-1, period 1, population 8
+#C ruleset: conway
+#C category: still-life
+#C period: 1
+#C heat: 0
+#C tags: still-life, conway
+#C description: An eight-cell ring around a 2×2 hole. Looks like a
+#C description: beehive that ate a block.
+x = 4, y = 4, rule = B3/S23
+b2o$o2bo$o2bo$b2o!

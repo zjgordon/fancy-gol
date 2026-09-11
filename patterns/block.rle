@@ -1,5 +1,16 @@
 #N Block
-#C The smallest still life in Conway's Game of Life: a 2x2 square that never changes.
+#O unknown, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Block
+#C verified: fancy-gol P2-B-1, period 1, population 4
+#C ruleset: conway
+#C category: still-life
+#C period: 1
+#C heat: 0
+#C aliases: 2x2, square
+#C tags: still-life, conway, staple
+#C description: Four cells in a square. The smallest still life, and
+#C description: the one everyone meets first.
 x = 2, y = 2, rule = B3/S23
-2o$
-2o!
+2o$2o!

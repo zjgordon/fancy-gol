@@ -1,6 +1,14 @@
 #N Acorn
-#C A seven-cell methuselah that takes 5206 generations to stabilise, ending with 633 live cells.
+#O Charles Corderman, 1971
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Acorn
+#C verified: fancy-gol P2-B-1, seven cells, evolves for 5206 generations
+#C ruleset: conway
+#C category: methuselah
+#C period: none
+#C tags: methuselah, conway, staple
+#C description: Seven cells, 5,206 generations to settle. Small enough
+#C description: to type, large enough to fill a screen.
 x = 7, y = 3, rule = B3/S23
-bo$
-3bo$
-2o2b3o!
+bo$3bo$2o2b3o!

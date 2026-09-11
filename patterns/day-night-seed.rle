@@ -1,0 +1,14 @@
+#N Day & Night seed
+#O Nathan Thompson, 1997
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/OCA:Day_%26_Night
+#C verified: fancy-gol P2-B-1, fourteen cells under B3678/S34678
+#C ruleset: day-and-night
+#C category: seed
+#C period: none
+#C tags: seed, day-and-night
+#C description: A compact Day & Night seed. Self-complementary rules
+#C description: treat this island differently than Conway ever would.
+x = 9, y = 5, rule = B3678/S34678
+4bo$2b2ob2o$2o5b2o$2b2ob2o$4bo!

@@ -1,0 +1,15 @@
+#N Long barge
+#O unknown, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Long_barge
+#C verified: fancy-gol P2-B-1, period 1, population 9
+#C ruleset: conway
+#C category: still-life
+#C period: 1
+#C heat: 0
+#C tags: still-life, conway
+#C description: A barge with one extra pair of cells. Nine cells, still,
+#C description: and a step along the barge sequence.
+x = 5, y = 5, rule = B3/S23
+bo$obo$bobo$2bobo$3b2o!

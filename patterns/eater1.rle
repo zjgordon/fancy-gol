@@ -1,0 +1,16 @@
+#N Eater 1
+#O Bill Gosper, 1971
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Eater_1
+#C verified: fancy-gol P2-B-1, period 1, population 7
+#C ruleset: conway
+#C category: still-life
+#C period: 1
+#C heat: 0
+#C aliases: fishhook
+#C tags: still-life, conway, eater
+#C description: A seven-cell fishhook that can swallow gliders and
+#C description: still sit down afterwards. The original eater.
+x = 4, y = 4, rule = B3/S23
+2o$bo$bobo$2b2o!

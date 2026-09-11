@@ -1,0 +1,14 @@
+#N Diehard
+#O unknown
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Diehard
+#C verified: fancy-gol P2-B-1, seven cells, vanishes after 130 generations
+#C ruleset: conway
+#C category: methuselah
+#C period: none
+#C tags: methuselah, conway
+#C description: Seven cells that live 130 generations and then leave
+#C description: nothing. A methuselah whose last trick is emptiness.
+x = 8, y = 3, rule = B3/S23
+6bo$2o$bo3b3o!

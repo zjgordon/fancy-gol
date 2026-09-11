@@ -1,0 +1,15 @@
+#N Long canoe
+#O unknown, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Long_canoe
+#C verified: fancy-gol P2-B-1, period 1, population 8
+#C ruleset: conway
+#C category: still-life
+#C period: 1
+#C heat: 0
+#C tags: still-life, conway
+#C description: A canoe stretched by one. Eight cells on a diagonal,
+#C description: still as a boat that forgot how to float.
+x = 5, y = 5, rule = B3/S23
+2o$o$bo$2bobo$3b2o!

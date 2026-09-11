@@ -192,7 +192,7 @@ checker change (`engine → shared/`, scan `shared/**`), the canonical syntactic
 
 ### Workstream B — The Library
 
-#### - [ ] P2-B-1 · Catalogue schema, policy & seed set
+#### - [x] P2-B-1 · Catalogue schema, policy & seed set — @cursor, started 2026-09-11
 **Depends on:** P2-A-1 · **Files:** `patterns/**`, `patterns/SOURCES.md`, `LICENSE`, `LICENSES/**`, `NOTICE`, `scripts/check-pattern-licenses.mjs`, `package.json` (`license` field), `src/engine/patterns/catalog-types.ts`
 **Intent:** Unblock the library workstream with a real but partial catalogue. Full ≥200 content is **P2-B-5** (split 2026-09-11 — never renumbered).
 **Metadata per entry:** `id, name, aliases[], ruleset, category, discoverer, year, width, height, population, period, speed (e.g. "c/4 diagonal"), heat, description, source (URL/citation), tags[], canonicalHash`, plus in-file SPDX provenance (`SPDX-License-Identifier`, `SPDX-FileCopyrightText`, `source:`, `verified:` on `#C` lines).
@@ -201,14 +201,14 @@ checker change (`engine → shared/`, scan `shared/**`), the canonical syntactic
 **Licensing (binding — `planning/README.md` §3.9, decided 2026-09-11):** two layers. Code is **MIT** (`LICENSE` + `"license": "MIT"` beside `"private": true`). Pattern content is per-item: **take facts, write your own words**; never paste wiki prose. Provenance classes A/B/C allowed, D omitted. Repo shape: `LICENSES/` (full texts), `NOTICE` (attribution roll-up), `patterns/SOURCES.md` (policy + per-source table with the LifeWiki footer string verified 2026-09-11), REUSE-style SPDX on every `.rle`. Gate: `scripts/check-pattern-licenses.mjs` in `verify` — every pattern needs `#N`, `#O` (discoverer; `unknown` ok, blank not), `source:` URL, and an allowlisted `SPDX-License-Identifier`. **Do not ship a pattern we cannot attribute.**
 **Implementation notes** Land the licence scaffolding and `SOURCES.md` policy **before** importing any third-party catalogue content. Descriptions in the library are original. Hand-pick entries; do not mirror an archive wholesale.
 **Acceptance criteria**
-- [ ] `LICENSE` is MIT; `package.json` has `"license": "MIT"` while remaining `"private": true`.
-- [ ] `patterns/SOURCES.md` states the two-layer policy, the Class A–D allowlist, and records the LifeWiki footer licence string verbatim with verification date 2026-09-11.
-- [ ] `LICENSES/` holds the full text of every content licence in use; `NOTICE` rolls up attributions.
-- [ ] `scripts/check-pattern-licenses.mjs` runs in `npm run verify` and fails on missing `#N`, blank `#O`, missing `source:`, or non-allowlisted SPDX.
-- [ ] Every shipped `.rle` carries SPDX + provenance `#C` lines; the pre-existing ten patterns are retrofitted.
-- [ ] ≥ 40 entries across ≥ 4 rulesets: each decodes, matches declared width/height/population, and has period (where applicable) verified by simulation.
-- [ ] Every entry has a `source`; catalogue descriptions are original (no pasted wiki prose).
-- [ ] Declared `speed` values are verified by simulation for all spaceships in the seed set.
+- [x] `LICENSE` is MIT; `package.json` has `"license": "MIT"` while remaining `"private": true`.
+- [x] `patterns/SOURCES.md` states the two-layer policy, the Class A–D allowlist, and records the LifeWiki footer licence string verbatim with verification date 2026-09-11.
+- [x] `LICENSES/` holds the full text of every content licence in use; `NOTICE` rolls up attributions.
+- [x] `scripts/check-pattern-licenses.mjs` runs in `npm run verify` and fails on missing `#N`, blank `#O`, missing `source:`, or non-allowlisted SPDX.
+- [x] Every shipped `.rle` carries SPDX + provenance `#C` lines; the pre-existing ten patterns are retrofitted.
+- [x] ≥ 40 entries across ≥ 4 rulesets: each decodes, matches declared width/height/population, and has period (where applicable) verified by simulation.
+- [x] Every entry has a `source`; catalogue descriptions are original (no pasted wiki prose).
+- [x] Declared `speed` values are verified by simulation for all spaceships in the seed set.
 
 #### - [ ] P2-B-2 · Thumbnail generation
 **Depends on:** P2-B-1 · **Files:** `scripts/gen-thumbnails.mjs`

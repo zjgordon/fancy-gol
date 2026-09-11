@@ -1,0 +1,14 @@
+#N Pentadecathlon
+#O John H. Conway, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Pentadecathlon
+#C verified: fancy-gol P2-B-1, period 15, population 12
+#C ruleset: conway
+#C category: oscillator
+#C period: 15
+#C tags: oscillator, conway
+#C description: A row of ten, sparking at both ends on a 15-generation
+#C description: loop. Conway found it in the first month.
+x = 10, y = 3, rule = B3/S23
+2bo4bo$2ob4ob2o$2bo4bo!

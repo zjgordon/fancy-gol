@@ -1,0 +1,14 @@
+#N Seeds cluster
+#O Brian Silverman
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/OCA:Seeds
+#C verified: fancy-gol P2-B-1, twelve cells under B2/S
+#C ruleset: seeds
+#C category: seed
+#C period: none
+#C tags: seed, seeds
+#C description: Twelve cells packed into a 4×4. In Seeds every live cell
+#C description: dies, so this is a fuse, not a still life.
+x = 4, y = 4, rule = B2/S
+o2bo$4o$4o$o2bo!

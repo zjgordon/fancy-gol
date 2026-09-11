@@ -1,0 +1,15 @@
+#N Long boat
+#O unknown, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Long_boat
+#C verified: fancy-gol P2-B-1, period 1, population 7
+#C ruleset: conway
+#C category: still-life
+#C period: 1
+#C heat: 0
+#C tags: still-life, conway
+#C description: A boat stretched by one cell. Seven cells, still, and
+#C description: a step on the long-boat ladder.
+x = 4, y = 4, rule = B3/S23
+bo$obo$bobo$2b2o!

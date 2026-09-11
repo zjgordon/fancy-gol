@@ -1,0 +1,15 @@
+#N WireWorld diode
+#O Brian Silverman, 1987
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://en.wikipedia.org/wiki/Wireworld
+#C verified: fancy-gol P2-B-1, 17 conductor/electron cells, diode geometry
+#C ruleset: wireworld
+#C category: logic
+#C period: none
+#C tags: logic, wireworld, multi-state
+#C description: A one-way conductor gap. Electrons that approach from
+#C description: the tail side pass; the other direction dies in the
+#C description: pocket.
+x = 7, y = 3, rule = WireWorld
+CCC.CCC$C.CBC.C$CCC.CCC!

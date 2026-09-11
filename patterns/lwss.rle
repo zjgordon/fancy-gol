@@ -1,7 +1,16 @@
 #N Lightweight spaceship
-#C The smallest orthogonal spaceship, period 4 -- faster than the glider and moves in a straight line.
+#O John H. Conway, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Lightweight_spaceship
+#C verified: fancy-gol P2-B-1, period 4, displaces two cells orthogonally, population 9
+#C ruleset: conway
+#C category: spaceship
+#C period: 4
+#C speed: c/2 orthogonal
+#C aliases: LWSS
+#C tags: spaceship, conway, staple
+#C description: Nine cells, period 4, c/2 along an axis. The smallest
+#C description: orthogonal spaceship.
 x = 5, y = 4, rule = B3/S23
-b4o$
-o3bo$
-4bo$
-o2bo!
+b4o$o3bo$4bo$o2bo!

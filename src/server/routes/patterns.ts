@@ -1,26 +1,20 @@
 /**
- * `/api/patterns` (ADR-002, P1-G-2 "skeleton"): serves the ten Phase 1 patterns from `.rle`
- * files under the repo-root `patterns/` directory.
+ * `/api/patterns` (ADR-002, P1-G-2 skeleton, P2-B-1 seed): serves curated `.rle` files
+ * from the repo-root `patterns/` directory.
  *
  *   GET /api/patterns?ruleset=<id> -> PatternSummary[]
  *
- * These are the exact same ten patterns `ui/tools/stamp.ts`'s `BUILTIN_STAMPS` already ships —
- * independently duplicated here on disk, not read from that module or generated from it: ADR-002
- * requires the client to keep its own bundled copy so the stamp tool works with the server
- * unreachable ("the app must be fully functional... a bundled starter pattern set ships in the
- * client bundle"), so this is a second, server-side source of the same content, not a refactor
- * of the first. `tests/unit/server/patterns-route.spec.ts` decodes both copies and cross-checks
- * every one resolves to the identical set of live cells, so the two can never silently diverge.
+ * The ten Phase 1 stamps in `ui/tools/stamp.ts` remain an independent client copy (ADR-002:
+ * the stamp tool works with the server unreachable). This router now also serves the rest of
+ * the P2-B-1 seed catalogue. `tests/unit/server/patterns-route.spec.ts` still cross-checks
+ * those ten ids against `BUILTIN_STAMPS` so the two copies cannot silently diverge.
  *
- * "The query interface Phase 2 will fill out": `ruleset` is the only filter today (every one of
- * these ten is a classic Conway's-Life pattern, so all ten answer `?ruleset=conway`); Phase 2's
- * P2-B-4 (server pattern routes, complete) adds search/tags/pagination against this same
- * response shape — "establish the response shape now so the client never changes" (this task's
- * own words) is why `PatternSummary` is written to grow, not to be replaced.
+ * Ruleset is read from `#C ruleset:` (P2-B-1); P2-B-4 will add search/tags/pagination against
+ * this same response shape.
  */
 import { Router } from 'express';
-import { readdirSync, readFileSync } from 'node:fs';
-import { extname, join } from 'node:path';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { basename, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const DEFAULT_PATTERNS_DIR = fileURLToPath(new URL('../../../patterns', import.meta.url));
@@ -30,8 +24,7 @@ export interface PatternSummary {
   readonly name: string;
   readonly description?: string;
   readonly author?: string;
-  /** Which ruleset this pattern is designed for — a hardcoded tag today (every Phase 1 pattern
-   * is Conway's Life), a real field once Phase 2 stores patterns for other rulesets too. */
+  /** Which ruleset this pattern is designed for — read from `#C ruleset:` when present. */
   readonly ruleset: string;
   readonly width: number;
   readonly height: number;
@@ -46,10 +39,15 @@ export interface PatternSummary {
  * *content* stays opaque RLE text all the way to the client, which already owns a real codec.
  * Not `ui/tools/select.ts`'s `decodeRLE`: `server/` may not import `ui/` (ADR-009).
  */
-export function parsePatternFile(id: string, text: string, ruleset: string): PatternSummary {
+const PROVENANCE_C =
+  /^(SPDX-|source:|verified:|ruleset:|category:|period:|speed:|heat:|aliases:|year:|tags:|description:)/i;
+
+export function parsePatternFile(id: string, text: string, ruleset?: string): PatternSummary {
   let name = id;
   let author: string | undefined;
   const descriptionLines: string[] = [];
+  const freeCommentLines: string[] = [];
+  let fileRuleset: string | undefined;
   let width = 0;
   let height = 0;
   const bodyLines: string[] = [];
@@ -57,10 +55,18 @@ export function parsePatternFile(id: string, text: string, ruleset: string): Pat
   for (const rawLine of text.split('\n')) {
     const line = rawLine.trim();
     if (line.length === 0) continue;
-    if (line.startsWith('#N ')) name = line.slice(3).trim();
-    else if (line.startsWith('#O ')) author = line.slice(3).trim();
-    else if (line.startsWith('#C ')) descriptionLines.push(line.slice(3).trim());
-    else if (line.startsWith('#')) continue; // other comment tags (e.g. #R) -- not needed yet
+    if (line.startsWith('#N')) name = line.slice(2).trim() || name;
+    else if (line.startsWith('#O')) author = line.slice(2).trim();
+    else if (line.startsWith('#C ') || line.startsWith('#c ')) {
+      const rest = line.slice(3).trim();
+      if (rest.startsWith('description:')) {
+        descriptionLines.push(rest.slice('description:'.length).trim());
+      } else if (rest.startsWith('ruleset:')) {
+        fileRuleset = rest.slice('ruleset:'.length).trim();
+      } else if (!PROVENANCE_C.test(rest)) {
+        freeCommentLines.push(rest);
+      }
+    } else if (line.startsWith('#')) continue; // other comment tags (e.g. #R) -- not needed yet
     else if (/^x\s*=/.test(line)) {
       const m = /^x\s*=\s*(\d+)\s*,\s*y\s*=\s*(\d+)/.exec(line);
       if (m) {
@@ -72,29 +78,41 @@ export function parsePatternFile(id: string, text: string, ruleset: string): Pat
     }
   }
 
+  const description =
+    descriptionLines.length > 0
+      ? descriptionLines.join(' ')
+      : freeCommentLines.length > 0
+        ? freeCommentLines.join(' ')
+        : undefined;
+
   return {
     id,
     name,
-    ...(descriptionLines.length > 0 ? { description: descriptionLines.join(' ') } : {}),
-    ...(author !== undefined ? { author } : {}),
-    ruleset,
+    ...(description !== undefined ? { description } : {}),
+    ...(author !== undefined && author !== '' ? { author } : {}),
+    ruleset: ruleset ?? fileRuleset ?? 'conway',
     width,
     height,
     rle: `x = ${width}, y = ${height}\n${bodyLines.join('\n')}`,
   };
 }
 
-/** Every Phase 1 pattern is a Conway's-Life classic — a single hardcoded tag until Phase 2 stores
- * the ruleset a pattern actually belongs to alongside it. */
-const DEFAULT_RULESET_TAG = 'conway';
+function listRleFiles(dir: string, out: string[] = []): string[] {
+  for (const name of readdirSync(dir)) {
+    const full = join(dir, name);
+    const st = statSync(full);
+    if (st.isDirectory()) listRleFiles(full, out);
+    else if (extname(name) === '.rle') out.push(full);
+  }
+  return out;
+}
 
 export function loadPatterns(dir: string): readonly PatternSummary[] {
-  return readdirSync(dir)
-    .filter((name) => extname(name) === '.rle')
-    .map((fileName) => {
-      const id = fileName.slice(0, -'.rle'.length);
-      const text = readFileSync(join(dir, fileName), 'utf8');
-      return parsePatternFile(id, text, DEFAULT_RULESET_TAG);
+  return listRleFiles(dir)
+    .map((filePath) => {
+      const id = basename(filePath, '.rle');
+      const text = readFileSync(filePath, 'utf8');
+      return parsePatternFile(id, text);
     })
     .sort((a, b) => a.id.localeCompare(b.id));
 }

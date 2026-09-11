@@ -1,0 +1,12 @@
+fancy-gol
+Copyright (c) 2026 fancy-gol contributors
+
+Code in this repository is licensed under the MIT License. See LICENSE.
+
+Pattern files under patterns/ are licensed per item. Each .rle file carries its own
+SPDX-License-Identifier and SPDX-FileCopyrightText. The seed catalogue (P2-B-1) ships
+Class B historical configurations under CC0-1.0; library descriptions are original
+prose written for this project, also released under CC0-1.0.
+
+See patterns/SOURCES.md for the two-layer policy, provenance classes, and the
+per-source table. Full texts of content licences in use live in LICENSES/.

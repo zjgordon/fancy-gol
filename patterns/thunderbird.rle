@@ -1,0 +1,14 @@
+#N Thunderbird
+#O unknown
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Thunderbird
+#C verified: fancy-gol P2-B-1, six cells
+#C ruleset: conway
+#C category: methuselah
+#C period: none
+#C tags: methuselah, conway
+#C description: A T of six cells. It runs for a couple of hundred
+#C description: generations, then the usual junk.
+x = 3, y = 5, rule = B3/S23
+3o2$bo$bo$bo!

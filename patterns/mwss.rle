@@ -1,0 +1,16 @@
+#N Middleweight spaceship
+#O John H. Conway, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Middleweight_spaceship
+#C verified: fancy-gol P2-B-1, period 4, c/2 orthogonal, population 11
+#C ruleset: conway
+#C category: spaceship
+#C period: 4
+#C speed: c/2 orthogonal
+#C aliases: MWSS
+#C tags: spaceship, conway
+#C description: The middle sibling of the XWSS family: eleven cells,
+#C description: same period and speed as the LWSS, one row taller.
+x = 6, y = 5, rule = B3/S23
+b5o$o4bo$5bo$o3bo$2bo!

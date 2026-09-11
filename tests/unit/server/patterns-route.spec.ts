@@ -31,9 +31,21 @@ describe('parsePatternFile (pure)', () => {
     });
   });
 
-  it('joins multiple #C lines with a space', () => {
+  it('joins multiple free-form #C lines with a space, and ignores SPDX provenance keys', () => {
     const text = ['#N Two-line', '#C First sentence.', '#C Second sentence.', 'x = 1, y = 1', 'o!'].join('\n');
     expect(parsePatternFile('x', text, 'conway').description).toBe('First sentence. Second sentence.');
+  });
+
+  it('prefers #C description: over provenance comments', () => {
+    const text = [
+      '#N Glider',
+      '#C SPDX-License-Identifier: CC0-1.0',
+      '#C source: https://example.com/glider',
+      '#C description: The smallest spaceship.',
+      'x = 3, y = 3',
+      'bo$2bo$3o!',
+    ].join('\n');
+    expect(parsePatternFile('glider', text, 'conway').description).toBe('The smallest spaceship.');
   });
 
   it('omits author/description entirely when there is no #O/#C line', () => {
@@ -46,6 +58,11 @@ describe('parsePatternFile (pure)', () => {
   it('falls back to the file id as the name when there is no #N line', () => {
     const text = ['x = 1, y = 1', 'o!'].join('\n');
     expect(parsePatternFile('no-name-file', text, 'conway').name).toBe('no-name-file');
+  });
+
+  it('reads ruleset from #C ruleset: when the caller does not override', () => {
+    const text = ['#N R', '#C ruleset: highlife', 'x = 1, y = 1', 'o!'].join('\n');
+    expect(parsePatternFile('r', text).ruleset).toBe('highlife');
   });
 
   it('ignores comment tags it does not understand (e.g. #R)', () => {
@@ -73,20 +90,21 @@ describe('loadPatterns', () => {
     expect(patterns.map((p) => p.id)).toEqual(['a', 'b']);
   });
 
-  it('loads the real bundled patterns/ directory: exactly the ten Phase 1 patterns (P1-G-2 AC1)', () => {
+  it('loads the real bundled patterns/ directory: the P2-B-1 seed set', () => {
     const patterns = loadPatterns(REAL_PATTERNS_DIR);
-    expect(patterns).toHaveLength(10);
+    expect(patterns.length).toBeGreaterThanOrEqual(40);
+    const rulesets = new Set(patterns.map((p) => p.ruleset));
+    expect(rulesets.size).toBeGreaterThanOrEqual(4);
     for (const p of patterns) {
-      expect(p.ruleset).toBe('conway');
       expect(p.name.length).toBeGreaterThan(0);
       expect(p.width).toBeGreaterThan(0);
       expect(p.height).toBeGreaterThan(0);
     }
   });
 
-  it('never silently diverges from ui/tools/stamp.ts’s BUILTIN_STAMPS (same ten patterns, same cells)', () => {
+  it('never silently diverges from ui/tools/stamp.ts’s BUILTIN_STAMPS (same ten ids, same cells)', () => {
     const serverPatterns = loadPatterns(REAL_PATTERNS_DIR);
-    expect(serverPatterns.map((p) => p.id).sort()).toEqual([...BUILTIN_STAMPS.map((s) => s.id)].sort());
+    expect(serverPatterns.map((p) => p.id)).toEqual(expect.arrayContaining([...BUILTIN_STAMPS.map((s) => s.id)]));
 
     for (const stamp of BUILTIN_STAMPS) {
       const serverPattern = serverPatterns.find((p) => p.id === stamp.id);
@@ -114,11 +132,11 @@ afterEach(async () => {
 });
 
 describe('GET /api/patterns', () => {
-  it('returns the ten Phase 1 patterns with complete metadata (P1-G-2 AC1)', async () => {
+  it('returns the seed catalogue with complete metadata', async () => {
     const res = await fetch(`${baseUrl}/api/patterns`);
     expect(res.status).toBe(200);
     const body = (await res.json()) as Array<Record<string, unknown>>;
-    expect(body).toHaveLength(10);
+    expect(body.length).toBeGreaterThanOrEqual(40);
     for (const pattern of body) {
       expect(typeof pattern['id']).toBe('string');
       expect(typeof pattern['name']).toBe('string');
@@ -129,14 +147,22 @@ describe('GET /api/patterns', () => {
     }
   });
 
-  it('?ruleset=conway returns all ten (every Phase 1 pattern is Conway’s Life)', async () => {
+  it('?ruleset=conway returns only Conway patterns, and at least the Phase 1 ten', async () => {
     const res = await fetch(`${baseUrl}/api/patterns?ruleset=conway`);
+    const body = (await res.json()) as Array<{ ruleset: string }>;
+    expect(body.length).toBeGreaterThanOrEqual(10);
+    expect(body.every((p) => p.ruleset === 'conway')).toBe(true);
+  });
+
+  it('?ruleset=highlife returns the HighLife seed, not an empty list', async () => {
+    const res = await fetch(`${baseUrl}/api/patterns?ruleset=highlife`);
+    expect(res.status).toBe(200);
     const body = (await res.json()) as unknown[];
-    expect(body).toHaveLength(10);
+    expect(body.length).toBeGreaterThanOrEqual(1);
   });
 
   it('?ruleset=<unknown> returns an empty array, not an error', async () => {
-    const res = await fetch(`${baseUrl}/api/patterns?ruleset=highlife`);
+    const res = await fetch(`${baseUrl}/api/patterns?ruleset=not-a-ruleset`);
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual([]);
   });

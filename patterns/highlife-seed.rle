@@ -1,0 +1,14 @@
+#N HighLife seed
+#O Nathan Thompson, 1994
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/OCA:HighLife
+#C verified: fancy-gol P2-B-1, eight cells unique to the HighLife seed set
+#C ruleset: highlife
+#C category: seed
+#C period: none
+#C tags: seed, highlife
+#C description: Eight cells that are not a Conway still life. HighLife's
+#C description: extra birth-on-6 is enough to pull this seed apart.
+x = 4, y = 4, rule = B36/S23
+obo$b2o$2o$obo!

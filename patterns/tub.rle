@@ -1,0 +1,15 @@
+#N Tub
+#O unknown, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Tub
+#C verified: fancy-gol P2-B-1, period 1, population 4
+#C ruleset: conway
+#C category: still-life
+#C period: 1
+#C heat: 0
+#C tags: still-life, conway
+#C description: Four cells on the diagonals of a 3×3. Same population
+#C description: as a block, completely different shape.
+x = 3, y = 3, rule = B3/S23
+bo$obo$bo!

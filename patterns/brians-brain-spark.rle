@@ -1,0 +1,15 @@
+#N Brian's Brain spark
+#O Brian Silverman, 1994
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/OCA:Brian%27s_Brain
+#C verified: fancy-gol P2-B-1, four firing cells around a refractory centre
+#C ruleset: brians-brain
+#C category: seed
+#C period: none
+#C tags: seed, brians-brain, multi-state
+#C description: Four firing cells around a cooling centre. In Brian's
+#C description: Brain they flash, decay, and scatter — a multi-state
+#C description: spark, not a Life still life.
+x = 3, y = 3, rule = /2/3
+.A.$ABA$.A.!

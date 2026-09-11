@@ -1,0 +1,16 @@
+#N Heavyweight spaceship
+#O John H. Conway, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Heavyweight_spaceship
+#C verified: fancy-gol P2-B-1, period 4, c/2 orthogonal, population 13
+#C ruleset: conway
+#C category: spaceship
+#C period: 4
+#C speed: c/2 orthogonal
+#C aliases: HWSS
+#C tags: spaceship, conway
+#C description: Thirteen cells, still c/2 orthogonal. The heaviest of
+#C description: the three standard spaceships Conway found in 1970.
+x = 7, y = 5, rule = B3/S23
+b6o$o5bo$6bo$o4bo$2b2o!

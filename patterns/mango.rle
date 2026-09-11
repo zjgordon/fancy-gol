@@ -1,0 +1,16 @@
+#N Mango
+#O unknown, 1971
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Mango
+#C verified: fancy-gol P2-B-1, period 1, population 8
+#C ruleset: conway
+#C category: still-life
+#C period: 1
+#C heat: 0
+#C aliases: cigar
+#C tags: still-life, conway
+#C description: Eight cells with a diagonal shear. Sometimes called a
+#C description: cigar; it does not smoke.
+x = 5, y = 4, rule = B3/S23
+b2o$o2bo$bo2bo$2b2o!

@@ -1,6 +1,14 @@
 #N R-pentomino
-#C A five-cell methuselah that stabilises only after 1103 generations, ending with 116 live cells.
+#O John H. Conway, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/R-pentomino
+#C verified: fancy-gol P2-B-1, five cells, evolves for 1103 generations
+#C ruleset: conway
+#C category: methuselah
+#C period: none
+#C tags: methuselah, conway, staple
+#C description: Five cells that refuse to sit down for 1,103
+#C description: generations. The methuselah that started the hunt.
 x = 3, y = 3, rule = B3/S23
-b2o$
-2o$
-bo!
+b2o$2o$bo!

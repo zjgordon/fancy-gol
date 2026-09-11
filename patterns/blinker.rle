@@ -1,4 +1,14 @@
 #N Blinker
-#C The smallest oscillator, period 2 -- a row of three cells that flips between horizontal and vertical.
+#O John H. Conway, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Blinker
+#C verified: fancy-gol P2-B-1, period 2, population 3
+#C ruleset: conway
+#C category: oscillator
+#C period: 2
+#C tags: oscillator, conway, staple
+#C description: Three cells in a line that flip between horizontal and
+#C description: vertical every generation. Period 2, population 3.
 x = 3, y = 1, rule = B3/S23
 3o!
