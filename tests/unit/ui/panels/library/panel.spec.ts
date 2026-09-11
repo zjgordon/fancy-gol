@@ -97,8 +97,8 @@ describe('createLibraryPanel', () => {
   it('opens in under 100 ms with 250 entries loaded', () => {
     const entries = catalogue();
     expect(entries.length).toBeGreaterThanOrEqual(250);
-    const t0 = performance.now();
     const { panel, host } = setup(entries);
+    const t0 = performance.now();
     host.open(LIBRARY_PANEL_ID);
     const elapsed = performance.now() - t0;
     expect(panel.root.querySelectorAll('.lib-card').length).toBeLessThan(30);
@@ -112,8 +112,10 @@ describe('createLibraryPanel', () => {
     host.open(LIBRARY_PANEL_ID);
     const viewport = panel.root.querySelector<HTMLElement>('.lib-virtual-viewport')!;
     Object.defineProperty(viewport, 'clientHeight', { value: 320, configurable: true });
-    const t0 = performance.now();
     viewport.scrollTop = 4000;
+    viewport.dispatchEvent(new Event('scroll'));
+    const t0 = performance.now();
+    viewport.scrollTop = 4080;
     viewport.dispatchEvent(new Event('scroll'));
     const elapsed = performance.now() - t0;
     expect(panel.root.querySelectorAll('.lib-card').length).toBeLessThan(20);

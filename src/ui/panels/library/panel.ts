@@ -121,6 +121,7 @@ export function createLibraryPanel(opts: LibraryPanelOptions = {}): LibraryPanel
   let ranked = filterLibrary(entries, filters);
   const thumbUrl = opts.thumbUrl ?? defaultThumbUrl;
   const thumbs = createThumbDirector();
+  const cardCache = new Map<string, HTMLElement>();
 
   const root = document.createElement('div');
   root.className = 'lib-panel';
@@ -221,6 +222,12 @@ export function createLibraryPanel(opts: LibraryPanelOptions = {}): LibraryPanel
   }
 
   function renderCard(entry: LibraryEntry): HTMLElement {
+    const cached = cardCache.get(entry.id);
+    if (cached) {
+      cached.setAttribute('aria-selected', entry.id === selectedId ? 'true' : 'false');
+      cached.classList.toggle('lib-card--selected', entry.id === selectedId);
+      return cached;
+    }
     const card = document.createElement('div');
     card.className = 'lib-card';
     card.setAttribute('role', 'option');
@@ -272,6 +279,7 @@ export function createLibraryPanel(opts: LibraryPanelOptions = {}): LibraryPanel
       e.dataTransfer?.setData('text/plain', entry.id);
       if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
     });
+    cardCache.set(entry.id, card);
     return card;
   }
 
@@ -449,6 +457,7 @@ export function createLibraryPanel(opts: LibraryPanelOptions = {}): LibraryPanel
     setEntries(next, source) {
       entries = next;
       if (source) catalogSource = source;
+      cardCache.clear();
       paintFilters();
       paint();
     },
