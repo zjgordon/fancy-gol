@@ -22,6 +22,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Oscillators, spaceships, and guns report their period from an incremental Zobrist hash, confirmed against history. (P2-C-3)
 - Population growth is classified as constant, linear, quadratic, or exponential — or as insufficient data, not a guess. (P2-C-4)
 - A million generations of stats stay under 32 MB, and downsampled charts still show the min/max envelope of any oscillation. (P2-C-5)
+- Charts query a labelled, downsampled stats window from the worker instead of mirroring every sample on the main thread. (P2-C-6)
 
 ## [0.2.0] — 2026-09-08
 

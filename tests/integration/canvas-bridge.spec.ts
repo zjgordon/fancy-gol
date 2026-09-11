@@ -53,6 +53,9 @@ function createFakeWorker(): { workerLike: WorkerLike } {
     },
     scheduler: new NoopScheduler(),
     capabilities: CAPS,
+    // Same isolate as the renderer: a 6 MB stats ring would pollute the
+    // heapUsed probe around draw(). A real worker thread still records.
+    recordStats: false,
   });
   const workerLike: WorkerLike = {
     postMessage: (message, transfer) => {

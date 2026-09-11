@@ -278,7 +278,12 @@ function writeSlot(
   r.cx[i] = cx;
   r.cy[i] = cy;
   if (r.perState.length > 0) {
-    r.perState.set(perState.subarray(perOff, perOff + STATE_SLOTS), i * STATE_SLOTS);
+    const dest = i * STATE_SLOTS;
+    if (perOff === 0 && perState.length === STATE_SLOTS) {
+      r.perState.set(perState, dest);
+    } else {
+      r.perState.set(perState.subarray(perOff, perOff + STATE_SLOTS), dest);
+    }
   }
 }
 
@@ -438,6 +443,7 @@ export class Series {
     makeRing(false),
   ];
   private readonly acc: readonly [Acc, Acc, Acc] = [makeAcc(), makeAcc(), makeAcc()];
+  private readonly foldBBox = { x: 0, y: 0, width: 0, height: 0 };
   private newestTick = -1;
 
   get bytes(): number {
@@ -463,16 +469,9 @@ export class Series {
   }
 
   push(s: StatSample): void {
-    const pop = s.population;
-    const bbox = s.bbox;
-    const i0 = this.rings[0].write;
-    writeSlot(
-      this.rings[0],
-      i0,
+    this.record(
       s.tick,
-      pop,
-      pop,
-      pop,
+      s.population,
       s.births,
       s.deaths,
       s.transitions,
@@ -480,25 +479,16 @@ export class Series {
       s.density,
       s.entropy,
       s.hash,
-      bbox.x,
-      bbox.y,
-      bbox.width,
-      bbox.height,
+      s.bbox,
       s.centroid.x,
       s.centroid.y,
       s.perState,
-      0,
     );
-    this.rings[0].write = (i0 + 1) % TIER_SLOTS;
-    if (this.rings[0].filled < TIER_SLOTS) this.rings[0].filled += 1;
-    this.newestTick = s.tick;
-    this.fold(0, i0);
   }
 
   /**
-   * Record one collector tick. Same rings as {@link push}; the live
-   * `perState` buffer is copied, not sliced, so this stays allocation-light
-   * on the `apply` path.
+   * Record one collector tick without allocating a `StatSample`. The live
+   * `perState` buffer is copied, not sliced, so `apply` stays allocation-light.
    */
   capture(
     s: {
@@ -516,20 +506,66 @@ export class Series {
     },
     hash: number,
   ): void {
-    this.push({
-      tick: s.tick,
-      population: s.population,
-      perState: s.perState,
-      births: s.births,
-      deaths: s.deaths,
-      transitions: s.transitions,
-      activity: s.activity,
-      density: s.density,
-      bbox: s.bbox,
-      centroid: s.centroid,
-      entropy: s.entropy,
+    this.record(
+      s.tick,
+      s.population,
+      s.births,
+      s.deaths,
+      s.transitions,
+      s.activity,
+      s.density,
+      s.entropy,
       hash,
-    });
+      s.bbox,
+      s.centroid.x,
+      s.centroid.y,
+      s.perState,
+    );
+  }
+
+  private record(
+    tick: number,
+    pop: number,
+    births: number,
+    deaths: number,
+    transitions: number,
+    activity: number,
+    density: number,
+    entropy: number,
+    hash: number,
+    bbox: Rect,
+    cx: number,
+    cy: number,
+    perState: Uint32Array,
+  ): void {
+    const i0 = this.rings[0].write;
+    writeSlot(
+      this.rings[0],
+      i0,
+      tick,
+      pop,
+      pop,
+      pop,
+      births,
+      deaths,
+      transitions,
+      activity,
+      density,
+      entropy,
+      hash,
+      bbox.x,
+      bbox.y,
+      bbox.width,
+      bbox.height,
+      cx,
+      cy,
+      perState,
+      0,
+    );
+    this.rings[0].write = (i0 + 1) % TIER_SLOTS;
+    if (this.rings[0].filled < TIER_SLOTS) this.rings[0].filled += 1;
+    this.newestTick = tick;
+    this.fold(0, i0);
   }
 
   /**
@@ -616,12 +652,11 @@ export class Series {
   private fold(fromTier: 0 | 1 | 2, slot: number): void {
     const src = this.rings[fromTier];
     const acc = this.acc[fromTier];
-    const bbox: Rect = {
-      x: src.bboxX[slot]!,
-      y: src.bboxY[slot]!,
-      width: src.bboxW[slot]!,
-      height: src.bboxH[slot]!,
-    };
+    const bbox = this.foldBBox;
+    bbox.x = src.bboxX[slot]!;
+    bbox.y = src.bboxY[slot]!;
+    bbox.width = src.bboxW[slot]!;
+    bbox.height = src.bboxH[slot]!;
     accAdd(
       acc,
       src.tick[slot]!,

@@ -22,6 +22,7 @@ import { parseEvent, type Command, type Event } from '@shared/protocol';
 import type { RuleSet, Snapshot } from '@shared/types';
 
 export type FrameEvent = Extract<Event, { type: 'frame' }>;
+export type StatsWindowReply = Extract<Event, { type: 'statsWindow' }>;
 
 type WithoutId<T> = T extends { readonly id: number } ? Omit<T, 'id'> : never;
 /** Any `Command` minus its `id` — `WorkerClient.send` assigns the correlation id itself. */
@@ -119,7 +120,7 @@ export class WorkerClient {
       this.scheduleFrameDelivery();
       return;
     }
-    if (event.type === 'stats') return; // no Phase 0 consumer yet (Phase 2's stat engine)
+    if (event.type === 'stats') return; // unused push; charts use statsWindow (P2-C-6)
     if (!isEventWithId(event)) return;
 
     const request = this.pending.get(event.id);
@@ -150,6 +151,19 @@ export class WorkerClient {
   onFrame(cb: (frame: FrameEvent) => void): () => void {
     this.frameSubscribers.add(cb);
     return () => this.frameSubscribers.delete(cb);
+  }
+
+  /**
+   * Query the worker's tiered series (P2-C-6). Charts must use this helper —
+   * do not import `Series` from `@engine` on the main thread.
+   */
+  statsWindow(fromTick: number, toTick: number, maxPoints: number): Promise<StatsWindowReply> {
+    return this.send({ cmd: 'statsWindow', fromTick, toTick, maxPoints }).then((event) => {
+      if (event.type !== 'statsWindow') {
+        throw new Error(`expected statsWindow reply, got ${event.type}`);
+      }
+      return event;
+    });
   }
 
   /** Send one command, assigning its correlation id. Resolves with the matching `ready`/`ok`, rejects with the matching `error`. */

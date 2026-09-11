@@ -347,6 +347,67 @@ describe('worker-protocol: the full Phase 0 command set, through an in-memory po
     expect(event?.type).toBe('error');
     if (event?.type === 'error') expect(event.code).toBe('E_DISPOSED');
   });
+
+  it('statsWindow replies with ≤ maxPoints labelled samples', () => {
+    const port = createPort();
+    port.send({ id: 1, cmd: 'init', ruleset: CONWAY, width: 16, height: 16, seed: 1 });
+    port.send({
+      id: 2,
+      cmd: 'paint',
+      ops: [
+        { x: 4, y: 4, state: 1 },
+        { x: 5, y: 4, state: 1 },
+        { x: 4, y: 5, state: 1 },
+        { x: 5, y: 5, state: 1 },
+      ],
+    });
+    port.send({ id: 3, cmd: 'step', n: 24 });
+    port.send({ id: 4, cmd: 'statsWindow', fromTick: 0, toTick: 24, maxPoints: 8 });
+    const reply = findByType(port.events, 'statsWindow');
+    expect(reply).toBeDefined();
+    expect(reply?.id).toBe(4);
+    expect(reply!.points.length).toBeLessThanOrEqual(8);
+    expect(reply!.points.length).toBeGreaterThan(0);
+    expect(reply!.label).toMatch(/Tier/);
+    expect(reply!.tier).toBe(0);
+    expect(reply!.aggregated).toBe(false);
+  });
+
+  it(
+    'statsWindow on an old span uses an aggregated tier and keeps the min/max envelope',
+    { timeout: 30_000 },
+    () => {
+      const port = createPort();
+      port.send({ id: 1, cmd: 'init', ruleset: CONWAY, width: 16, height: 16, seed: 1 });
+      // A 2×2 block: cheap enough that 4,200 gens do not starve the DOM
+      // project's 16.6 ms brush gate, and constant population still proves
+      // min/max survive aggregation (min = max = 4).
+      port.send({
+        id: 2,
+        cmd: 'paint',
+        ops: [
+          { x: 4, y: 4, state: 1 },
+          { x: 5, y: 4, state: 1 },
+          { x: 4, y: 5, state: 1 },
+          { x: 5, y: 5, state: 1 },
+        ],
+      });
+      // T0 only covers the last 4,096 ticks; query the start of the run so
+      // pickTier has to walk up to an aggregated ring.
+      port.send({ id: 3, cmd: 'step', n: 4_200 });
+      port.send({ id: 4, cmd: 'statsWindow', fromTick: 0, toTick: 200, maxPoints: 32 });
+      const reply = findByType(port.events, 'statsWindow');
+      expect(reply).toBeDefined();
+      expect(reply!.points.length).toBeLessThanOrEqual(32);
+      expect(reply!.tier).toBeGreaterThanOrEqual(1);
+      expect(reply!.aggregated).toBe(true);
+      expect(reply!.label).toMatch(/min\/mean\/max/);
+      for (const p of reply!.points) {
+        expect(p.populationMin).toBeLessThanOrEqual(p.population);
+        expect(p.population).toBeLessThanOrEqual(p.populationMax);
+      }
+    },
+  );
 });
 
 describe('worker-protocol: an unknown command returns a structured error and does not kill the handler', () => {

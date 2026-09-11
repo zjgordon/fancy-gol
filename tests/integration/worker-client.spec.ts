@@ -150,6 +150,28 @@ describe('WorkerClient: promise-based RPC', () => {
     expect(reply).toEqual({ id: 1, type: 'ready', capabilities: CAPS });
   });
 
+  it('statsWindow is a typed helper that never needs @engine/stats', async () => {
+    const fake = createFakeWorker();
+    const client = new WorkerClient({ spawn: () => fake.workerLike, frameScheduler: IMMEDIATE_FRAME_SCHEDULER });
+    await client.send({ cmd: 'init', ruleset: CONWAY, width: 16, height: 16, seed: 1 });
+    await client.send({
+      cmd: 'paint',
+      ops: [
+        { x: 4, y: 4, state: 1 },
+        { x: 5, y: 4, state: 1 },
+        { x: 4, y: 5, state: 1 },
+        { x: 5, y: 5, state: 1 },
+      ],
+    });
+    await client.send({ cmd: 'step', n: 8 });
+    const reply = await client.statsWindow(0, 8, 16);
+    expect(reply.type).toBe('statsWindow');
+    expect(reply.points.length).toBeLessThanOrEqual(16);
+    expect(reply.points.length).toBeGreaterThan(0);
+    expect(reply.label).toMatch(/Tier/);
+    expect(reply.points[0]?.populationMin).toBeLessThanOrEqual(reply.points[0]!.populationMax);
+  });
+
   it('send rejects on the matching error event', async () => {
     const fake = createFakeWorker();
     const client = new WorkerClient({ spawn: () => fake.workerLike, frameScheduler: IMMEDIATE_FRAME_SCHEDULER });

@@ -34,6 +34,7 @@ function kindOf(cmd: Command['cmd']): Command['cmd'] {
     case 'restore':
     case 'setViewport':
     case 'dispose':
+    case 'statsWindow':
       return cmd;
     default:
       return assertExhaustive(cmd);
@@ -55,11 +56,34 @@ const ALL_KINDS: readonly Command['cmd'][] = [
   'restore',
   'setViewport',
   'dispose',
+  'statsWindow',
 ];
 
 describe('Command exhaustiveness', () => {
   it('every known kind round-trips through the exhaustive switch unchanged', () => {
     for (const kind of ALL_KINDS) expect(kindOf(kind)).toBe(kind);
+  });
+});
+
+function eventKindOf(type: Event['type']): Event['type'] {
+  switch (type) {
+    case 'ready':
+    case 'frame':
+    case 'stats':
+    case 'statsWindow':
+    case 'ok':
+    case 'error':
+      return type;
+    default:
+      return assertExhaustive(type);
+  }
+}
+
+describe('Event exhaustiveness', () => {
+  it('every known type round-trips through the exhaustive switch unchanged', () => {
+    for (const type of ['ready', 'frame', 'stats', 'statsWindow', 'ok', 'error'] as const) {
+      expect(eventKindOf(type)).toBe(type);
+    }
   });
 });
 
@@ -93,6 +117,7 @@ const VALID_COMMANDS: Record<Command['cmd'], Record<string, unknown>> = {
     viewport: { rect: { x: 0, y: 0, width: 10, height: 10 }, scale: 1 },
   },
   dispose: { id: 13, cmd: 'dispose' },
+  statsWindow: { id: 15, cmd: 'statsWindow', fromTick: 0, toTick: 100, maxPoints: 800 },
 };
 
 describe('parseCommand: valid messages', () => {
@@ -260,6 +285,34 @@ const VALID_EVENTS: Record<Event['type'], Record<string, unknown>> = {
       entropy: 0,
       hash: 0,
     },
+  },
+  statsWindow: {
+    id: 4,
+    type: 'statsWindow',
+    tier: 1,
+    aggregated: true,
+    downsampled: true,
+    sourceCount: 4096,
+    label: 'Tier 1 (min/mean/max, every 16 ticks, LTTB to 800 points)',
+    points: [
+      {
+        tick: 16,
+        population: 12,
+        populationMin: 8,
+        populationMax: 16,
+        perState: new Uint32Array(2),
+        births: 1,
+        deaths: 1,
+        transitions: 0,
+        activity: 2,
+        density: 0.1,
+        bbox: { x: 0, y: 0, width: 4, height: 4 },
+        centroid: { x: 2, y: 2 },
+        entropy: 0,
+        hash: 0,
+        tier: 1,
+      },
+    ],
   },
   ok: { id: 1, type: 'ok', result: { snapshot: true } },
   error: { id: 1, type: 'error', message: 'boom', code: 'E_BOOM' },

@@ -14,6 +14,8 @@ import type { Clock } from '@engine/clock';
 import { CHUNK_AREA, CHUNK_SIZE, chunkToWorld, unpackChunkX, unpackChunkY } from '@engine/grid/coords';
 import { validateRuleSet } from '@engine/rules/validate';
 import { Simulation } from '@engine/simulation';
+import { StatsCollector } from '@engine/stats/collector';
+import { describeSeriesQuery } from '@engine/stats/series';
 import { DEAD, type ChangeSet, type Rect, type StateId } from '@engine/types';
 import { parseCommand, type Command, type Event, type TransferredChunks, type WorkerCaps } from '@shared/protocol';
 import type { TickStats } from '@shared/types';
@@ -48,6 +50,13 @@ export interface HandlerOptions {
   readonly capabilities: WorkerCaps;
   /** Injected clock for `TickStats.stepMicros`; defaults to `Simulation`'s own zero-delta stub. */
   readonly clock?: Clock;
+  /**
+   * Record a {@link StatsCollector} series on every generation (P2-C-6).
+   * Default true. The in-memory canvas-bridge allocation probe shares this
+   * isolate with the handler; it opts out so `heapUsed` around `draw()` is
+   * the renderer, not a 6 MB stats ring. A real worker thread keeps this on.
+   */
+  readonly recordStats?: boolean;
 }
 
 export interface WorkerHandler {
@@ -103,12 +112,29 @@ function buildDirtyRects(dirtyChunks: Int32Array): Rect[] {
 
 export function createHandler(opts: HandlerOptions): WorkerHandler {
   let sim: Simulation | null = null;
+  let collector: StatsCollector | null = null;
   let runHandle: number | null = null;
   let disposed = false;
+  const recordStats = opts.recordStats !== false;
 
   function requireSim(): Simulation {
     if (!sim) throw new Error('no simulation initialised; send "init" first');
     return sim;
+  }
+
+  function requireCollector(): StatsCollector {
+    if (!collector) {
+      throw new Error(
+        recordStats
+          ? 'no simulation initialised; send "init" first'
+          : 'stats recording is disabled on this handler',
+      );
+    }
+    return collector;
+  }
+
+  function resetCollector(active: Simulation): void {
+    collector?.reset(active.view(), active.tick);
   }
 
   function stopRun(): void {
@@ -118,14 +144,44 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
     }
   }
 
-  /** Everything already known to have happened: post the resulting frame from a real `ChangeSet`. */
-  function postFrame(active: Simulation, cs: ChangeSet): void {
-    const chunks = buildTransferredChunks(active, cs.dirtyChunks);
-    const dirty = buildDirtyRects(cs.dirtyChunks);
+  /** Everything already known to have happened: post the resulting frame from dirty chunk keys. */
+  function postFrame(active: Simulation, dirtyChunks: Int32Array): void {
+    const chunks = buildTransferredChunks(active, dirtyChunks);
+    const dirty = buildDirtyRects(dirtyChunks);
     opts.post(
       { type: 'frame', tick: active.tick, chunks, dirty, stats: copyStats(active.stats) },
       [chunks.keys.buffer, chunks.data.buffer],
     );
+  }
+
+  function postFrameFromChangeSet(active: Simulation, cs: ChangeSet): void {
+    postFrame(active, cs.dirtyChunks);
+  }
+
+  /**
+   * Step `n` generations, recording each in the collector so charts see every
+   * tick. Dirty chunks are coalesced across the batch (same honesty as
+   * `Simulation.stepMany`) so the client's mirror does not miss an intermediate
+   * edit that had settled by the last generation.
+   */
+  function stepGenerations(active: Simulation, n: number): Int32Array {
+    const col = collector;
+    const view = active.view();
+    if (!col) return active.stepMany(n).dirtyChunks;
+    if (n <= 0) return active.stepMany(n).dirtyChunks;
+    if (n === 1) {
+      const cs = active.step();
+      col.apply(cs, view);
+      return cs.dirtyChunks;
+    }
+    const seen = new Set<number>();
+    for (let i = 0; i < n; i++) {
+      const cs = active.step();
+      col.apply(cs, view);
+      const dirty = cs.dirtyChunks;
+      for (let d = 0; d < dirty.length; d++) seen.add(dirty[d]!);
+    }
+    return Int32Array.from(seen);
   }
 
   /** For mutations with no incremental `ChangeSet` (`clear`, `seedRandom`, `seek`, …): a full-world frame via `snapshot()`, honestly labelled as "everything changed" rather than approximated as a dirty-rect list. */
@@ -151,6 +207,8 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
           seed: cmd.seed,
           ...(opts.clock ? { clock: opts.clock } : {}),
         });
+        collector = recordStats ? new StatsCollector() : null;
+        if (collector) collector.reset(sim.view(), sim.tick);
         opts.post({ id: cmd.id, type: 'ready', capabilities: opts.capabilities });
         return;
       }
@@ -159,6 +217,7 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
         const migration = cmd.migration;
         const migrate = migration ? (old: StateId): StateId => migration[old] ?? DEAD : undefined;
         active.setRuleset(validateRuleSet(cmd.ruleset), migrate);
+        resetCollector(active);
         opts.post({ id: cmd.id, type: 'ok' });
         // Every live cell's byte can change here (a migration remaps the whole palette, not an
         // incremental edit) — `setRuleset` returns no `ChangeSet` at all, so a full frame is the
@@ -169,9 +228,9 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
       }
       case 'step': {
         const active = requireSim();
-        const cs = active.stepMany(cmd.n);
+        const dirty = stepGenerations(active, cmd.n);
         opts.post({ id: cmd.id, type: 'ok' });
-        postFrame(active, cs);
+        postFrame(active, dirty);
         return;
       }
       case 'run': {
@@ -179,9 +238,10 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
         if (!(cmd.tps > 0)) throw new RangeError(`run.tps must be > 0, got ${cmd.tps}`);
         stopRun();
         runHandle = opts.scheduler.setInterval(() => {
-          if (!sim || disposed) return;
+          if (!sim || disposed || !collector) return;
           const cs = sim.step();
-          postFrame(sim, cs);
+          collector.apply(cs, sim.view());
+          postFrameFromChangeSet(sim, cs);
         }, 1000 / cmd.tps);
         opts.post({ id: cmd.id, type: 'ok' });
         return;
@@ -194,13 +254,15 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
       case 'paint': {
         const active = requireSim();
         const cs = active.paint(cmd.ops);
+        resetCollector(active);
         opts.post({ id: cmd.id, type: 'ok' });
-        postFrame(active, cs);
+        postFrameFromChangeSet(active, cs);
         return;
       }
       case 'clear': {
         const active = requireSim();
         active.clear();
+        resetCollector(active);
         opts.post({ id: cmd.id, type: 'ok' });
         postFullFrame(active);
         return;
@@ -208,6 +270,7 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
       case 'seedRandom': {
         const active = requireSim();
         active.seedRandom(cmd.density, cmd.seed);
+        resetCollector(active);
         opts.post({ id: cmd.id, type: 'ok' });
         postFullFrame(active);
         return;
@@ -221,6 +284,7 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
       case 'seek': {
         const active = requireSim();
         active.seek(cmd.tick);
+        resetCollector(active);
         opts.post({ id: cmd.id, type: 'ok' });
         postFullFrame(active);
         return;
@@ -234,6 +298,7 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
       case 'restore': {
         const active = requireSim();
         active.restore(cmd.snapshot);
+        resetCollector(active);
         opts.post({ id: cmd.id, type: 'ok' });
         postFullFrame(active);
         return;
@@ -249,8 +314,24 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
       case 'dispose': {
         stopRun();
         sim = null;
+        collector = null;
         disposed = true;
         opts.post({ id: cmd.id, type: 'ok' });
+        return;
+      }
+      case 'statsWindow': {
+        const col = requireCollector();
+        const q = col.series.query(cmd.fromTick, cmd.toTick, cmd.maxPoints);
+        opts.post({
+          id: cmd.id,
+          type: 'statsWindow',
+          tier: q.tier,
+          aggregated: q.aggregated,
+          downsampled: q.downsampled,
+          sourceCount: q.sourceCount,
+          label: describeSeriesQuery(q),
+          points: q.points,
+        });
         return;
       }
       /* v8 ignore next 4 -- Command['cmd'] is a closed union; parseCommand already narrowed this file's only caller. */

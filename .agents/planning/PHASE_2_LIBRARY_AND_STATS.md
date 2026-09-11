@@ -319,14 +319,16 @@ Measured: OLS on a 2048-sample trailing ring, best by adjusted R² with a fewer-
 
 Measured: four columnar rings of 4,096 slots (`src/engine/stats/series.ts`). Occupancy is **6.13 MB** (`Series.bytes`; T0 keeps a 256-bin histogram, coarser rings keep the population envelope only — folding 256 bins every tick is O(palette), not O(changes)). The rings do not grow with tick count; T3 is ring-capped at 4,096 × 4,096-tick buckets. Population stores min/mean/max so a 32-tick sine of amplitude 50 still has a T3 band **> 90** after a 4,096-tick fold. `query(fromTick, toTick, maxPoints)` is the §2.2 `window()` method — not named `window` because that identifier is the DOM global the pure-logic lane forbids (ADR-009); P2-C-6 should call `query`. It picks the finest covering ring (a live 1M-tick span is T2's 4,096 points) then LTTB-reduces; 800 points in **< 8 ms** (the million-tick suite is skipped under `VITEST_COVERAGE`). `describeSeriesQuery` labels tier, min/mean/max, and LTTB — never present a downsampled series as exact. `stats-overhead` median **2.95%** (budget 5%) with a columnar copy on every `apply`.
 
-#### - [ ] P2-C-6 · `statsWindow` protocol + worker plumbing
+#### - [x] P2-C-6 · `statsWindow` protocol + worker plumbing — @cursor, started 2026-09-11
 **Depends on:** P2-C-5 · **Files:** `src/shared/protocol.ts`, `src/worker/{handler,client}.ts`, `tests/integration/worker-protocol.spec.ts`
 **Intent:** Charts must query tiered series without mirroring engine logic on the main thread or streaming every sample. Appended 2026-09-11 (ADR-006 amendment).
 **Implementation notes** Add `statsWindow` command + reply per ADR-006 amendment. `TickStats` on `frame` stays for the status bar; charts call `statsWindow({ fromTick, toTick, maxPoints, … })` and receive an LTTB-downsampled `StatSample` (or equivalent) with tier labelled. Do not duplicate `Series` in `ui/`.
 **Acceptance criteria**
-- [ ] Protocol types include `statsWindow` request and reply; exhaustiveness switches updated.
-- [ ] Integration test: seed a known series in the worker, query a window, assert point count ≤ maxPoints and min/max envelope preserved for tiers ≥ 1.
-- [ ] `WorkerClient` exposes a typed helper; no `ui/ → engine/` import for series reads.
+- [x] Protocol types include `statsWindow` request and reply; exhaustiveness switches updated.
+- [x] Integration test: seed a known series in the worker, query a window, assert point count ≤ maxPoints and min/max envelope preserved for tiers ≥ 1.
+- [x] `WorkerClient` exposes a typed helper; no `ui/ → engine/` import for series reads.
+
+Measured: dedicated `{ id, type: 'statsWindow' }` reply (not `ok.result`) carrying `tier`, `aggregated`, `downsampled`, `sourceCount`, `label` (`describeSeriesQuery`), and `points` with `populationMin`/`populationMax`. `{ type: 'stats' }` push stays unused. The worker handler owns a `StatsCollector`: `reset` after init/paint/clear/seed/restore/seek/setRuleset, `apply` on every generation (`step` loops so a batch of n still records n samples; dirty chunks are coalesced for the frame). `WorkerClient.statsWindow(from, to, maxPoints)` is the only main-thread read — `ui/` does not import `@engine/stats`. Still-life 4,200 gens, `query[0, 200]` at 32 points → tier ≥ 1, `points.length ≤ 32`, min ≤ mean ≤ max on every point. The canvas-bridge heap probe opts out (`recordStats: false`) because it shares the handler's isolate; a real worker thread still records.
 
 ---
 

@@ -86,7 +86,33 @@ export type Command =
   | { readonly id: number; readonly cmd: 'snapshot' }
   | { readonly id: number; readonly cmd: 'restore'; readonly snapshot: Snapshot } // added P0-G-3 (ADR-006 amendment): snapshot's write counterpart, for recovering a killed-and-restarted worker
   | { readonly id: number; readonly cmd: 'setViewport'; readonly viewport: Viewport } // worker sends only visible chunks
-  | { readonly id: number; readonly cmd: 'dispose' };
+  | { readonly id: number; readonly cmd: 'dispose' }
+  | {
+      readonly id: number;
+      readonly cmd: 'statsWindow';
+      readonly fromTick: number;
+      readonly toTick: number;
+      readonly maxPoints: number;
+    };
+
+/** One LTTB-reduced series point on the wire (P2-C-6). Min/max is the envelope so a chart cannot hide an oscillation. */
+export interface StatsWindowPoint {
+  readonly tick: number;
+  readonly population: number;
+  readonly populationMin: number;
+  readonly populationMax: number;
+  readonly perState: Uint32Array;
+  readonly births: number;
+  readonly deaths: number;
+  readonly transitions: number;
+  readonly activity: number;
+  readonly density: number;
+  readonly bbox: Rect;
+  readonly centroid: { readonly x: number; readonly y: number };
+  readonly entropy: number;
+  readonly hash: number;
+  readonly tier: 0 | 1 | 2 | 3;
+}
 
 // worker → main
 export type Event =
@@ -99,6 +125,17 @@ export type Event =
       readonly stats: TickStats;
     }
   | { readonly type: 'stats'; readonly series: StatSample }
+  | {
+      readonly id: number;
+      readonly type: 'statsWindow';
+      readonly tier: 0 | 1 | 2 | 3;
+      readonly aggregated: boolean;
+      readonly downsampled: boolean;
+      readonly sourceCount: number;
+      /** `describeSeriesQuery` — never present a downsampled window as exact. */
+      readonly label: string;
+      readonly points: readonly StatsWindowPoint[];
+    }
   | { readonly id: number; readonly type: 'ok'; readonly result?: unknown }
   | {
       readonly id: number;
@@ -199,6 +236,7 @@ const COMMAND_KINDS = [
   'restore',
   'setViewport',
   'dispose',
+  'statsWindow',
 ] as const;
 
 type CommandKind = (typeof COMMAND_KINDS)[number];
@@ -310,13 +348,28 @@ export function parseCommand(raw: unknown): ParseResult<Command> {
     }
     case 'dispose':
       return ok({ id, cmd });
+    case 'statsWindow': {
+      if (!isFiniteNumber(raw['fromTick']))
+        return fail('fromTick', 'statsWindow.fromTick must be a finite number');
+      if (!isFiniteNumber(raw['toTick']))
+        return fail('toTick', 'statsWindow.toTick must be a finite number');
+      if (!isFiniteNumber(raw['maxPoints']))
+        return fail('maxPoints', 'statsWindow.maxPoints must be a finite number');
+      return ok({
+        id,
+        cmd,
+        fromTick: raw['fromTick'],
+        toTick: raw['toTick'],
+        maxPoints: raw['maxPoints'],
+      });
+    }
     /* v8 ignore next 2 -- see assertNever above. */
     default:
       return assertNever(cmd);
   }
 }
 
-const EVENT_KINDS = ['ready', 'frame', 'stats', 'ok', 'error'] as const;
+const EVENT_KINDS = ['ready', 'frame', 'stats', 'statsWindow', 'ok', 'error'] as const;
 type EventKind = (typeof EVENT_KINDS)[number];
 
 function isEventKind(v: unknown): v is EventKind {
@@ -376,6 +429,31 @@ export function parseEvent(raw: unknown): ParseResult<Event> {
       if (!isRecord(raw['series']))
         return fail('series', 'stats.series must be a StatSample object');
       return ok({ type, series: raw['series'] as unknown as StatSample });
+    }
+    case 'statsWindow': {
+      if (!isFiniteNumber(raw['id'])) return fail('id', 'statsWindow.id must be a finite number');
+      if (!isFiniteNumber(raw['tier']))
+        return fail('tier', 'statsWindow.tier must be a finite number');
+      if (typeof raw['aggregated'] !== 'boolean')
+        return fail('aggregated', 'statsWindow.aggregated must be a boolean');
+      if (typeof raw['downsampled'] !== 'boolean')
+        return fail('downsampled', 'statsWindow.downsampled must be a boolean');
+      if (!isFiniteNumber(raw['sourceCount']))
+        return fail('sourceCount', 'statsWindow.sourceCount must be a finite number');
+      if (typeof raw['label'] !== 'string')
+        return fail('label', 'statsWindow.label must be a string');
+      if (!Array.isArray(raw['points']))
+        return fail('points', 'statsWindow.points must be an array');
+      return ok({
+        id: raw['id'],
+        type,
+        tier: raw['tier'] as 0 | 1 | 2 | 3,
+        aggregated: raw['aggregated'],
+        downsampled: raw['downsampled'],
+        sourceCount: raw['sourceCount'],
+        label: raw['label'],
+        points: raw['points'] as readonly StatsWindowPoint[],
+      });
     }
     case 'ok': {
       if (!isFiniteNumber(raw['id'])) return fail('id', 'ok.id must be a finite number');
