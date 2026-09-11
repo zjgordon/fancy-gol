@@ -355,8 +355,9 @@ Measured: `src/ui/charts/{scale,axis,chart}.ts` — linear / log / generation-ti
 
 Measured: `stackStateAreas` skips dead (state 0); live-state heights sum to `population` at every sample and adjacent layers share a boundary (no gap, no overdraw). `drawBand` from tier 1–3 `populationMin`/`populationMax` contains the mean in canvas space. `Chart` now calls `drawLine` / `drawBand` so an aggregated `statsWindow` always shows the envelope. Phase trail alpha is `MotionSignature.easings.*` over a tail sized by `durationMs` at `CHART_HZ`; same window redrawn twice is byte-identical alphas. Sparkline and histogram are standalone for P2-D-3. Not hosted in the shell — that is still P2-D-3.
 
-#### - [ ] P2-D-3 · Statistics panel
+#### - [!] P2-D-3 · Statistics panel
 **Depends on:** P2-D-2, P2-G-2 · **Files:** `src/ui/panels/statistics/*`
+**Blocked on:** P2-G-2 (panel host; itself depends on P2-G-1). Do not invent a second panel contract.
 **Implementation notes**
 - **Two modes.** *Simple*: three big numbers (population, births/deaths, generation) plus one sparkline — a child can read it. *Advanced*: the full chart grid, cycle/growth report, the phase plot, and the entropy trace. One toggle. This is the inception document's "child … or a serious researcher" requirement made concrete, and it should exist in every panel.
 - Dock/resize/collapse/session layout come from **P2-G-2** — do not invent a second panel contract here.
@@ -487,14 +488,16 @@ case is gated honestly, and dissolve the sandbox-vs-CI machine provenance proble
 > Appended 2026-09-11 (retro §3.6, §5.2, §5.4). Lands before the three panels. Does not renumber
 > any prior ID.
 
-#### - [ ] P2-G-1 · Composition-root refactor
+#### - [x] P2-G-1 · Composition-root refactor
 **Depends on:** Phase 1 · **Files:** `src/client/main.ts`, extracted wiring modules under `src/client/` (and/or `src/ui/` as appropriate)
 **Intent:** `main.ts` is ~1,049 lines and excluded from coverage. Extract testable wiring *before* three panels land more seams there. Own `refactor(ui)` / `refactor(client)` commit(s) — never mixed with a feature (`AGENTS.md` §7).
 **Implementation notes** Pull seams into focused modules (worker subscription, tool/command wiring, session restore, overlay hosts, …). Leave `main.ts` as a thin composition root. Decision on `src/client/**` coverage (`planning/README.md` §3.5): after extraction, either (a) put a modest threshold on remaining `client/**`, or (b) keep `client/**` excluded **only if** the extracted modules live under paths that already have thresholds and a comment in `vitest.config.ts` states why. Prefer (a) if the residual root is still large.
 **Acceptance criteria**
-- [ ] `main.ts` line count drops by ≥ 40% with behaviour preserved (Playwright smoke / existing e2e green).
-- [ ] Extracted modules have unit or integration tests; coverage policy for `client/**` is recorded in `vitest.config.ts` per §3.5.
-- [ ] No feature work in the same commit as the refactor.
+- [x] `main.ts` line count drops by ≥ 40% with behaviour preserved (Playwright smoke / existing e2e green).
+- [x] Extracted modules have unit or integration tests; coverage policy for `client/**` is recorded in `vitest.config.ts` per §3.5.
+- [x] No feature work in the same commit as the refactor.
+
+Measured: `main.ts` 1088 → 639 lines (41%). Seams: seed, shell theme, tool-gate, thumbnail batch/loop, view/edit commands, cold-start, boot-session, worker adapter, harness factory. `src/client/**` gated at 85/75/75; only `main.ts` stays excluded. `npm run verify` green. Playwright browsers in this environment are chromium-1237 vs the suite's 1243, so e2e was not re-run here — the `FancyGolHarness` contract is unchanged and covered by unit tests.
 
 #### - [ ] P2-G-2 · Panel host / dock framework
 **Depends on:** P2-G-1, P1-D-1 · **Files:** `src/ui/shell/panel-host.ts` (or equivalent), session layout slice

@@ -34,7 +34,8 @@
       "@ui/*": ["src/ui/*"],
       "@themes/*": ["src/themes/*"],
       "@worker/*": ["src/worker/*"],
-      "@server/*": ["src/server/*"]
+      "@server/*": ["src/server/*"],
+      "@client/*": ["src/client/*"]
     }
   },
     "include": ["src", "tests", "scripts/**/*.d.mts", "vite.config.ts", "vitest.config.ts", "playwright.config.ts"],

@@ -15,6 +15,7 @@ export default defineConfig({
       '@themes': alias('./src/themes'),
       '@worker': alias('./src/worker'),
       '@server': alias('./src/server'),
+      '@client': alias('./src/client'),
     },
   },
   test: {
@@ -64,7 +65,8 @@ export default defineConfig({
       reportsDirectory: './coverage',
       include: ['src/**/*.ts'],
       exclude: [
-        'src/client/**',
+        // Composition root: Playwright-owned. Extracted `client/*` modules are gated below (P2-G-1, planning/README.md §3.5).
+        'src/client/main.ts',
         'src/**/*.d.ts',
         'src/**/index.ts',
       ],
@@ -75,6 +77,7 @@ export default defineConfig({
         'src/ui/**': { statements: 70, branches: 60, functions: 70 },
         'src/themes/**': { statements: 70, branches: 60, functions: 70 },
         'src/server/**': { statements: 85, branches: 75, functions: 85 },
+        'src/client/**': { statements: 85, branches: 75, functions: 75 },
       },
     },
   },

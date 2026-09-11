@@ -147,7 +147,7 @@ Enforced by `vitest --coverage` thresholds in `vitest.config.ts`:
 | `src/ui/**`, `src/themes/**` | 70% | 60% | 70% |
 | `src/server/**` | 85% | 75% | 85% |
 | `src/audio/**` | **95/90/95 when the directory is created (P3-B-1)** | | |
-| `src/client/**` | see decision below | | |
+| `src/client/**` | **85%** (P2-G-1; `main.ts` excluded) | **75%** | **75%** |
 
 Thresholds may be **raised** by a phase. They may never be lowered; a phase that would lower one
 must instead delete or fix the untested code.
@@ -156,9 +156,9 @@ must instead delete or fix the untested code.
 toward a few points under measured actuals where slack is large. Do not leave 20+ points of slack
 as a silent permission to ship untested UI.
 
-**`src/client/**` (decided 2026-09-11):** after **P2-G-1** extracts testable wiring, either set a
-modest threshold on the residual `client/**` or keep it excluded **only if** extracted modules sit
-under already-gated paths and `vitest.config.ts` records why. Prefer measuring the residual root.
+**`src/client/**` (decided 2026-09-11, recorded P2-G-1):** option (a) — modest threshold on the
+residual `client/**` (85/75/75). `src/client/main.ts` stays excluded: it is the Playwright-owned
+composition root. Extracted wiring is gated; do not re-exclude the whole tree.
 
 ### 3.6 Performance budgets (CI-enforced from Phase 0)
 

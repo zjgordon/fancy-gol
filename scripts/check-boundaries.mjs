@@ -26,7 +26,7 @@ export const MATRIX = {
   server: ['server', 'engine', 'shared'],
 };
 
-const ALIASES = ['engine', 'shared', 'render', 'ui', 'themes', 'worker', 'server'];
+const ALIASES = ['engine', 'shared', 'render', 'ui', 'themes', 'worker', 'server', 'client'];
 
 /** Layers that must stay free of DOM / Node / I/O globals (ADR-009). */
 export const PURE_LAYERS = new Set(['engine', 'shared']);
