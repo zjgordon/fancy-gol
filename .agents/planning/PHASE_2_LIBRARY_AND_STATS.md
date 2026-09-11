@@ -309,13 +309,15 @@ Measured: blinker p2, pulsar p3, pentadecathlon p15 (absolute Zobrist, journal-c
 
 Measured: OLS on a 2048-sample trailing ring, best by adjusted R² with a fewer-parameters tie-break; winner below adj-R² **0.90** is `chaotic`. Gosper gun (1,500 gens) **linear, R² > 0.99**. Riley's breeder (900 gens) **quadratic**. A 2×2 block **constant, R² = 1**. 64×64 Conway soup at 80 gens **chaotic**. `n < 64` → `Insufficient data (n/64 samples)` via `growthLabel()` / `describeGrowth` (the statistics panel, P2-D-3, renders that string). Fitting is O(samples) on demand; `apply` only pushes `(tick, population)`.
 
-#### - [ ] P2-C-5 · Tiered series storage
+#### - [x] P2-C-5 · Tiered series storage — @cursor, started 2026-09-11
 **Depends on:** P2-C-1 · **Files:** `src/engine/stats/series.ts`
 **Implementation notes** Exactly the four tiers in §2.2, min/mean/max aggregation, typed-array ring buffers, hard memory cap. `window()` performs LTTB (Largest-Triangle-Three-Buckets) downsampling — ~40 lines, and it is the reason a million-point series still shows its real shape. Instance-scoped with the collector (P2-C-1).
 **Acceptance criteria**
-- [ ] One million ticks of stats occupy < 32 MB.
-- [ ] `window()` over a million ticks at 800 output points completes in < 8 ms.
-- [ ] An oscillation present in tier 0 remains visible as a min/max band in tier 3 (asserted by test — this is the anti-lying-chart guarantee).
+- [x] One million ticks of stats occupy < 32 MB.
+- [x] `window()` over a million ticks at 800 output points completes in < 8 ms.
+- [x] An oscillation present in tier 0 remains visible as a min/max band in tier 3 (asserted by test — this is the anti-lying-chart guarantee).
+
+Measured: four columnar rings of 4,096 slots (`src/engine/stats/series.ts`). Occupancy is **6.13 MB** (`Series.bytes`; T0 keeps a 256-bin histogram, coarser rings keep the population envelope only — folding 256 bins every tick is O(palette), not O(changes)). The rings do not grow with tick count; T3 is ring-capped at 4,096 × 4,096-tick buckets. Population stores min/mean/max so a 32-tick sine of amplitude 50 still has a T3 band **> 90** after a 4,096-tick fold. `query(fromTick, toTick, maxPoints)` is the §2.2 `window()` method — not named `window` because that identifier is the DOM global the pure-logic lane forbids (ADR-009); P2-C-6 should call `query`. It picks the finest covering ring (a live 1M-tick span is T2's 4,096 points) then LTTB-reduces; 800 points in **< 8 ms** (the million-tick suite is skipped under `VITEST_COVERAGE`). `describeSeriesQuery` labels tier, min/mean/max, and LTTB — never present a downsampled series as exact. `stats-overhead` median **2.95%** (budget 5%) with a columnar copy on every `apply`.
 
 #### - [ ] P2-C-6 · `statsWindow` protocol + worker plumbing
 **Depends on:** P2-C-5 · **Files:** `src/shared/protocol.ts`, `src/worker/{handler,client}.ts`, `tests/integration/worker-protocol.spec.ts`

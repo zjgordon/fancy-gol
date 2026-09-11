@@ -35,6 +35,9 @@
  * Growth classification (P2-C-4) is an O(1) ring push of population on
  * every `reset`/`apply`. Fitting is O(samples) and happens only when
  * {@link classifyGrowth} / {@link growthLabel} is called.
+ *
+ * The tiered series (P2-C-5) captures each sample into four columnar
+ * rings. `query` (LTTB) is on demand — `apply` only writes the rings.
  */
 import { CHUNK_AREA, CHUNK_SIZE, unpackCellX, unpackCellY } from '../grid/coords.js';
 import { DEAD, type ChangeSet, type GridView, type Snapshot, type StatSample } from '../types.js';
@@ -50,6 +53,7 @@ import {
   GrowthClassifier,
   type GrowthReport,
 } from './growth.js';
+import { Series } from './series.js';
 import { ZobristHasher } from './zobrist.js';
 
 /** A `StateId` is a grid byte; 256 slots always fits the palette. */
@@ -98,6 +102,7 @@ export class StatsCollector {
   readonly hasher: ZobristHasher;
   readonly cycleDetector: CycleDetector;
   readonly growth: GrowthClassifier;
+  readonly series: Series;
 
   private readonly stats: CollectorStats = {
     tick: 0,
@@ -136,6 +141,7 @@ export class StatsCollector {
     this.growth = new GrowthClassifier({
       ...(opts.growthCapacity !== undefined ? { capacity: opts.growthCapacity } : {}),
     });
+    this.series = new Series();
   }
 
   get snapshot(): Readonly<CollectorStats> {
@@ -304,6 +310,8 @@ export class StatsCollector {
     this.cycleDetector.reset();
     this.growth.reset();
     this.growth.observe(s.tick, s.population);
+    this.series.reset();
+    this.series.capture(s, this.hasher.absHash);
     // Reset already walked the grid; take an exact occupancy scan so the
     // baseline entropy matches the cells we just counted.
     this.syncEntropy(
@@ -392,6 +400,7 @@ export class StatsCollector {
     this.refreshDerived();
     this.hasher.endApply(s.bbox.x, s.bbox.y, view);
     this.growth.observe(s.tick, s.population);
+    this.series.capture(s, this.hasher.absHash);
     // The occupancy histogram is O(cells) and is not folded from the
     // ChangeSet. Mark the held value stale until {@link observeEntropy}.
     s.entropyExact = false;

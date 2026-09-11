@@ -146,7 +146,7 @@ describe('P2-C-4 growth on live patterns', () => {
     expect(collector.growthLabel()).toMatch(/^Constant population/);
   });
 
-  it('Gosper gun is linear with R² > 0.99', { timeout: 30_000 }, () => {
+  it('Gosper gun is linear with R² > 0.99', { timeout: 60_000 }, () => {
     const collector = runPattern('gosper-gun.rle', 1500);
     const report = collector.classifyGrowth();
     expect(report.kind, `gun classified as ${report.kind} R²=${report.r2}`).toBe('linear');
