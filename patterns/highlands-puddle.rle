@@ -1,0 +1,14 @@
+#N Highlands puddle
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://conwaylife.com/wiki/
+#C verified: fancy-gol P2-B-5, all-liquid patch
+#C ruleset: highlands-liquid
+#C category: seed
+#C period: none
+#C tags: seed, highlands-liquid, terrain
+#C description: A square of liquid. Weighted neighbours pull the shore
+#C description: inward until the puddle finds a quieter shape.
+x = 8, y = 4, rule = Highlands/Liquid
+8o$8o$8o$8o!

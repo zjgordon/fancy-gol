@@ -1,0 +1,14 @@
+#N WireWorld XOR
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://en.wikipedia.org/wiki/Wireworld
+#C verified: fancy-gol P2-B-5, XOR crossing geometry
+#C ruleset: wireworld
+#C category: logic
+#C period: none
+#C tags: logic, wireworld, gate
+#C description: Two inputs, one output, and a crossing that cancels
+#C description: doubles. Exclusive-or drawn in conductor.
+x = 9, y = 5, rule = WireWorld
+3C3.3C$C.C.C.C.C$C.5C.C$C7.C$9C!

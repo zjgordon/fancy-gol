@@ -1,0 +1,16 @@
+#N Space rake
+#O Bill Gosper, 1971
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Space_rake
+#C verified: fancy-gol P2-B-5, grows; p20 forward glider rake
+#C ruleset: conway
+#C category: rake
+#C period: 20
+#C tags: rake, conway
+#C description: A moving factory: the rake crawls at c/2 and throws a
+#C description: glider forward every twenty generations.
+x = 35, y = 20, rule = B3/S23
+21bo2bo$25bo6b2o$21bo3bo4b2ob2o$22b4o4b4o$31b2o$2o$b2o20bo$o20bo4bo3bo
+$13b2ob2o3bo3bo4b2o$13bo2bo8bo5b2o$5b2o7b3o13b2o$6b2o11bo2bo$5bo14b2o
+3$32b2o$14b2o14b2ob2o$13b4o13b4o$13b2ob2o13b2o$15b2o!

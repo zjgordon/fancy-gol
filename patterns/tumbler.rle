@@ -1,0 +1,14 @@
+#N Tumbler
+#O George Collins, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Tumbler
+#C verified: fancy-gol P2-B-5, period 14
+#C ruleset: conway
+#C category: oscillator
+#C period: 14
+#C tags: oscillator, conway
+#C description: A period-14 acrobat. Two arms swing past each other
+#C description: and meet again two weeks later, in generations.
+x = 9, y = 5, rule = B3/S23
+bo5bo$obo3bobo$o2bobo2bo$2bo3bo$2b2ob2o!

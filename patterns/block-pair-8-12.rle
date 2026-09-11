@@ -1,0 +1,14 @@
+#N Block pair 8×12
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://conwaylife.com/wiki/Constellation
+#C verified: fancy-gol P2-B-5, period 1 two-block constellation
+#C ruleset: conway
+#C category: still-life
+#C period: 1
+#C tags: still-life, conway, constellation
+#C description: Two blocks 8 cells across and 12 down. Far enough that
+#C description: they never shake hands.
+x = 10, y = 14, rule = B3/S23
+2o$2o11$8b2o$8b2o!

@@ -1,0 +1,14 @@
+#N Star Wars seed 4
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://conwaylife.com/wiki/OCA:Star_Wars
+#C verified: fancy-gol P2-B-5, unique seed for this ruleset
+#C ruleset: star-wars
+#C category: seed
+#C period: none
+#C tags: seed, star-wars, multi-state
+#C description: A Star Wars filament seed. Born on 3–5, it ages
+#C description: through two decaying states and looks like a dogfight.
+x = 11, y = 5, rule = B345/S2/G4
+3o$b3o$5obo$5bo4bo$ob5o!

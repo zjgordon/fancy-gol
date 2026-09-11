@@ -72,11 +72,58 @@ function loadAll() {
 describe('P2-B-1 seed catalogue', () => {
   const all = loadAll();
 
-  it('ships at least 40 patterns across at least 4 rulesets', () => {
-    expect(all.length).toBeGreaterThanOrEqual(40);
+  it('ships at least 200 patterns across at least 10 rulesets', () => {
+    expect(all.length).toBeGreaterThanOrEqual(200);
     const rulesets = new Set(all.map((p) => p.entry.ruleset));
-    expect(rulesets.size).toBeGreaterThanOrEqual(4);
+    expect(rulesets.size).toBeGreaterThanOrEqual(10);
     expect(rulesets.has('conway')).toBe(true);
+  });
+
+  it('meets the P2-B-5 per-ruleset minimums and Conway covers every category', () => {
+    const byRule = new Map<string, number>();
+    const conwayCats = new Set<string>();
+    for (const p of all) {
+      byRule.set(p.entry.ruleset, (byRule.get(p.entry.ruleset) ?? 0) + 1);
+      if (p.entry.ruleset === 'conway') conwayCats.add(p.entry.category);
+    }
+    const min: Record<string, number> = {
+      conway: 120,
+      highlife: 10,
+      'day-and-night': 5,
+      seeds: 5,
+      maze: 5,
+      diamoeba: 5,
+      replicator: 5,
+      'two-by-two': 5,
+      'life-without-death': 5,
+      'brians-brain': 8,
+      wireworld: 10,
+      'star-wars': 5,
+      bloomerang: 5,
+      'highlands-liquid': 4,
+    };
+    for (const [id, n] of Object.entries(min)) {
+      expect(byRule.get(id) ?? 0, id).toBeGreaterThanOrEqual(n);
+    }
+    expect(all.some((p) => p.id === 'highlife-replicator')).toBe(true);
+    expect(all.some((p) => p.id === 'herschel')).toBe(true);
+    expect(all.some((p) => p.entry.ruleset === 'conway' && p.entry.tags.includes('breeder'))).toBe(true);
+    const required = [
+      'still-life',
+      'oscillator',
+      'spaceship',
+      'puffer',
+      'rake',
+      'gun',
+      'methuselah',
+      'wick',
+      'agar',
+      'reflector',
+      'logic',
+      'seed',
+      'curiosity',
+    ];
+    for (const cat of required) expect(conwayCats.has(cat), cat).toBe(true);
   });
 
   it('includes the ten Phase 1 stamp ids', () => {
@@ -169,15 +216,25 @@ describe('P2-B-1 seed catalogue', () => {
         }
         const [dx, dy] = disp;
         const speed = p.entry.speed;
+        const period = p.entry.period ?? 0;
         if (speed === 'c/4 diagonal') {
-          if (!(Math.abs(dx) === 1 && Math.abs(dy) === 1)) report(p.id, `c/4 diagonal but disp (${dx},${dy})`);
+          const step = period / 4;
+          if (!(Math.abs(dx) === step && Math.abs(dy) === step)) {
+            report(p.id, `c/4 diagonal but disp (${dx},${dy}) period ${period}`);
+          }
         } else if (speed === 'c/2 orthogonal') {
-          if (!((Math.abs(dx) === 2 && dy === 0) || (dx === 0 && Math.abs(dy) === 2))) {
-            report(p.id, `c/2 orthogonal but disp (${dx},${dy})`);
+          const step = period / 2;
+          if (!((Math.abs(dx) === step && dy === 0) || (dx === 0 && Math.abs(dy) === step))) {
+            report(p.id, `c/2 orthogonal but disp (${dx},${dy}) period ${period}`);
           }
         } else if (speed === 'c/4 orthogonal') {
-          if (!((Math.abs(dx) === 1 && dy === 0) || (dx === 0 && Math.abs(dy) === 1))) {
-            report(p.id, `c/4 orthogonal but disp (${dx},${dy})`);
+          const step = period / 4;
+          if (!((Math.abs(dx) === step && dy === 0) || (dx === 0 && Math.abs(dy) === step))) {
+            report(p.id, `c/4 orthogonal but disp (${dx},${dy}) period ${period}`);
+          }
+        } else if (speed === 'c orthogonal') {
+          if (!((Math.abs(dx) === period && dy === 0) || (dx === 0 && Math.abs(dy) === period))) {
+            report(p.id, `c orthogonal but disp (${dx},${dy}) period ${period}`);
           }
         } else {
           report(p.id, `unrecognised speed "${speed}" (${dx},${dy})`);
@@ -208,6 +265,6 @@ describe('P2-B-1 seed catalogue', () => {
 describe('patterns/ directory listing (legacy normalize path)', () => {
   it('still finds .rle files at the catalogue root', () => {
     const files = readdirSync(PATTERNS).filter((f) => f.endsWith('.rle'));
-    expect(files.length).toBeGreaterThanOrEqual(40);
+    expect(files.length).toBeGreaterThanOrEqual(200);
   });
 });

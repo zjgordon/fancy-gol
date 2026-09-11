@@ -1,0 +1,15 @@
+#N HighLife seed 7
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://conwaylife.com/wiki/OCA:HighLife
+#C verified: fancy-gol P2-B-5, unique seed for this ruleset
+#C ruleset: highlife
+#C category: seed
+#C period: none
+#C tags: seed, highlife
+#C description: A compact HighLife seed with a unique barcode.
+#C description: Birth-on-6 pulls this one apart differently than
+#C description: Conway would.
+x = 10, y = 6, rule = B36/S23
+3o$bo$2b2o$3ob2o$2o2b6o$2ob3o!

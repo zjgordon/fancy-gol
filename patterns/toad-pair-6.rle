@@ -1,0 +1,13 @@
+#N Toad pair 6
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://conwaylife.com/wiki/Toad
+#C verified: fancy-gol P2-B-5, period 2 two-toad constellation
+#C ruleset: conway
+#C category: oscillator
+#C period: 2
+#C tags: oscillator, conway, constellation
+#C description: Two toads stacked 6 cells apart. Period 2, twice.
+x = 4, y = 8, rule = B3/S23
+b3o$3o5$b3o$3o!

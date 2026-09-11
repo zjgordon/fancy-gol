@@ -1,0 +1,15 @@
+#N WireWorld half adder
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://en.wikipedia.org/wiki/Wireworld
+#C verified: fancy-gol P2-B-5, half-adder geometry
+#C ruleset: wireworld
+#C category: logic
+#C period: none
+#C tags: logic, wireworld, adder
+#C description: A compact half-adder sketch: XOR-ish sum and AND-ish
+#C description: carry sharing a box of conductor. A starting kit, not
+#C description: a silicon die.
+x = 10, y = 9, rule = WireWorld
+10C$C8.C$C.6C.C$C.C4.C.C$C.C.2C.C.C$C.C.C2.C.C$C.6C.C$C8.C$10C!

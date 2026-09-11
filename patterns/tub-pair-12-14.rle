@@ -1,0 +1,14 @@
+#N Tub pair 12×14
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://conwaylife.com/wiki/Constellation
+#C verified: fancy-gol P2-B-5, period 1 two-tub constellation
+#C ruleset: conway
+#C category: still-life
+#C period: 1
+#C tags: still-life, conway, constellation
+#C description: Two tubs offset by (12,14). A constellation, not a
+#C description: bathhouse.
+x = 15, y = 17, rule = B3/S23
+bo$obo$bo12$13bo$12bobo$13bo!

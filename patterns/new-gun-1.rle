@@ -1,0 +1,15 @@
+#N New gun 1
+#O Bill Gosper, 1971
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/New_gun_1
+#C verified: fancy-gol P2-B-5, true period 46 gun, population grows
+#C ruleset: conway
+#C category: gun
+#C period: 46
+#C tags: gun, conway
+#C description: The second basic gun. Twin bees, a few eaters, and a
+#C description: glider every 46 generations.
+x = 49, y = 14, rule = B3/S23
+30b2o$29bobo15b2o$29bo17b2o$17bo11b3o$2o15b2o$2o16b2o$13b2o2b2o$29b3o$
+29bo17b2o$29bobo15b2o$13b2o2b2o11b2o$2o16b2o$2o15b2o$17bo!

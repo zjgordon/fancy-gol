@@ -1,0 +1,14 @@
+#N Block and loaf
+#O unknown, 1971
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Constellation
+#C verified: fancy-gol P2-B-5, period 1 constellation
+#C ruleset: conway
+#C category: still-life
+#C period: 1
+#C tags: still-life, conway, constellation
+#C description: Two still lifes parked far enough apart that neither
+#C description: notices the other. Block and loaf.
+x = 11, y = 4, rule = B3/S23
+2o6b2o$2o5bo2bo$8bobo$9bo!

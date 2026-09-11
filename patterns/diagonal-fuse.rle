@@ -1,0 +1,14 @@
+#N Diagonal fuse
+#O unknown, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Fuse
+#C verified: fancy-gol P2-B-5, lightspeed diagonal fuse
+#C ruleset: conway
+#C category: wick
+#C period: none
+#C tags: wick, conway, fuse
+#C description: A staircase of dominoes. Light a corner and the wick
+#C description: burns at lightspeed along the diagonal.
+x = 7, y = 6, rule = B3/S23
+2o$b2o$2b2o$3b2o$4b2o$5b2o!

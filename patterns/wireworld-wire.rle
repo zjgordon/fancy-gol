@@ -1,0 +1,14 @@
+#N WireWorld wire
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://en.wikipedia.org/wiki/Wireworld
+#C verified: fancy-gol P2-B-5, electron on a conductor
+#C ruleset: wireworld
+#C category: logic
+#C period: none
+#C tags: logic, wireworld
+#C description: A straight conductor with one electron already on the
+#C description: rail. The simplest moving signal in the rule.
+x = 10, y = 1, rule = WireWorld
+AB8C!

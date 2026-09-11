@@ -1,0 +1,15 @@
+#N WireWorld AND
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://en.wikipedia.org/wiki/Wireworld
+#C verified: fancy-gol P2-B-5, AND pocket geometry
+#C ruleset: wireworld
+#C category: logic
+#C period: none
+#C tags: logic, wireworld, gate
+#C description: A pocket that wants two heads at once. One input alone
+#C description: dies in the gap; both together spawn an output
+#C description: electron.
+x = 11, y = 5, rule = WireWorld
+5C$C3.C.5C$C.C.C.C$C3.C.C$5C.C!

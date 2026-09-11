@@ -1,0 +1,15 @@
+#N Bi-block
+#O unknown, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Bi-block
+#C verified: fancy-gol P2-B-5, period 1, two blocks
+#C ruleset: conway
+#C category: still-life
+#C period: 1
+#C tags: still-life, conway, constellation
+#C description: Two blocks a cell apart. The smallest interesting
+#C description: constellation: they do not touch, and they do not
+#C description: care.
+x = 5, y = 2, rule = B3/S23
+2ob2o$2ob2o!

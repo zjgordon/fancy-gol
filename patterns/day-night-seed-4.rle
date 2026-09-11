@@ -1,0 +1,14 @@
+#N Day & Night seed 4
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://conwaylife.com/wiki/OCA:Day_%26_Night
+#C verified: fancy-gol P2-B-5, unique seed for this ruleset
+#C ruleset: day-and-night
+#C category: seed
+#C period: none
+#C tags: seed, day-and-night
+#C description: A Day & Night island with a unique rim. Live and dead
+#C description: phases trade places more kindly than in Conway.
+x = 15, y = 6, rule = B3678/S34678
+b4o$o4bo$ob2obo$5obo$2obo2b4o2bobo$ob5o!

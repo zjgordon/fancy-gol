@@ -1,0 +1,14 @@
+#N T-tetromino
+#O unknown, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/T-tetromino
+#C verified: fancy-gol P2-B-5, four-cell seed, traffic-light predecessor
+#C ruleset: conway
+#C category: seed
+#C period: none
+#C tags: seed, conway
+#C description: Four cells in a T. The smallest interesting seed: it
+#C description: becomes a traffic light and then sits down.
+x = 3, y = 2, rule = B3/S23
+bo$3o!

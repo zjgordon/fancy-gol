@@ -1,0 +1,14 @@
+#N Brian's Brain seed 4
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://conwaylife.com/wiki/OCA:Brian%27s_Brain
+#C verified: fancy-gol P2-B-5, unique seed for this ruleset
+#C ruleset: brians-brain
+#C category: seed
+#C period: none
+#C tags: seed, brians-brain, multi-state
+#C description: A firing-and-cooling spark unique to Brian's Brain.
+#C description: Phoenix rules: nothing survives, everything flashes.
+x = 7, y = 6, rule = Brian's Brain
+A.A$.B$A.A$5A.A$A.A$A.5A!

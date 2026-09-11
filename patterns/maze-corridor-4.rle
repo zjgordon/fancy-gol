@@ -1,0 +1,14 @@
+#N Maze corridor 4
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://conwaylife.com/wiki/OCA:Maze
+#C verified: fancy-gol P2-B-5, unique seed for this ruleset
+#C ruleset: maze
+#C category: seed
+#C period: none
+#C tags: seed, maze
+#C description: A corridor sketch for Maze. Survival on 1–5 freezes
+#C description: soup into walls; this seed is one brick.
+x = 7, y = 7, rule = B3/S12345
+7o$o5bo$ob3obo$obobobo$5obo$b4o$ob5o!

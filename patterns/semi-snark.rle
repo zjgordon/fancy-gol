@@ -1,0 +1,15 @@
+#N Semi-Snark
+#O unknown, 2013
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Semi-Snark
+#C verified: fancy-gol P2-B-5, Spartan reflector (glider omitted)
+#C ruleset: conway
+#C category: reflector
+#C period: none
+#C tags: reflector, conway, snark
+#C description: A Spartan 90-degree reflector that keeps every other
+#C description: glider. The still-life bait, waiting for a stream.
+x = 19, y = 19, rule = B3/S23
+5b2o$5b2o3$14b2o$13bobo$14bo3$4bo3b2o$5b2ob2o$4b2o$15b2o$15bobo$17bo$
+2b2o13b2o$3bo$3o6b2o$o8b2o!

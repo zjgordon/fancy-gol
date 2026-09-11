@@ -1,0 +1,14 @@
+#N Cross
+#O unknown, 1989
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Cross
+#C verified: fancy-gol P2-B-5, period 3
+#C ruleset: conway
+#C category: oscillator
+#C period: 3
+#C tags: oscillator, conway
+#C description: A period-3 cross. The arms pull in and push out like a
+#C description: tiny plus sign doing yoga.
+x = 8, y = 8, rule = B3/S23
+2b4o$2bo2bo$3o2b3o$o6bo$o6bo$3o2b3o$2bo2bo$2b4o!

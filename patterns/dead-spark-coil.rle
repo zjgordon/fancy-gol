@@ -1,0 +1,14 @@
+#N Dead spark coil
+#O unknown, 1971
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Dead_spark_coil
+#C verified: fancy-gol P2-B-5, period 1
+#C ruleset: conway
+#C category: still-life
+#C period: 1
+#C tags: still-life, conway
+#C description: The spark coil after it stops sparking. Two hooks
+#C description: facing a gap that no longer fires.
+x = 7, y = 3, rule = B3/S23
+2o3b2o$obobobo$b2ob2o!

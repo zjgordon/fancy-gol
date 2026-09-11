@@ -1,0 +1,14 @@
+#N Ship and pond
+#O unknown, 1971
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Constellation
+#C verified: fancy-gol P2-B-5, period 1 constellation
+#C ruleset: conway
+#C category: still-life
+#C period: 1
+#C tags: still-life, conway, constellation
+#C description: Two still lifes parked far enough apart that neither
+#C description: notices the other. Ship and pond.
+x = 12, y = 10, rule = B3/S23
+2o$obo$b2o4$9b2o$8bo2bo$8bo2bo$9b2o!

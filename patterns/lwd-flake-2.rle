@@ -1,0 +1,14 @@
+#N Life without Death flake 2
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://conwaylife.com/wiki/OCA:Life_without_Death
+#C verified: fancy-gol P2-B-5, unique seed for this ruleset
+#C ruleset: life-without-death
+#C category: seed
+#C period: none
+#C tags: seed, life-without-death
+#C description: An inkspot flake. Cells never die, so this seed only
+#C description: stains more of the plane.
+x = 19, y = 5, rule = B3/S012345678
+3o$bo$3ob3o$4obo2b2o5b2obo$3ob3o!

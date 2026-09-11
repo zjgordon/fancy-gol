@@ -1,0 +1,14 @@
+#N Glider-producing switch engine
+#O Charles Corderman, 1971
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Glider-producing_switch_engine
+#C verified: fancy-gol P2-B-5, grows; emits gliders while translating
+#C ruleset: conway
+#C category: rake
+#C period: 96
+#C tags: rake, conway, switch-engine
+#C description: A switch engine that throws gliders as it crawls. A
+#C description: rake made of eight cells and patience.
+x = 6, y = 28, rule = B3/S23
+4bo$3bobo2$2bo2bo$2b2o$2bo21$2o$2o!

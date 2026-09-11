@@ -1,0 +1,14 @@
+#N Bakery
+#O unknown, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Bakery
+#C verified: fancy-gol P2-B-5, period 1, four loaves
+#C ruleset: conway
+#C category: still-life
+#C period: 1
+#C tags: still-life, conway, constellation
+#C description: Four loaves in a ring. The bakery produces nothing but
+#C description: the smell of still life.
+x = 9, y = 4, rule = B3/S23
+b2o3b2o$o2bobo2bo$bobobobo$2b2ob2o!

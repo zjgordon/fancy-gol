@@ -1,0 +1,15 @@
+#N Riley's breeder
+#O Mitchell Riley, 2006
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Riley%27s_breeder
+#C verified: fancy-gol P2-B-5, puffer-2 plus two LWSS (best-effort escort)
+#C ruleset: conway
+#C category: curiosity
+#C period: none
+#C tags: curiosity, conway, breeder
+#C description: Puffer 2 plus two lightweight ships — the recipe Riley
+#C description: used for a tiny quadratic-growth breeder.
+x = 15, y = 30, rule = B3/S23
+11b4o$10bo3bo$14bo$10bo2bo3$2b2o$2ob2o$4o$b2o3$o$2o$b2o$2o5$2b2o$2ob2o
+$4o$b2o3$11b4o$10bo3bo$14bo$10bo2bo!

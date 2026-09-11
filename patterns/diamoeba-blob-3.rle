@@ -1,0 +1,14 @@
+#N Diamoeba blob 3
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://conwaylife.com/wiki/OCA:Diamoeba
+#C verified: fancy-gol P2-B-5, unique seed for this ruleset
+#C ruleset: diamoeba
+#C category: seed
+#C period: none
+#C tags: seed, diamoeba
+#C description: A diamond-ish Diamoeba seed. The rule pinches and
+#C description: sometimes throws wisps; this one is just the start.
+x = 10, y = 6, rule = B35678/S5678
+b4o$5o$b3obo$4ob2o$2obob5o$2ob4o!

@@ -42,6 +42,47 @@
     "origin": "curated"
   },
   {
+    "id": "backward-space-rake",
+    "name": "Backward space rake",
+    "aliases": [],
+    "description": "The same engine, firing over its shoulder. Gliders peel backward while the rake keeps going.",
+    "author": "Bill Gosper",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "rake",
+    "tags": [
+      "rake",
+      "conway"
+    ],
+    "width": 32,
+    "height": 21,
+    "population": 76,
+    "period": 20,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "bakery",
+    "name": "Bakery",
+    "aliases": [],
+    "description": "Four loaves in a ring. The bakery produces nothing but the smell of still life.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 9,
+    "height": 4,
+    "population": 16,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
     "id": "barge",
     "name": "Barge",
     "aliases": [],
@@ -82,6 +123,90 @@
     "origin": "curated"
   },
   {
+    "id": "beacon-pair-10",
+    "name": "Beacon pair 10",
+    "aliases": [],
+    "description": "Two beacons offset by 10. Each blinks at the other from a polite distance.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway",
+      "constellation"
+    ],
+    "width": 16,
+    "height": 14,
+    "population": 16,
+    "period": 2,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "beacon-pair-12",
+    "name": "Beacon pair 12",
+    "aliases": [],
+    "description": "Two beacons offset by 12. Each blinks at the other from a polite distance.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway",
+      "constellation"
+    ],
+    "width": 18,
+    "height": 16,
+    "population": 16,
+    "period": 2,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "beacon-pair-6",
+    "name": "Beacon pair 6",
+    "aliases": [],
+    "description": "Two beacons offset by 6. Each blinks at the other from a polite distance.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway",
+      "constellation"
+    ],
+    "width": 12,
+    "height": 10,
+    "population": 16,
+    "period": 2,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "beacon-pair-8",
+    "name": "Beacon pair 8",
+    "aliases": [],
+    "description": "Two beacons offset by 8. Each blinks at the other from a polite distance.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway",
+      "constellation"
+    ],
+    "width": 14,
+    "height": 12,
+    "population": 16,
+    "period": 2,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
     "id": "beehive",
     "name": "Beehive",
     "aliases": [],
@@ -97,6 +222,69 @@
     "width": 4,
     "height": 3,
     "population": 6,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "beehive-and-boat",
+    "name": "Beehive and boat",
+    "aliases": [],
+    "description": "Two still lifes parked far enough apart that neither notices the other. Beehive and boat.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 11,
+    "height": 6,
+    "population": 11,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "beehive-and-loaf",
+    "name": "Beehive and loaf",
+    "aliases": [],
+    "description": "Two still lifes parked far enough apart that neither notices the other. Beehive and loaf.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 12,
+    "height": 8,
+    "population": 13,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "bi-block",
+    "name": "Bi-block",
+    "aliases": [],
+    "description": "Two blocks a cell apart. The smallest interesting constellation: they do not touch, and they do not care.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 5,
+    "height": 2,
+    "population": 8,
     "period": 1,
     "speed": null,
     "origin": "curated"
@@ -118,6 +306,90 @@
     "width": 3,
     "height": 1,
     "population": 3,
+    "period": 2,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "blinker-pair-10",
+    "name": "Blinker pair 10",
+    "aliases": [],
+    "description": "Two blinkers 10 cells apart. They flip in sync and never touch.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway",
+      "constellation"
+    ],
+    "width": 13,
+    "height": 1,
+    "population": 6,
+    "period": 2,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "blinker-pair-12",
+    "name": "Blinker pair 12",
+    "aliases": [],
+    "description": "Two blinkers 12 cells apart. They flip in sync and never touch.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway",
+      "constellation"
+    ],
+    "width": 15,
+    "height": 1,
+    "population": 6,
+    "period": 2,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "blinker-pair-6",
+    "name": "Blinker pair 6",
+    "aliases": [],
+    "description": "Two blinkers 6 cells apart. They flip in sync and never touch.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway",
+      "constellation"
+    ],
+    "width": 9,
+    "height": 1,
+    "population": 6,
+    "period": 2,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "blinker-pair-8",
+    "name": "Blinker pair 8",
+    "aliases": [],
+    "description": "Two blinkers 8 cells apart. They flip in sync and never touch.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway",
+      "constellation"
+    ],
+    "width": 11,
+    "height": 1,
+    "population": 6,
     "period": 2,
     "speed": null,
     "origin": "curated"
@@ -147,6 +419,551 @@
     "origin": "curated"
   },
   {
+    "id": "block-agar",
+    "name": "Block agar",
+    "aliases": [],
+    "description": "A finite patch of the block lattice. Every tile is a still life; together they are the dullest infinite wallpaper Life has.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "agar",
+    "tags": [
+      "agar",
+      "conway"
+    ],
+    "width": 10,
+    "height": 10,
+    "population": 36,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-and-beehive",
+    "name": "Block and beehive",
+    "aliases": [],
+    "description": "Two still lifes parked far enough apart that neither notices the other. Block and beehive.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 11,
+    "height": 4,
+    "population": 10,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-and-loaf",
+    "name": "Block and loaf",
+    "aliases": [],
+    "description": "Two still lifes parked far enough apart that neither notices the other. Block and loaf.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 11,
+    "height": 4,
+    "population": 11,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-and-pond",
+    "name": "Block and pond",
+    "aliases": [],
+    "description": "Two still lifes parked far enough apart that neither notices the other. Block and pond.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 12,
+    "height": 4,
+    "population": 12,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-and-tub",
+    "name": "Block and tub",
+    "aliases": [],
+    "description": "Two still lifes parked far enough apart that neither notices the other. Block and tub.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 9,
+    "height": 3,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-laying-switch-engine",
+    "name": "Block-laying switch engine",
+    "aliases": [],
+    "description": "A switch engine that drops a tidy trail of blocks. The clean cousin of the messy original.",
+    "author": "Charles Corderman",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "puffer",
+    "tags": [
+      "puffer",
+      "conway",
+      "switch-engine"
+    ],
+    "width": 4,
+    "height": 16,
+    "population": 12,
+    "period": 96,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-pair-10-10",
+    "name": "Block pair 10×10",
+    "aliases": [],
+    "description": "Two blocks 10 cells across and 10 down. Far enough that they never shake hands.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 12,
+    "height": 12,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-pair-10-12",
+    "name": "Block pair 10×12",
+    "aliases": [],
+    "description": "Two blocks 10 cells across and 12 down. Far enough that they never shake hands.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 12,
+    "height": 14,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-pair-10-14",
+    "name": "Block pair 10×14",
+    "aliases": [],
+    "description": "Two blocks 10 cells across and 14 down. Far enough that they never shake hands.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 12,
+    "height": 16,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-pair-12-12",
+    "name": "Block pair 12×12",
+    "aliases": [],
+    "description": "Two blocks 12 cells across and 12 down. Far enough that they never shake hands.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 14,
+    "height": 14,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-pair-12-14",
+    "name": "Block pair 12×14",
+    "aliases": [],
+    "description": "Two blocks 12 cells across and 14 down. Far enough that they never shake hands.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 14,
+    "height": 16,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-pair-14-14",
+    "name": "Block pair 14×14",
+    "aliases": [],
+    "description": "Two blocks 14 cells across and 14 down. Far enough that they never shake hands.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 16,
+    "height": 16,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-pair-6-10",
+    "name": "Block pair 6×10",
+    "aliases": [],
+    "description": "Two blocks 6 cells across and 10 down. Far enough that they never shake hands.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 8,
+    "height": 12,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-pair-6-12",
+    "name": "Block pair 6×12",
+    "aliases": [],
+    "description": "Two blocks 6 cells across and 12 down. Far enough that they never shake hands.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 8,
+    "height": 14,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-pair-6-14",
+    "name": "Block pair 6×14",
+    "aliases": [],
+    "description": "Two blocks 6 cells across and 14 down. Far enough that they never shake hands.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 8,
+    "height": 16,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-pair-6-6",
+    "name": "Block pair 6×6",
+    "aliases": [],
+    "description": "Two blocks 6 cells across and 6 down. Far enough that they never shake hands.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 8,
+    "height": 8,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-pair-6-8",
+    "name": "Block pair 6×8",
+    "aliases": [],
+    "description": "Two blocks 6 cells across and 8 down. Far enough that they never shake hands.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 8,
+    "height": 10,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-pair-8-10",
+    "name": "Block pair 8×10",
+    "aliases": [],
+    "description": "Two blocks 8 cells across and 10 down. Far enough that they never shake hands.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 10,
+    "height": 12,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-pair-8-12",
+    "name": "Block pair 8×12",
+    "aliases": [],
+    "description": "Two blocks 8 cells across and 12 down. Far enough that they never shake hands.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 10,
+    "height": 14,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-pair-8-14",
+    "name": "Block pair 8×14",
+    "aliases": [],
+    "description": "Two blocks 8 cells across and 14 down. Far enough that they never shake hands.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 10,
+    "height": 16,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block-pair-8-8",
+    "name": "Block pair 8×8",
+    "aliases": [],
+    "description": "Two blocks 8 cells across and 8 down. Far enough that they never shake hands.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 10,
+    "height": 10,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "bloomerang-seed-1",
+    "name": "Bloomerang seed 1",
+    "aliases": [],
+    "description": "A Bloomerang spark. Twenty-four decay states turn a small seed into a long bloom-and-rebound trail.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "bloomerang",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "bloomerang",
+      "multi-state"
+    ],
+    "width": 12,
+    "height": 5,
+    "population": 27,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "bloomerang-seed-2",
+    "name": "Bloomerang seed 2",
+    "aliases": [],
+    "description": "A Bloomerang spark. Twenty-four decay states turn a small seed into a long bloom-and-rebound trail.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "bloomerang",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "bloomerang",
+      "multi-state"
+    ],
+    "width": 11,
+    "height": 5,
+    "population": 26,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "bloomerang-seed-3",
+    "name": "Bloomerang seed 3",
+    "aliases": [],
+    "description": "A Bloomerang spark. Twenty-four decay states turn a small seed into a long bloom-and-rebound trail.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "bloomerang",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "bloomerang",
+      "multi-state"
+    ],
+    "width": 12,
+    "height": 5,
+    "population": 27,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "bloomerang-seed-4",
+    "name": "Bloomerang seed 4",
+    "aliases": [],
+    "description": "A Bloomerang spark. Twenty-four decay states turn a small seed into a long bloom-and-rebound trail.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "bloomerang",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "bloomerang",
+      "multi-state"
+    ],
+    "width": 11,
+    "height": 5,
+    "population": 26,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "bloomerang-seed-5",
+    "name": "Bloomerang seed 5",
+    "aliases": [],
+    "description": "A Bloomerang spark. Twenty-four decay states turn a small seed into a long bloom-and-rebound trail.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "bloomerang",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "bloomerang",
+      "multi-state"
+    ],
+    "width": 12,
+    "height": 5,
+    "population": 25,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
     "id": "boat",
     "name": "Boat",
     "aliases": [],
@@ -163,6 +980,174 @@
     "height": 3,
     "population": 5,
     "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "boat-and-ship",
+    "name": "Boat and ship",
+    "aliases": [],
+    "description": "Two still lifes parked far enough apart that neither notices the other. Boat and ship.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 10,
+    "height": 8,
+    "population": 11,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "brians-brain-butterfly",
+    "name": "Brian's Brain butterfly",
+    "aliases": [],
+    "description": "A six-cell c/4 diagonal ship. Firing and cooling trade places every generation; the butterfly still walks.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "brians-brain",
+    "category": "spaceship",
+    "tags": [
+      "spaceship",
+      "brians-brain",
+      "multi-state"
+    ],
+    "width": 3,
+    "height": 4,
+    "population": 6,
+    "period": 4,
+    "speed": "c/4 diagonal",
+    "origin": "curated"
+  },
+  {
+    "id": "brians-brain-p3",
+    "name": "Brian's Brain p3",
+    "aliases": [],
+    "description": "A period-3 oscillator in a rule with no period 2. Sweney found the first ones; this is the small square that blinks forever.",
+    "author": "Michael Sweney",
+    "year": 1999,
+    "ruleset": "brians-brain",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "brians-brain",
+      "multi-state"
+    ],
+    "width": 4,
+    "height": 4,
+    "population": 8,
+    "period": 3,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "brians-brain-photon",
+    "name": "Brian's Brain photon",
+    "aliases": [],
+    "description": "A lightspeed orthogonal photon. Eight cells of fire and ash covering four cells a generation.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "brians-brain",
+    "category": "spaceship",
+    "tags": [
+      "spaceship",
+      "brians-brain",
+      "multi-state"
+    ],
+    "width": 5,
+    "height": 3,
+    "population": 8,
+    "period": 4,
+    "speed": "c orthogonal",
+    "origin": "curated"
+  },
+  {
+    "id": "brians-brain-seed-1",
+    "name": "Brian's Brain seed 1",
+    "aliases": [],
+    "description": "A firing-and-cooling spark unique to Brian's Brain. Phoenix rules: nothing survives, everything flashes.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "brians-brain",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "brians-brain",
+      "multi-state"
+    ],
+    "width": 7,
+    "height": 6,
+    "population": 20,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "brians-brain-seed-2",
+    "name": "Brian's Brain seed 2",
+    "aliases": [],
+    "description": "A firing-and-cooling spark unique to Brian's Brain. Phoenix rules: nothing survives, everything flashes.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "brians-brain",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "brians-brain",
+      "multi-state"
+    ],
+    "width": 7,
+    "height": 6,
+    "population": 19,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "brians-brain-seed-3",
+    "name": "Brian's Brain seed 3",
+    "aliases": [],
+    "description": "A firing-and-cooling spark unique to Brian's Brain. Phoenix rules: nothing survives, everything flashes.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "brians-brain",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "brians-brain",
+      "multi-state"
+    ],
+    "width": 7,
+    "height": 6,
+    "population": 20,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "brians-brain-seed-4",
+    "name": "Brian's Brain seed 4",
+    "aliases": [],
+    "description": "A firing-and-cooling spark unique to Brian's Brain. Phoenix rules: nothing survives, everything flashes.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "brians-brain",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "brians-brain",
+      "multi-state"
+    ],
+    "width": 7,
+    "height": 6,
+    "population": 19,
+    "period": null,
     "speed": null,
     "origin": "curated"
   },
@@ -188,6 +1173,66 @@
     "origin": "curated"
   },
   {
+    "id": "cis-mirrored-r-bee",
+    "name": "Cis-mirrored R-bee",
+    "aliases": [],
+    "description": "Two R-bees facing the same way. A honey-farm fragment that never left the hive.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway"
+    ],
+    "width": 4,
+    "height": 7,
+    "population": 14,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "color-changing-reflector",
+    "name": "Colour-changing reflector",
+    "aliases": [],
+    "description": "A syringe welded to a Snark. Gliders leave on the other colour. The still-life waiting room of a 90-degree bounce.",
+    "author": "unknown",
+    "year": 2013,
+    "ruleset": "conway",
+    "category": "reflector",
+    "tags": [
+      "reflector",
+      "conway"
+    ],
+    "width": 52,
+    "height": 30,
+    "population": 106,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "cross",
+    "name": "Cross",
+    "aliases": [],
+    "description": "A period-3 cross. The arms pull in and push out like a tiny plus sign doing yoga.",
+    "author": "unknown",
+    "year": 1989,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway"
+    ],
+    "width": 8,
+    "height": 8,
+    "population": 28,
+    "period": 3,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
     "id": "day-night-seed",
     "name": "Day & Night seed",
     "aliases": [],
@@ -203,6 +1248,227 @@
     "width": 9,
     "height": 5,
     "population": 14,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "day-night-seed-1",
+    "name": "Day & Night seed 1",
+    "aliases": [],
+    "description": "A Day & Night island with a unique rim. Live and dead phases trade places more kindly than in Conway.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "day-and-night",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "day-and-night"
+    ],
+    "width": 13,
+    "height": 6,
+    "population": 30,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "day-night-seed-2",
+    "name": "Day & Night seed 2",
+    "aliases": [],
+    "description": "A Day & Night island with a unique rim. Live and dead phases trade places more kindly than in Conway.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "day-and-night",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "day-and-night"
+    ],
+    "width": 15,
+    "height": 6,
+    "population": 31,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "day-night-seed-3",
+    "name": "Day & Night seed 3",
+    "aliases": [],
+    "description": "A Day & Night island with a unique rim. Live and dead phases trade places more kindly than in Conway.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "day-and-night",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "day-and-night"
+    ],
+    "width": 13,
+    "height": 6,
+    "population": 30,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "day-night-seed-4",
+    "name": "Day & Night seed 4",
+    "aliases": [],
+    "description": "A Day & Night island with a unique rim. Live and dead phases trade places more kindly than in Conway.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "day-and-night",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "day-and-night"
+    ],
+    "width": 15,
+    "height": 6,
+    "population": 31,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "dead-spark-coil",
+    "name": "Dead spark coil",
+    "aliases": [],
+    "description": "The spark coil after it stops sparking. Two hooks facing a gap that no longer fires.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway"
+    ],
+    "width": 7,
+    "height": 3,
+    "population": 12,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "diagonal-fuse",
+    "name": "Diagonal fuse",
+    "aliases": [],
+    "description": "A staircase of dominoes. Light a corner and the wick burns at lightspeed along the diagonal.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "wick",
+    "tags": [
+      "wick",
+      "conway",
+      "fuse"
+    ],
+    "width": 7,
+    "height": 6,
+    "population": 12,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "diamoeba-blob-1",
+    "name": "Diamoeba blob 1",
+    "aliases": [],
+    "description": "A diamond-ish Diamoeba seed. The rule pinches and sometimes throws wisps; this one is just the start.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "diamoeba",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "diamoeba"
+    ],
+    "width": 10,
+    "height": 6,
+    "population": 33,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "diamoeba-blob-2",
+    "name": "Diamoeba blob 2",
+    "aliases": [],
+    "description": "A diamond-ish Diamoeba seed. The rule pinches and sometimes throws wisps; this one is just the start.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "diamoeba",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "diamoeba"
+    ],
+    "width": 9,
+    "height": 6,
+    "population": 32,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "diamoeba-blob-3",
+    "name": "Diamoeba blob 3",
+    "aliases": [],
+    "description": "A diamond-ish Diamoeba seed. The rule pinches and sometimes throws wisps; this one is just the start.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "diamoeba",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "diamoeba"
+    ],
+    "width": 10,
+    "height": 6,
+    "population": 33,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "diamoeba-blob-4",
+    "name": "Diamoeba blob 4",
+    "aliases": [],
+    "description": "A diamond-ish Diamoeba seed. The rule pinches and sometimes throws wisps; this one is just the start.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "diamoeba",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "diamoeba"
+    ],
+    "width": 9,
+    "height": 6,
+    "population": 32,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "diamoeba-blob-5",
+    "name": "Diamoeba blob 5",
+    "aliases": [],
+    "description": "A diamond-ish Diamoeba seed. The rule pinches and sometimes throws wisps; this one is just the start.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "diamoeba",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "diamoeba"
+    ],
+    "width": 10,
+    "height": 6,
+    "population": 31,
     "period": null,
     "speed": null,
     "origin": "curated"
@@ -251,6 +1517,28 @@
     "origin": "curated"
   },
   {
+    "id": "figure-eight",
+    "name": "Figure eight",
+    "aliases": [
+      "big beacon"
+    ],
+    "description": "Two 3×3 blocks on a diagonal, trading mass for eight generations. Also called the big beacon.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway"
+    ],
+    "width": 6,
+    "height": 6,
+    "population": 18,
+    "period": 8,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
     "id": "glider",
     "name": "Glider",
     "aliases": [
@@ -271,6 +1559,27 @@
     "population": 5,
     "period": 4,
     "speed": "c/4 diagonal",
+    "origin": "curated"
+  },
+  {
+    "id": "glider-producing-switch-engine",
+    "name": "Glider-producing switch engine",
+    "aliases": [],
+    "description": "A switch engine that throws gliders as it crawls. A rake made of eight cells and patience.",
+    "author": "Charles Corderman",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "rake",
+    "tags": [
+      "rake",
+      "conway",
+      "switch-engine"
+    ],
+    "width": 6,
+    "height": 28,
+    "population": 12,
+    "period": 96,
+    "speed": null,
     "origin": "curated"
   },
   {
@@ -295,6 +1604,134 @@
     "origin": "curated"
   },
   {
+    "id": "herschel",
+    "name": "Herschel",
+    "aliases": [],
+    "description": "The heptomino that Life uses as a signal. Conduits, universal constructors and the Turing-complete circuitry of the late game all speak Herschel.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "logic",
+    "tags": [
+      "logic",
+      "conway",
+      "herschel",
+      "turing"
+    ],
+    "width": 3,
+    "height": 4,
+    "population": 6,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "highlands-banding-soup",
+    "name": "Highlands banding soup",
+    "aliases": [],
+    "description": "The documented 32×32 banding soup from the Highlands / Liquid rule comments. Void, liquid and highland at 1/4, 3/8, 3/8 — the seed that settles into shorelines.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "highlands-liquid",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "highlands-liquid",
+      "terrain",
+      "documented-soup"
+    ],
+    "width": 32,
+    "height": 32,
+    "population": 765,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "highlands-puddle",
+    "name": "Highlands puddle",
+    "aliases": [],
+    "description": "A square of liquid. Weighted neighbours pull the shore inward until the puddle finds a quieter shape.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "highlands-liquid",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "highlands-liquid",
+      "terrain"
+    ],
+    "width": 8,
+    "height": 4,
+    "population": 32,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "highlands-ridge",
+    "name": "Highlands ridge",
+    "aliases": [],
+    "description": "A highland bar. Weight 3 on every neighbour makes a ridge that wants to stay land.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "highlands-liquid",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "highlands-liquid",
+      "terrain"
+    ],
+    "width": 8,
+    "height": 3,
+    "population": 24,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "highlands-shore",
+    "name": "Highlands shore",
+    "aliases": [],
+    "description": "Land meeting water. The documented wall: highland on one side, liquid on the other, the threshold sitting on the beach.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "highlands-liquid",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "highlands-liquid",
+      "terrain"
+    ],
+    "width": 8,
+    "height": 4,
+    "population": 32,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "highlife-replicator",
+    "name": "HighLife replicator",
+    "aliases": [],
+    "description": "The reason HighLife has a fan club. A five-by-five that copies itself along the diagonal instead of sitting still.",
+    "author": "unknown",
+    "year": 1994,
+    "ruleset": "highlife",
+    "category": "curiosity",
+    "tags": [
+      "curiosity",
+      "highlife",
+      "replicator"
+    ],
+    "width": 5,
+    "height": 5,
+    "population": 12,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
     "id": "highlife-seed",
     "name": "HighLife seed",
     "aliases": [],
@@ -311,6 +1748,207 @@
     "height": 4,
     "population": 8,
     "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "highlife-seed-10",
+    "name": "HighLife seed 10",
+    "aliases": [],
+    "description": "A compact HighLife seed with a unique barcode. Birth-on-6 pulls this one apart differently than Conway would.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "highlife",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "highlife"
+    ],
+    "width": 11,
+    "height": 6,
+    "population": 23,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "highlife-seed-2",
+    "name": "HighLife seed 2",
+    "aliases": [],
+    "description": "A compact HighLife seed with a unique barcode. Birth-on-6 pulls this one apart differently than Conway would.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "highlife",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "highlife"
+    ],
+    "width": 9,
+    "height": 6,
+    "population": 25,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "highlife-seed-3",
+    "name": "HighLife seed 3",
+    "aliases": [],
+    "description": "A compact HighLife seed with a unique barcode. Birth-on-6 pulls this one apart differently than Conway would.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "highlife",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "highlife"
+    ],
+    "width": 10,
+    "height": 6,
+    "population": 26,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "highlife-seed-4",
+    "name": "HighLife seed 4",
+    "aliases": [],
+    "description": "A compact HighLife seed with a unique barcode. Birth-on-6 pulls this one apart differently than Conway would.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "highlife",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "highlife"
+    ],
+    "width": 9,
+    "height": 6,
+    "population": 25,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "highlife-seed-5",
+    "name": "HighLife seed 5",
+    "aliases": [],
+    "description": "A compact HighLife seed with a unique barcode. Birth-on-6 pulls this one apart differently than Conway would.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "highlife",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "highlife"
+    ],
+    "width": 10,
+    "height": 6,
+    "population": 24,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "highlife-seed-6",
+    "name": "HighLife seed 6",
+    "aliases": [],
+    "description": "A compact HighLife seed with a unique barcode. Birth-on-6 pulls this one apart differently than Conway would.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "highlife",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "highlife"
+    ],
+    "width": 9,
+    "height": 6,
+    "population": 23,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "highlife-seed-7",
+    "name": "HighLife seed 7",
+    "aliases": [],
+    "description": "A compact HighLife seed with a unique barcode. Birth-on-6 pulls this one apart differently than Conway would.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "highlife",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "highlife"
+    ],
+    "width": 10,
+    "height": 6,
+    "population": 24,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "highlife-seed-8",
+    "name": "HighLife seed 8",
+    "aliases": [],
+    "description": "A compact HighLife seed with a unique barcode. Birth-on-6 pulls this one apart differently than Conway would.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "highlife",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "highlife"
+    ],
+    "width": 9,
+    "height": 6,
+    "population": 23,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "highlife-seed-9",
+    "name": "HighLife seed 9",
+    "aliases": [],
+    "description": "A compact HighLife seed with a unique barcode. Birth-on-6 pulls this one apart differently than Conway would.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "highlife",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "highlife"
+    ],
+    "width": 10,
+    "height": 6,
+    "population": 32,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "honey-farm",
+    "name": "Honey farm",
+    "aliases": [],
+    "description": "Four beehives around an empty centre. A common ash of the traffic-light reaction.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 14,
+    "height": 11,
+    "population": 24,
+    "period": 1,
     "speed": null,
     "origin": "curated"
   },
@@ -337,6 +1975,26 @@
     "origin": "curated"
   },
   {
+    "id": "i-heptomino",
+    "name": "I-heptomino",
+    "aliases": [],
+    "description": "Seven cells in a broken I. One of the heptominoes that runs a long time before sitting down.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "methuselah",
+    "tags": [
+      "methuselah",
+      "conway"
+    ],
+    "width": 5,
+    "height": 3,
+    "population": 7,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
     "id": "integral",
     "name": "Integral",
     "aliases": [
@@ -359,6 +2017,26 @@
     "origin": "curated"
   },
   {
+    "id": "lidka",
+    "name": "Lidka",
+    "aliases": [],
+    "description": "A small seed that takes thousands of generations to settle. Lidka is the patience test of the methuselah shelf.",
+    "author": "Andrzej Okrasinski",
+    "year": 1991,
+    "ruleset": "conway",
+    "category": "methuselah",
+    "tags": [
+      "methuselah",
+      "conway"
+    ],
+    "width": 6,
+    "height": 12,
+    "population": 12,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
     "id": "loaf",
     "name": "Loaf",
     "aliases": [],
@@ -374,6 +2052,27 @@
     "width": 4,
     "height": 4,
     "population": 7,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "loaf-and-pond",
+    "name": "Loaf and pond",
+    "aliases": [],
+    "description": "Two still lifes parked far enough apart that neither notices the other. Loaf and pond.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 13,
+    "height": 6,
+    "population": 15,
     "period": 1,
     "speed": null,
     "origin": "curated"
@@ -459,6 +2158,106 @@
     "origin": "curated"
   },
   {
+    "id": "lwd-flake-1",
+    "name": "Life without Death flake 1",
+    "aliases": [],
+    "description": "An inkspot flake. Cells never die, so this seed only stains more of the plane.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "life-without-death",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "life-without-death"
+    ],
+    "width": 20,
+    "height": 5,
+    "population": 27,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "lwd-flake-2",
+    "name": "Life without Death flake 2",
+    "aliases": [],
+    "description": "An inkspot flake. Cells never die, so this seed only stains more of the plane.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "life-without-death",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "life-without-death"
+    ],
+    "width": 19,
+    "height": 5,
+    "population": 26,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "lwd-flake-3",
+    "name": "Life without Death flake 3",
+    "aliases": [],
+    "description": "An inkspot flake. Cells never die, so this seed only stains more of the plane.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "life-without-death",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "life-without-death"
+    ],
+    "width": 20,
+    "height": 5,
+    "population": 27,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "lwd-flake-4",
+    "name": "Life without Death flake 4",
+    "aliases": [],
+    "description": "An inkspot flake. Cells never die, so this seed only stains more of the plane.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "life-without-death",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "life-without-death"
+    ],
+    "width": 19,
+    "height": 5,
+    "population": 26,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "lwd-flake-5",
+    "name": "Life without Death flake 5",
+    "aliases": [],
+    "description": "An inkspot flake. Cells never die, so this seed only stains more of the plane.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "life-without-death",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "life-without-death"
+    ],
+    "width": 20,
+    "height": 5,
+    "population": 25,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
     "id": "lwss",
     "name": "Lightweight spaceship",
     "aliases": [
@@ -504,6 +2303,106 @@
     "origin": "curated"
   },
   {
+    "id": "maze-corridor-1",
+    "name": "Maze corridor 1",
+    "aliases": [],
+    "description": "A corridor sketch for Maze. Survival on 1–5 freezes soup into walls; this seed is one brick.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "maze",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "maze"
+    ],
+    "width": 7,
+    "height": 7,
+    "population": 35,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "maze-corridor-2",
+    "name": "Maze corridor 2",
+    "aliases": [],
+    "description": "A corridor sketch for Maze. Survival on 1–5 freezes soup into walls; this seed is one brick.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "maze",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "maze"
+    ],
+    "width": 7,
+    "height": 7,
+    "population": 34,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "maze-corridor-3",
+    "name": "Maze corridor 3",
+    "aliases": [],
+    "description": "A corridor sketch for Maze. Survival on 1–5 freezes soup into walls; this seed is one brick.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "maze",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "maze"
+    ],
+    "width": 9,
+    "height": 7,
+    "population": 39,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "maze-corridor-4",
+    "name": "Maze corridor 4",
+    "aliases": [],
+    "description": "A corridor sketch for Maze. Survival on 1–5 freezes soup into walls; this seed is one brick.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "maze",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "maze"
+    ],
+    "width": 7,
+    "height": 7,
+    "population": 34,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "maze-corridor-5",
+    "name": "Maze corridor 5",
+    "aliases": [],
+    "description": "A corridor sketch for Maze. Survival on 1–5 freezes soup into walls; this seed is one brick.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "maze",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "maze"
+    ],
+    "width": 7,
+    "height": 7,
+    "population": 33,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
     "id": "mwss",
     "name": "Middleweight spaceship",
     "aliases": [
@@ -523,6 +2422,47 @@
     "population": 11,
     "period": 4,
     "speed": "c/2 orthogonal",
+    "origin": "curated"
+  },
+  {
+    "id": "new-gun-1",
+    "name": "New gun 1",
+    "aliases": [],
+    "description": "The second basic gun. Twin bees, a few eaters, and a glider every 46 generations.",
+    "author": "Bill Gosper",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "gun",
+    "tags": [
+      "gun",
+      "conway"
+    ],
+    "width": 49,
+    "height": 14,
+    "population": 50,
+    "period": 46,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "noahs-ark",
+    "name": "Noah's ark",
+    "aliases": [],
+    "description": "Two switch engines walking away from each other. An ark that unloads junk instead of animals.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "puffer",
+    "tags": [
+      "puffer",
+      "conway",
+      "switch-engine"
+    ],
+    "width": 15,
+    "height": 15,
+    "population": 16,
+    "period": 96,
+    "speed": null,
     "origin": "curated"
   },
   {
@@ -585,6 +2525,46 @@
     "height": 4,
     "population": 8,
     "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "pre-honey-farm",
+    "name": "Pre-honey farm",
+    "aliases": [],
+    "description": "The predecessor of the honey farm. Six cells that remember they wanted to be four beehives.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "conway"
+    ],
+    "width": 4,
+    "height": 3,
+    "population": 7,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "puffer-2",
+    "name": "Puffer 2",
+    "aliases": [],
+    "description": "Two lightweight ships escort a B-heptomino. The second puffer anyone found, and it still drops junk every 140 generations.",
+    "author": "Bill Gosper",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "puffer",
+    "tags": [
+      "puffer",
+      "conway"
+    ],
+    "width": 5,
+    "height": 18,
+    "population": 31,
+    "period": 140,
     "speed": null,
     "origin": "curated"
   },
@@ -652,6 +2632,168 @@
     "origin": "curated"
   },
   {
+    "id": "rabbits",
+    "name": "Rabbits",
+    "aliases": [],
+    "description": "Nine cells that multiply like the name before the ash wins. A compact methuselah from Trevorrow.",
+    "author": "Andrew Trevorrow",
+    "year": 1986,
+    "ruleset": "conway",
+    "category": "methuselah",
+    "tags": [
+      "methuselah",
+      "conway"
+    ],
+    "width": 7,
+    "height": 3,
+    "population": 8,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "replicator-seed-1",
+    "name": "Replicator seed 1",
+    "aliases": [],
+    "description": "A Fredkin-rule seed. Odd neighbourhoods copy; this barcode is the serial number on the tile.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "replicator",
+    "category": "curiosity",
+    "tags": [
+      "curiosity",
+      "replicator"
+    ],
+    "width": 12,
+    "height": 5,
+    "population": 23,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "replicator-seed-2",
+    "name": "Replicator seed 2",
+    "aliases": [],
+    "description": "A Fredkin-rule seed. Odd neighbourhoods copy; this barcode is the serial number on the tile.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "replicator",
+    "category": "curiosity",
+    "tags": [
+      "curiosity",
+      "replicator"
+    ],
+    "width": 11,
+    "height": 5,
+    "population": 22,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "replicator-seed-3",
+    "name": "Replicator seed 3",
+    "aliases": [],
+    "description": "A Fredkin-rule seed. Odd neighbourhoods copy; this barcode is the serial number on the tile.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "replicator",
+    "category": "curiosity",
+    "tags": [
+      "curiosity",
+      "replicator"
+    ],
+    "width": 12,
+    "height": 5,
+    "population": 23,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "replicator-seed-4",
+    "name": "Replicator seed 4",
+    "aliases": [],
+    "description": "A Fredkin-rule seed. Odd neighbourhoods copy; this barcode is the serial number on the tile.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "replicator",
+    "category": "curiosity",
+    "tags": [
+      "curiosity",
+      "replicator"
+    ],
+    "width": 11,
+    "height": 5,
+    "population": 22,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "replicator-seed-5",
+    "name": "Replicator seed 5",
+    "aliases": [],
+    "description": "A Fredkin-rule seed. Odd neighbourhoods copy; this barcode is the serial number on the tile.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "replicator",
+    "category": "curiosity",
+    "tags": [
+      "curiosity",
+      "replicator"
+    ],
+    "width": 12,
+    "height": 5,
+    "population": 21,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "rileys-breeder",
+    "name": "Riley's breeder",
+    "aliases": [],
+    "description": "Puffer 2 plus two lightweight ships — the recipe Riley used for a tiny quadratic-growth breeder.",
+    "author": "Mitchell Riley",
+    "year": 2006,
+    "ruleset": "conway",
+    "category": "curiosity",
+    "tags": [
+      "curiosity",
+      "conway",
+      "breeder"
+    ],
+    "width": 15,
+    "height": 30,
+    "population": 49,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "schick-engine",
+    "name": "Schick engine",
+    "aliases": [],
+    "description": "Two lightweight ships towing a period-12 spark. The tagalong that taught puffers to have engines.",
+    "author": "Paul Schick",
+    "year": 1972,
+    "ruleset": "conway",
+    "category": "spaceship",
+    "tags": [
+      "spaceship",
+      "conway",
+      "tagalong"
+    ],
+    "width": 20,
+    "height": 11,
+    "population": 39,
+    "period": 12,
+    "speed": "c/2 orthogonal",
+    "origin": "curated"
+  },
+  {
     "id": "seeds-cluster",
     "name": "Seeds cluster",
     "aliases": [],
@@ -672,6 +2814,107 @@
     "origin": "curated"
   },
   {
+    "id": "seeds-cluster-1",
+    "name": "Seeds cluster 1",
+    "aliases": [],
+    "description": "A Seeds fuse with a unique barcode. Every live cell dies; the next generation is born from pairs.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "seeds",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "seeds"
+    ],
+    "width": 7,
+    "height": 5,
+    "population": 19,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "seeds-cluster-2",
+    "name": "Seeds cluster 2",
+    "aliases": [],
+    "description": "A Seeds fuse with a unique barcode. Every live cell dies; the next generation is born from pairs.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "seeds",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "seeds"
+    ],
+    "width": 7,
+    "height": 5,
+    "population": 20,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "seeds-cluster-3",
+    "name": "Seeds cluster 3",
+    "aliases": [],
+    "description": "A Seeds fuse with a unique barcode. Every live cell dies; the next generation is born from pairs.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "seeds",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "seeds"
+    ],
+    "width": 7,
+    "height": 5,
+    "population": 19,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "seeds-cluster-4",
+    "name": "Seeds cluster 4",
+    "aliases": [],
+    "description": "A Seeds fuse with a unique barcode. Every live cell dies; the next generation is born from pairs.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "seeds",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "seeds"
+    ],
+    "width": 7,
+    "height": 5,
+    "population": 20,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "semi-snark",
+    "name": "Semi-Snark",
+    "aliases": [],
+    "description": "A Spartan 90-degree reflector that keeps every other glider. The still-life bait, waiting for a stream.",
+    "author": "unknown",
+    "year": 2013,
+    "ruleset": "conway",
+    "category": "reflector",
+    "tags": [
+      "reflector",
+      "conway",
+      "snark"
+    ],
+    "width": 19,
+    "height": 19,
+    "population": 36,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
     "id": "ship",
     "name": "Ship",
     "aliases": [],
@@ -687,6 +2930,27 @@
     "width": 3,
     "height": 3,
     "population": 6,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "ship-and-pond",
+    "name": "Ship and pond",
+    "aliases": [],
+    "description": "Two still lifes parked far enough apart that neither notices the other. Ship and pond.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 12,
+    "height": 10,
+    "population": 14,
     "period": 1,
     "speed": null,
     "origin": "curated"
@@ -732,6 +2996,192 @@
     "origin": "curated"
   },
   {
+    "id": "space-rake",
+    "name": "Space rake",
+    "aliases": [],
+    "description": "A moving factory: the rake crawls at c/2 and throws a glider forward every twenty generations.",
+    "author": "Bill Gosper",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "rake",
+    "tags": [
+      "rake",
+      "conway"
+    ],
+    "width": 35,
+    "height": 20,
+    "population": 81,
+    "period": 20,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "stairstep-hexomino",
+    "name": "Stairstep hexomino",
+    "aliases": [],
+    "description": "Six cells on a stair. It settles into the blockade — four blocks in a diamond — and then stops climbing.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "conway"
+    ],
+    "width": 3,
+    "height": 4,
+    "population": 6,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "star-wars-seed-1",
+    "name": "Star Wars seed 1",
+    "aliases": [],
+    "description": "A Star Wars filament seed. Born on 3–5, it ages through two decaying states and looks like a dogfight.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "star-wars",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "star-wars",
+      "multi-state"
+    ],
+    "width": 7,
+    "height": 5,
+    "population": 19,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "star-wars-seed-2",
+    "name": "Star Wars seed 2",
+    "aliases": [],
+    "description": "A Star Wars filament seed. Born on 3–5, it ages through two decaying states and looks like a dogfight.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "star-wars",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "star-wars",
+      "multi-state"
+    ],
+    "width": 11,
+    "height": 5,
+    "population": 20,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "star-wars-seed-3",
+    "name": "Star Wars seed 3",
+    "aliases": [],
+    "description": "A Star Wars filament seed. Born on 3–5, it ages through two decaying states and looks like a dogfight.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "star-wars",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "star-wars",
+      "multi-state"
+    ],
+    "width": 7,
+    "height": 5,
+    "population": 19,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "star-wars-seed-4",
+    "name": "Star Wars seed 4",
+    "aliases": [],
+    "description": "A Star Wars filament seed. Born on 3–5, it ages through two decaying states and looks like a dogfight.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "star-wars",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "star-wars",
+      "multi-state"
+    ],
+    "width": 11,
+    "height": 5,
+    "population": 20,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "star-wars-seed-5",
+    "name": "Star Wars seed 5",
+    "aliases": [],
+    "description": "A Star Wars filament seed. Born on 3–5, it ages through two decaying states and looks like a dogfight.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "star-wars",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "star-wars",
+      "multi-state"
+    ],
+    "width": 6,
+    "height": 5,
+    "population": 17,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "switch-engine",
+    "name": "Switch engine",
+    "aliases": [],
+    "description": "The original messy puffer: a eight-cell engine that crawls and leaves junk. Stabilised cousins become clean puffers and rakes.",
+    "author": "Charles Corderman",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "puffer",
+    "tags": [
+      "puffer",
+      "conway",
+      "switch-engine"
+    ],
+    "width": 6,
+    "height": 4,
+    "population": 8,
+    "period": 96,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "t-tetromino",
+    "name": "T-tetromino",
+    "aliases": [],
+    "description": "Four cells in a T. The smallest interesting seed: it becomes a traffic light and then sits down.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "conway"
+    ],
+    "width": 3,
+    "height": 2,
+    "population": 4,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
     "id": "thunderbird",
     "name": "Thunderbird",
     "aliases": [],
@@ -772,6 +3222,90 @@
     "origin": "curated"
   },
   {
+    "id": "toad-pair-10",
+    "name": "Toad pair 10",
+    "aliases": [],
+    "description": "Two toads stacked 10 cells apart. Period 2, twice.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway",
+      "constellation"
+    ],
+    "width": 4,
+    "height": 12,
+    "population": 12,
+    "period": 2,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "toad-pair-12",
+    "name": "Toad pair 12",
+    "aliases": [],
+    "description": "Two toads stacked 12 cells apart. Period 2, twice.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway",
+      "constellation"
+    ],
+    "width": 4,
+    "height": 14,
+    "population": 12,
+    "period": 2,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "toad-pair-6",
+    "name": "Toad pair 6",
+    "aliases": [],
+    "description": "Two toads stacked 6 cells apart. Period 2, twice.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway",
+      "constellation"
+    ],
+    "width": 4,
+    "height": 8,
+    "population": 12,
+    "period": 2,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "toad-pair-8",
+    "name": "Toad pair 8",
+    "aliases": [],
+    "description": "Two toads stacked 8 cells apart. Period 2, twice.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway",
+      "constellation"
+    ],
+    "width": 4,
+    "height": 10,
+    "population": 12,
+    "period": 2,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
     "id": "tub",
     "name": "Tub",
     "aliases": [],
@@ -787,6 +3321,608 @@
     "width": 3,
     "height": 3,
     "population": 4,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tub-and-boat",
+    "name": "Tub and boat",
+    "aliases": [],
+    "description": "Two still lifes parked far enough apart that neither notices the other. Tub and boat.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 10,
+    "height": 5,
+    "population": 9,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tub-and-ship",
+    "name": "Tub and ship",
+    "aliases": [],
+    "description": "Two still lifes parked far enough apart that neither notices the other. Tub and ship.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 11,
+    "height": 4,
+    "population": 10,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tub-pair-10-10",
+    "name": "Tub pair 10×10",
+    "aliases": [],
+    "description": "Two tubs offset by (10,10). A constellation, not a bathhouse.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 13,
+    "height": 13,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tub-pair-10-12",
+    "name": "Tub pair 10×12",
+    "aliases": [],
+    "description": "Two tubs offset by (10,12). A constellation, not a bathhouse.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 13,
+    "height": 15,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tub-pair-10-14",
+    "name": "Tub pair 10×14",
+    "aliases": [],
+    "description": "Two tubs offset by (10,14). A constellation, not a bathhouse.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 13,
+    "height": 17,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tub-pair-12-12",
+    "name": "Tub pair 12×12",
+    "aliases": [],
+    "description": "Two tubs offset by (12,12). A constellation, not a bathhouse.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 15,
+    "height": 15,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tub-pair-12-14",
+    "name": "Tub pair 12×14",
+    "aliases": [],
+    "description": "Two tubs offset by (12,14). A constellation, not a bathhouse.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 15,
+    "height": 17,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tub-pair-14-14",
+    "name": "Tub pair 14×14",
+    "aliases": [],
+    "description": "Two tubs offset by (14,14). A constellation, not a bathhouse.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 17,
+    "height": 17,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tub-pair-6-10",
+    "name": "Tub pair 6×10",
+    "aliases": [],
+    "description": "Two tubs offset by (6,10). A constellation, not a bathhouse.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 9,
+    "height": 13,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tub-pair-6-12",
+    "name": "Tub pair 6×12",
+    "aliases": [],
+    "description": "Two tubs offset by (6,12). A constellation, not a bathhouse.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 9,
+    "height": 15,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tub-pair-6-14",
+    "name": "Tub pair 6×14",
+    "aliases": [],
+    "description": "Two tubs offset by (6,14). A constellation, not a bathhouse.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 9,
+    "height": 17,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tub-pair-6-6",
+    "name": "Tub pair 6×6",
+    "aliases": [],
+    "description": "Two tubs offset by (6,6). A constellation, not a bathhouse.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 9,
+    "height": 9,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tub-pair-6-8",
+    "name": "Tub pair 6×8",
+    "aliases": [],
+    "description": "Two tubs offset by (6,8). A constellation, not a bathhouse.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 9,
+    "height": 11,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tub-pair-8-10",
+    "name": "Tub pair 8×10",
+    "aliases": [],
+    "description": "Two tubs offset by (8,10). A constellation, not a bathhouse.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 11,
+    "height": 13,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tub-pair-8-12",
+    "name": "Tub pair 8×12",
+    "aliases": [],
+    "description": "Two tubs offset by (8,12). A constellation, not a bathhouse.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 11,
+    "height": 15,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tub-pair-8-14",
+    "name": "Tub pair 8×14",
+    "aliases": [],
+    "description": "Two tubs offset by (8,14). A constellation, not a bathhouse.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 11,
+    "height": 17,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tub-pair-8-8",
+    "name": "Tub pair 8×8",
+    "aliases": [],
+    "description": "Two tubs offset by (8,8). A constellation, not a bathhouse.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 11,
+    "height": 11,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tub-with-tail",
+    "name": "Tub with tail",
+    "aliases": [],
+    "description": "A tub that grew a tail. Four cells of quiet plus a handle that never pours.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway"
+    ],
+    "width": 5,
+    "height": 5,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tumbler",
+    "name": "Tumbler",
+    "aliases": [],
+    "description": "A period-14 acrobat. Two arms swing past each other and meet again two weeks later, in generations.",
+    "author": "George Collins",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway"
+    ],
+    "width": 9,
+    "height": 5,
+    "population": 16,
+    "period": 14,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "twin-bees-shuttle",
+    "name": "Twin bees shuttle",
+    "aliases": [],
+    "description": "Two B-heptominoes bounce between blocks on a 46-generation loop. Most period-46 guns start here.",
+    "author": "Bill Gosper",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway",
+      "shuttle"
+    ],
+    "width": 29,
+    "height": 11,
+    "population": 34,
+    "period": 46,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "two-beehives",
+    "name": "Two beehives",
+    "aliases": [],
+    "description": "Two still lifes parked far enough apart that neither notices the other. Two beehives.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 11,
+    "height": 9,
+    "population": 12,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "two-by-two-seed-1",
+    "name": "2×2 seed 1",
+    "aliases": [],
+    "description": "A 2×2-rule seed. Survival on 1 and 5 makes familiar blocks misbehave; this cluster is unique to the set.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "two-by-two",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "two-by-two"
+    ],
+    "width": 12,
+    "height": 5,
+    "population": 26,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "two-by-two-seed-2",
+    "name": "2×2 seed 2",
+    "aliases": [],
+    "description": "A 2×2-rule seed. Survival on 1 and 5 makes familiar blocks misbehave; this cluster is unique to the set.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "two-by-two",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "two-by-two"
+    ],
+    "width": 11,
+    "height": 5,
+    "population": 25,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "two-by-two-seed-3",
+    "name": "2×2 seed 3",
+    "aliases": [],
+    "description": "A 2×2-rule seed. Survival on 1 and 5 makes familiar blocks misbehave; this cluster is unique to the set.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "two-by-two",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "two-by-two"
+    ],
+    "width": 12,
+    "height": 5,
+    "population": 26,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "two-by-two-seed-4",
+    "name": "2×2 seed 4",
+    "aliases": [],
+    "description": "A 2×2-rule seed. Survival on 1 and 5 makes familiar blocks misbehave; this cluster is unique to the set.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "two-by-two",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "two-by-two"
+    ],
+    "width": 11,
+    "height": 5,
+    "population": 25,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "two-by-two-seed-5",
+    "name": "2×2 seed 5",
+    "aliases": [],
+    "description": "A 2×2-rule seed. Survival on 1 and 5 makes familiar blocks misbehave; this cluster is unique to the set.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "two-by-two",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "two-by-two"
+    ],
+    "width": 12,
+    "height": 5,
+    "population": 24,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "two-loaves",
+    "name": "Two loaves",
+    "aliases": [],
+    "description": "Two still lifes parked far enough apart that neither notices the other. Two loaves.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 12,
+    "height": 9,
+    "population": 14,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "two-ponds",
+    "name": "Two ponds",
+    "aliases": [],
+    "description": "Two still lifes parked far enough apart that neither notices the other. Two ponds.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 12,
+    "height": 11,
+    "population": 16,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "two-tubs",
+    "name": "Two tubs",
+    "aliases": [],
+    "description": "Two still lifes parked far enough apart that neither notices the other. Two tubs.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "constellation"
+    ],
+    "width": 9,
+    "height": 7,
+    "population": 8,
     "period": 1,
     "speed": null,
     "origin": "curated"
@@ -812,6 +3948,88 @@
     "origin": "curated"
   },
   {
+    "id": "wireworld-and",
+    "name": "WireWorld AND",
+    "aliases": [],
+    "description": "A pocket that wants two heads at once. One input alone dies in the gap; both together spawn an output electron.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "wireworld",
+    "category": "logic",
+    "tags": [
+      "logic",
+      "wireworld",
+      "gate"
+    ],
+    "width": 11,
+    "height": 5,
+    "population": 25,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "wireworld-clock",
+    "name": "WireWorld clock",
+    "aliases": [],
+    "description": "A four-cell loop with one electron. The clock ticks forever and feeds every gate that needs a heartbeat.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "wireworld",
+    "category": "logic",
+    "tags": [
+      "logic",
+      "wireworld",
+      "clock"
+    ],
+    "width": 4,
+    "height": 3,
+    "population": 10,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "wireworld-crossover",
+    "name": "WireWorld crossover",
+    "aliases": [],
+    "description": "A plus-shaped crossing. Electrons that arrive on one axis leave on the same axis if the timing is kind.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "wireworld",
+    "category": "logic",
+    "tags": [
+      "logic",
+      "wireworld"
+    ],
+    "width": 5,
+    "height": 5,
+    "population": 9,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "wireworld-delay",
+    "name": "WireWorld delay",
+    "aliases": [],
+    "description": "A long rail. Same electron, more generations — the delay line every adder eventually asks for.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "wireworld",
+    "category": "logic",
+    "tags": [
+      "logic",
+      "wireworld"
+    ],
+    "width": 14,
+    "height": 1,
+    "population": 14,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
     "id": "wireworld-diode",
     "name": "WireWorld diode",
     "aliases": [],
@@ -829,6 +4047,149 @@
     "height": 3,
     "population": 17,
     "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "wireworld-fanout",
+    "name": "WireWorld fan-out",
+    "aliases": [],
+    "description": "A T-junction. One electron becomes two, which is how clocks feed more than one gate.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "wireworld",
+    "category": "logic",
+    "tags": [
+      "logic",
+      "wireworld"
+    ],
+    "width": 5,
+    "height": 3,
+    "population": 7,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "wireworld-half-adder",
+    "name": "WireWorld half adder",
+    "aliases": [],
+    "description": "A compact half-adder sketch: XOR-ish sum and AND-ish carry sharing a box of conductor. A starting kit, not a silicon die.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "wireworld",
+    "category": "logic",
+    "tags": [
+      "logic",
+      "wireworld",
+      "adder"
+    ],
+    "width": 10,
+    "height": 9,
+    "population": 55,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "wireworld-or",
+    "name": "WireWorld OR",
+    "aliases": [],
+    "description": "Two rails join a trunk. One or two incoming heads both fire the output — WireWorld’s native OR.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "wireworld",
+    "category": "logic",
+    "tags": [
+      "logic",
+      "wireworld",
+      "gate"
+    ],
+    "width": 9,
+    "height": 5,
+    "population": 20,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "wireworld-terminator",
+    "name": "WireWorld terminator",
+    "aliases": [],
+    "description": "A rail that simply ends. Electrons arrive, find nowhere to go, and vanish. The period at the end of a sentence.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "wireworld",
+    "category": "logic",
+    "tags": [
+      "logic",
+      "wireworld"
+    ],
+    "width": 6,
+    "height": 1,
+    "population": 6,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "wireworld-wire",
+    "name": "WireWorld wire",
+    "aliases": [],
+    "description": "A straight conductor with one electron already on the rail. The simplest moving signal in the rule.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "wireworld",
+    "category": "logic",
+    "tags": [
+      "logic",
+      "wireworld"
+    ],
+    "width": 10,
+    "height": 1,
+    "population": 10,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "wireworld-xor",
+    "name": "WireWorld XOR",
+    "aliases": [],
+    "description": "Two inputs, one output, and a crossing that cancels doubles. Exclusive-or drawn in conductor.",
+    "author": "fancy-gol",
+    "year": 2026,
+    "ruleset": "wireworld",
+    "category": "logic",
+    "tags": [
+      "logic",
+      "wireworld",
+      "gate"
+    ],
+    "width": 9,
+    "height": 5,
+    "population": 29,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "zebra-agar",
+    "name": "Zebra stripes",
+    "aliases": [],
+    "description": "Alternating live and dead rows. In the infinite agar the stripes are immortal; this patch shows the weave.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "agar",
+    "tags": [
+      "agar",
+      "conway"
+    ],
+    "width": 8,
+    "height": 7,
+    "population": 32,
+    "period": 1,
     "speed": null,
     "origin": "curated"
   }

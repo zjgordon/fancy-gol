@@ -1,0 +1,14 @@
+#N 2×2 seed 4
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://conwaylife.com/wiki/OCA:2x2
+#C verified: fancy-gol P2-B-5, unique seed for this ruleset
+#C ruleset: two-by-two
+#C category: seed
+#C period: none
+#C tags: seed, two-by-two
+#C description: A 2×2-rule seed. Survival on 1 and 5 makes familiar
+#C description: blocks misbehave; this cluster is unique to the set.
+x = 11, y = 5, rule = B36/S125
+2ob2o$bobo$5obo$2ob3o3b2o$ob5o!

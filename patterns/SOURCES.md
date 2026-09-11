@@ -50,7 +50,9 @@ source that requires it has been imported.
 | Source | What we take | Class | Terms (verbatim / summary) | Seed patterns |
 |---|---|---|---|---|
 | LifeWiki (conwaylife.com) | Facts: names, discoverers, years, periods, speeds, layouts | B | Footer quoted in §3, verified 2026-09-11. Structured data CC0; wiki text BY-SA (unused here). | Conway staples, HighLife seed, Day & Night seed, Seeds cluster, Brian's Brain spark |
+| LifeWiki + *Mathematics and Construction* book RLEs | Additional Conway facts (space rake, puffer 2, twin bees, New gun 1, switch-engine family, Semi-Snark) | B | Same footer as §3. Book pages publish RLE as structured pattern data; descriptions original. | P2-B-5 Conway completion set |
 | WireWorld (Brian Silverman, 1987) | Canonical diode layout as a historical configuration | B | Configuration treated as fact; description original | `wireworld-diode` |
+| fancy-gol P2-B-5 | Class A barcodes, WireWorld gate sketches, Highlands documented soup, Brian's Brain ships found by search | A | Originated here, CC0 | Other-ruleset minimums; constellation pairs |
 
 Individual `source:` URLs are on each file's `#C` lines. Do not wholesale-mirror an archive.
 Hand-pick, attribute, verify by simulation, or omit.

@@ -1,0 +1,15 @@
+#N Brian's Brain photon
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://conwaylife.com/wiki/OCA:Brian%27s_Brain
+#C verified: fancy-gol P2-B-5, period 4, displaces 4 cells orthogonally
+#C ruleset: brians-brain
+#C category: spaceship
+#C period: 4
+#C speed: c orthogonal
+#C tags: spaceship, brians-brain, multi-state
+#C description: A lightspeed orthogonal photon. Eight cells of fire
+#C description: and ash covering four cells a generation.
+x = 5, y = 3, rule = Brian's Brain
+AB$AB.AB$.AB!

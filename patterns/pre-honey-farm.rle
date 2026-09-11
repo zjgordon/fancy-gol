@@ -1,0 +1,14 @@
+#N Pre-honey farm
+#O unknown, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Honey_farm
+#C verified: fancy-gol P2-B-5, honey-farm predecessor
+#C ruleset: conway
+#C category: seed
+#C period: none
+#C tags: seed, conway
+#C description: The predecessor of the honey farm. Six cells that
+#C description: remember they wanted to be four beehives.
+x = 4, y = 3, rule = B3/S23
+b3o$o2bo$b2o!

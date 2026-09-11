@@ -1,0 +1,14 @@
+#N WireWorld OR
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://en.wikipedia.org/wiki/Wireworld
+#C verified: fancy-gol P2-B-5, join geometry
+#C ruleset: wireworld
+#C category: logic
+#C period: none
+#C tags: logic, wireworld, gate
+#C description: Two rails join a trunk. One or two incoming heads both
+#C description: fire the output — WireWorld’s native OR.
+x = 9, y = 5, rule = WireWorld
+5C$4.C$5C.3C$4.C$5C!

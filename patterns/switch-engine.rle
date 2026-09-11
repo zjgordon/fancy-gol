@@ -1,0 +1,15 @@
+#N Switch engine
+#O Charles Corderman, 1971
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Switch_engine
+#C verified: fancy-gol P2-B-5, grows / translates; Corderman 1971
+#C ruleset: conway
+#C category: puffer
+#C period: 96
+#C tags: puffer, conway, switch-engine
+#C description: The original messy puffer: a eight-cell engine that
+#C description: crawls and leaves junk. Stabilised cousins become
+#C description: clean puffers and rakes.
+x = 6, y = 4, rule = B3/S23
+bobo$o$bo2bo$3b3o!

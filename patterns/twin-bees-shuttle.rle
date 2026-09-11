@@ -1,0 +1,15 @@
+#N Twin bees shuttle
+#O Bill Gosper, 1971
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Twin_bees_shuttle
+#C verified: fancy-gol P2-B-5, period 46
+#C ruleset: conway
+#C category: oscillator
+#C period: 46
+#C tags: oscillator, conway, shuttle
+#C description: Two B-heptominoes bounce between blocks on a
+#C description: 46-generation loop. Most period-46 guns start here.
+x = 29, y = 11, rule = B3/S23
+17bo$2o15b2o8b2o$2o16b2o7b2o$13b2o2b2o4$13b2o2b2o$2o16b2o7b2o$2o15b2o
+8b2o$17bo!

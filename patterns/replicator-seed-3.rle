@@ -1,0 +1,14 @@
+#N Replicator seed 3
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://conwaylife.com/wiki/OCA:Replicator
+#C verified: fancy-gol P2-B-5, unique seed for this ruleset
+#C ruleset: replicator
+#C category: curiosity
+#C period: none
+#C tags: curiosity, replicator
+#C description: A Fredkin-rule seed. Odd neighbourhoods copy; this
+#C description: barcode is the serial number on the tile.
+x = 12, y = 5, rule = B1357/S1357
+obobo$bobo$4ob2o$3o2bo4b2o$2ob4o!

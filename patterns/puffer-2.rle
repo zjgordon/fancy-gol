@@ -1,0 +1,15 @@
+#N Puffer 2
+#O Bill Gosper, 1971
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Puffer_2
+#C verified: fancy-gol P2-B-5, grows; two LWSS escort a B-heptomino
+#C ruleset: conway
+#C category: puffer
+#C period: 140
+#C tags: puffer, conway
+#C description: Two lightweight ships escort a B-heptomino. The second
+#C description: puffer anyone found, and it still drops junk every 140
+#C description: generations.
+x = 5, y = 18, rule = B3/S23
+2b2o$2ob2o$4o$b2o3$o$2o$b2o$2o5$2b2o$2ob2o$4o$b2o!

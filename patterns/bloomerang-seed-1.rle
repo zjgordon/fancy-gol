@@ -1,0 +1,14 @@
+#N Bloomerang seed 1
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://conwaylife.com/wiki/OCA:Bloomerang
+#C verified: fancy-gol P2-B-5, unique seed for this ruleset
+#C ruleset: bloomerang
+#C category: seed
+#C period: none
+#C tags: seed, bloomerang, multi-state
+#C description: A Bloomerang spark. Twenty-four decay states turn a
+#C description: small seed into a long bloom-and-rebound trail.
+x = 12, y = 5, rule = B34678/S234/G24
+4o$b2o$2ob4o$o2bob7o$4ob2o!

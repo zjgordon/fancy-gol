@@ -1,0 +1,15 @@
+#N Figure eight
+#O unknown, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Figure_eight
+#C verified: fancy-gol P2-B-5, period 8
+#C ruleset: conway
+#C category: oscillator
+#C period: 8
+#C aliases: big beacon
+#C tags: oscillator, conway
+#C description: Two 3×3 blocks on a diagonal, trading mass for eight
+#C description: generations. Also called the big beacon.
+x = 6, y = 6, rule = B3/S23
+3o$3o$3o$3b3o$3b3o$3b3o!

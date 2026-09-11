@@ -1,0 +1,15 @@
+#N Brian's Brain butterfly
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://conwaylife.com/wiki/OCA:Brian%27s_Brain
+#C verified: fancy-gol P2-B-5, period 4, displaces (1,1)
+#C ruleset: brians-brain
+#C category: spaceship
+#C period: 4
+#C speed: c/4 diagonal
+#C tags: spaceship, brians-brain, multi-state
+#C description: A six-cell c/4 diagonal ship. Firing and cooling trade
+#C description: places every generation; the butterfly still walks.
+x = 3, y = 4, rule = Brian's Brain
+2.A$.2B$A.A$B!

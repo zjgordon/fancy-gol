@@ -1,0 +1,14 @@
+#N WireWorld fan-out
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://en.wikipedia.org/wiki/Wireworld
+#C verified: fancy-gol P2-B-5, T junction
+#C ruleset: wireworld
+#C category: logic
+#C period: none
+#C tags: logic, wireworld
+#C description: A T-junction. One electron becomes two, which is how
+#C description: clocks feed more than one gate.
+x = 5, y = 3, rule = WireWorld
+4.C$5C$4.C!

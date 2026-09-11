@@ -248,7 +248,7 @@ checker change (`engine → shared/`, scan `shared/**`), the canonical syntactic
 - [x] The client degrades to its bundled subset when the API is unreachable, with a visible but non-blocking notice.
 - [x] User-saved patterns appear in the library alongside curated ones, visually distinguished.
 
-#### - [ ] P2-B-5 · Catalogue completion
+#### - [x] P2-B-5 · Catalogue completion — @cursor, started 2026-09-11
 **Depends on:** P2-B-1 · **Files:** `patterns/**`
 **Intent:** Grow the seed set to the full ship bar. Appended 2026-09-11 so P2-B-2/B-3/B-4 are not blocked on content volume.
 **Minimum content to ship (cumulative with P2-B-1):**
@@ -260,9 +260,9 @@ checker change (`engine → shared/`, scan `shared/**`), the canonical syntactic
 - **Generations rules: ≥ 5 each** for the two shipped.
 - **The multi-state terrain rule: ≥ 4** documented seeds.
 **Acceptance criteria**
-- [ ] Catalogue ships ≥ 200 attributed patterns across ≥ 10 rulesets; every new entry passes the same build-time validation and licence gate as P2-B-1.
-- [ ] Thumbnails regenerated for all new entries; total thumbnail payload still < 3 MB.
-- [ ] No two entries share a canonical hash under different names (build-time check).
+- [x] Catalogue ships ≥ 200 attributed patterns across ≥ 10 rulesets; every new entry passes the same build-time validation and licence gate as P2-B-1.
+- [x] Thumbnails regenerated for all new entries; total thumbnail payload still < 3 MB.
+- [x] No two entries share a canonical hash under different names (build-time check).
 
 ---
 

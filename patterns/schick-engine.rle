@@ -1,0 +1,16 @@
+#N Schick engine
+#O Paul Schick, 1972
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Schick_engine
+#C verified: fancy-gol P2-B-5, period 12, translates c/2
+#C ruleset: conway
+#C category: spaceship
+#C period: 12
+#C speed: c/2 orthogonal
+#C tags: spaceship, conway, tagalong
+#C description: Two lightweight ships towing a period-12 spark. The
+#C description: tagalong that taught puffers to have engines.
+x = 20, y = 11, rule = B3/S23
+15bo2bo$19bo$15bo3bo$5b2o9b4o$4b2o5b3o$3o6b2ob2o$4b2o5b3o$5b2o9b4o$15b
+o3bo$19bo$15bo2bo!

@@ -1,0 +1,15 @@
+#N Highlands shore
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://conwaylife.com/wiki/
+#C verified: fancy-gol P2-B-5, land/water wall
+#C ruleset: highlands-liquid
+#C category: seed
+#C period: none
+#C tags: seed, highlands-liquid, terrain
+#C description: Land meeting water. The documented wall: highland on
+#C description: one side, liquid on the other, the threshold sitting
+#C description: on the beach.
+x = 8, y = 4, rule = Highlands/Liquid
+8B$8B$8A$8A!

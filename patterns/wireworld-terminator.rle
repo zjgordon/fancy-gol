@@ -1,0 +1,15 @@
+#N WireWorld terminator
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://en.wikipedia.org/wiki/Wireworld
+#C verified: fancy-gol P2-B-5, open conductor
+#C ruleset: wireworld
+#C category: logic
+#C period: none
+#C tags: logic, wireworld
+#C description: A rail that simply ends. Electrons arrive, find
+#C description: nowhere to go, and vanish. The period at the end of a
+#C description: sentence.
+x = 6, y = 1, rule = WireWorld
+AB4C!

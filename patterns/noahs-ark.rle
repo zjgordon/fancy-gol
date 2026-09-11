@@ -1,0 +1,14 @@
+#N Noah's ark
+#O unknown, 1971
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Noah%27s_ark
+#C verified: fancy-gol P2-B-5, two switch engines, population grows
+#C ruleset: conway
+#C category: puffer
+#C period: 96
+#C tags: puffer, conway, switch-engine
+#C description: Two switch engines walking away from each other. An
+#C description: ark that unloads junk instead of animals.
+x = 15, y = 15, rule = B3/S23
+2bobo$5bo$bo2bo$3o6$13bo$12bobo2$11bo2bo$11b2o$11bo!

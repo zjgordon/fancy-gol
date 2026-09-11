@@ -1,0 +1,14 @@
+#N Block-laying switch engine
+#O Charles Corderman, 1971
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Block-laying_switch_engine
+#C verified: fancy-gol P2-B-5, grows; lays blocks
+#C ruleset: conway
+#C category: puffer
+#C period: 96
+#C tags: puffer, conway, switch-engine
+#C description: A switch engine that drops a tidy trail of blocks. The
+#C description: clean cousin of the messy original.
+x = 4, y = 16, rule = B3/S23
+b2o$b2o9$2bo$bobo2$o2bo$2o$o!

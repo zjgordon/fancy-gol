@@ -1,0 +1,14 @@
+#N Stairstep hexomino
+#O unknown, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Stairstep_hexomino
+#C verified: fancy-gol P2-B-5, blockade predecessor
+#C ruleset: conway
+#C category: seed
+#C period: none
+#C tags: seed, conway
+#C description: Six cells on a stair. It settles into the blockade —
+#C description: four blocks in a diamond — and then stops climbing.
+x = 3, y = 4, rule = B3/S23
+o$2o$b2o$2bo!

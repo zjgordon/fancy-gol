@@ -1,0 +1,15 @@
+#N Brian's Brain p3
+#O Michael Sweney, 1999
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/OCA:Brian%27s_Brain
+#C verified: fancy-gol P2-B-5, period 3 oscillator
+#C ruleset: brians-brain
+#C category: oscillator
+#C period: 3
+#C tags: oscillator, brians-brain, multi-state
+#C description: A period-3 oscillator in a rule with no period 2.
+#C description: Sweney found the first ones; this is the small square
+#C description: that blinks forever.
+x = 4, y = 4, rule = Brian's Brain
+2.A$A2B$.2BA$.A!

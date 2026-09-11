@@ -1,0 +1,15 @@
+#N Herschel
+#O unknown, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Herschel
+#C verified: fancy-gol P2-B-5, heptomino signal, the conduit unit of Life circuitry
+#C ruleset: conway
+#C category: logic
+#C period: none
+#C tags: logic, conway, herschel, turing
+#C description: The heptomino that Life uses as a signal. Conduits,
+#C description: universal constructors and the Turing-complete
+#C description: circuitry of the late game all speak Herschel.
+x = 3, y = 4, rule = B3/S23
+o$bo$bo$3o!

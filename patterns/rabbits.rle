@@ -1,0 +1,14 @@
+#N Rabbits
+#O Andrew Trevorrow, 1986
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Rabbits
+#C verified: fancy-gol P2-B-5, methuselah, nine cells
+#C ruleset: conway
+#C category: methuselah
+#C period: none
+#C tags: methuselah, conway
+#C description: Nine cells that multiply like the name before the ash
+#C description: wins. A compact methuselah from Trevorrow.
+x = 7, y = 3, rule = B3/S23
+o3b3o$b2obo$bo!

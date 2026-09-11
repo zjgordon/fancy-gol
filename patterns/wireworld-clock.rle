@@ -1,0 +1,14 @@
+#N WireWorld clock
+#O fancy-gol, 2026
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: originated in fancy-gol P2-B-5 (CC0)
+#C source: https://en.wikipedia.org/wiki/Wireworld
+#C verified: fancy-gol P2-B-5, period-4 electron loop
+#C ruleset: wireworld
+#C category: logic
+#C period: none
+#C tags: logic, wireworld, clock
+#C description: A four-cell loop with one electron. The clock ticks
+#C description: forever and feeds every gate that needs a heartbeat.
+x = 4, y = 3, rule = WireWorld
+AB2C$C2.C$4C!

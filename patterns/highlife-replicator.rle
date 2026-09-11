@@ -1,0 +1,15 @@
+#N HighLife replicator
+#O unknown, 1994
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/OCA:HighLife
+#C verified: fancy-gol P2-B-5, copies on the diagonal; HighLife replicator
+#C ruleset: highlife
+#C category: curiosity
+#C period: none
+#C tags: curiosity, highlife, replicator
+#C description: The reason HighLife has a fan club. A five-by-five
+#C description: that copies itself along the diagonal instead of
+#C description: sitting still.
+x = 5, y = 5, rule = B36/S23
+2b3o$bo2bo$o3bo$o2bo$3o!

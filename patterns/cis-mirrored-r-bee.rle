@@ -1,0 +1,14 @@
+#N Cis-mirrored R-bee
+#O unknown, 1971
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Cis-mirrored_R-bee
+#C verified: fancy-gol P2-B-5, period 1
+#C ruleset: conway
+#C category: still-life
+#C period: 1
+#C tags: still-life, conway
+#C description: Two R-bees facing the same way. A honey-farm fragment
+#C description: that never left the hive.
+x = 4, y = 7, rule = B3/S23
+b2o$o2bo$b3o2$b3o$o2bo$b2o!
