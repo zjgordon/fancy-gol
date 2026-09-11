@@ -106,6 +106,16 @@ describe('SPA shell fallback', () => {
   });
 });
 
+describe('GET /thumbs', () => {
+  it('serves a committed library poster', async () => {
+    const res = await fetch(`${baseUrl}/thumbs/glider.png`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toMatch(/image\/png/);
+    const bytes = await res.arrayBuffer();
+    expect(bytes.byteLength).toBeGreaterThan(32);
+  });
+});
+
 describe('unknown /api/* paths', () => {
   it('returns a JSON 404, not the HTML shell', async () => {
     const res = await fetch(`${baseUrl}/api/does-not-exist`);

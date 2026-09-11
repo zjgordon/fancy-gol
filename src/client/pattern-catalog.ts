@@ -17,11 +17,14 @@ export interface CatalogPattern {
   readonly aliases: readonly string[];
   readonly description?: string;
   readonly author?: string;
+  readonly year?: number | null;
   readonly ruleset: string;
   readonly category: string;
   readonly tags: readonly string[];
   readonly width: number;
   readonly height: number;
+  readonly period?: number | null;
+  readonly source?: string;
   readonly origin: PatternOrigin;
   readonly rle?: string;
 }
@@ -67,16 +70,25 @@ export async function loadPatternCatalog(options: {
     if (!res.ok) return { patterns: fallback, source: 'bundled' };
     const body: unknown = await res.json();
     if (!Array.isArray(body)) return { patterns: fallback, source: 'bundled' };
-    const patterns = body.filter(isCatalogPattern).map((p) => ({
-      ...p,
-      aliases: Array.isArray(p.aliases) ? p.aliases : [],
-      tags: Array.isArray(p.tags) ? p.tags : [],
-      ruleset: typeof p.ruleset === 'string' ? p.ruleset : 'conway',
-      category: typeof p.category === 'string' ? p.category : 'curiosity',
-      width: typeof p.width === 'number' ? p.width : 0,
-      height: typeof p.height === 'number' ? p.height : 0,
-      origin: p.origin === 'user' || p.origin === 'curated' || p.origin === 'bundled' ? p.origin : 'curated',
-    }));
+    const patterns = body.filter(isCatalogPattern).map((p) => {
+      const rec = p as CatalogPattern & Record<string, unknown>;
+      const year = rec['year'];
+      const period = rec['period'];
+      const source = rec['source'];
+      return {
+        ...p,
+        aliases: Array.isArray(p.aliases) ? p.aliases : [],
+        tags: Array.isArray(p.tags) ? p.tags : [],
+        ruleset: typeof p.ruleset === 'string' ? p.ruleset : 'conway',
+        category: typeof p.category === 'string' ? p.category : 'curiosity',
+        width: typeof p.width === 'number' ? p.width : 0,
+        height: typeof p.height === 'number' ? p.height : 0,
+        origin: p.origin === 'user' || p.origin === 'curated' || p.origin === 'bundled' ? p.origin : 'curated',
+        ...(typeof year === 'number' || year === null ? { year } : {}),
+        ...(typeof period === 'number' || period === null ? { period } : {}),
+        ...(typeof source === 'string' ? { source } : {}),
+      };
+    });
     if (patterns.length === 0) return { patterns: fallback, source: 'bundled' };
     return { patterns, source: 'api' };
   } catch {

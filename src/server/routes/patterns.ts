@@ -52,6 +52,7 @@ export interface PatternSummary {
   readonly population?: number;
   readonly period?: number | null;
   readonly speed?: string | null;
+  readonly source?: string;
   readonly origin: PatternOrigin;
 }
 
@@ -98,6 +99,7 @@ export function parsePatternFile(id: string, text: string, ruleset?: string): Pa
   let year: number | null | undefined;
   let period: number | null | undefined;
   let speed: string | null | undefined;
+  let source: string | undefined;
   let width = 0;
   let height = 0;
   const bodyLines: string[] = [];
@@ -140,6 +142,9 @@ export function parsePatternFile(id: string, text: string, ruleset?: string): Pa
       } else if (rest.startsWith('speed:')) {
         const raw = rest.slice('speed:'.length).trim();
         speed = !raw || raw === 'none' ? null : raw;
+      } else if (rest.startsWith('source:')) {
+        const raw = rest.slice('source:'.length).trim();
+        if (raw) source = raw;
       } else if (!PROVENANCE_C.test(rest)) {
         freeCommentLines.push(rest);
       }
@@ -176,6 +181,7 @@ export function parsePatternFile(id: string, text: string, ruleset?: string): Pa
     height,
     ...(period !== undefined ? { period } : {}),
     ...(speed !== undefined ? { speed } : {}),
+    ...(source !== undefined ? { source } : {}),
     origin: 'curated',
     rle: `x = ${width}, y = ${height}\n${bodyLines.join('\n')}`,
   };
@@ -214,6 +220,7 @@ function summaryFromCatalog(id: string, text: string): PatternSummary {
     population: entry.population,
     period: entry.period,
     speed: entry.speed,
+    source: entry.source,
     origin: 'curated',
   };
 }

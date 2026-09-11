@@ -25,6 +25,7 @@ import { createFileStore, type FileStore } from './store/file-store.js';
 import { createFileSessionStore, type SessionStore } from './store/session-store.js';
 
 const DEFAULT_DIST_CLIENT = fileURLToPath(new URL('../../dist/client', import.meta.url));
+const DEFAULT_THUMBS_DIR = fileURLToPath(new URL('../../patterns/thumbnails', import.meta.url));
 const PACKAGE_JSON_PATH = fileURLToPath(new URL('../../package.json', import.meta.url));
 /** ADR-002: "file-backed JSON on a mounted volume" — `data/` at the process's cwd, which in the
  * production image (`docker/Dockerfile`) is `/app`, the directory `docker/docker-compose*.yml`
@@ -52,6 +53,8 @@ export interface CreateAppOptions {
   readonly rulesetStore?: FileStore<RuleSetDocument>;
   /** Directory `.rle` pattern files are read from. Defaults to the repo-root `patterns/`; overridable so a test uses a scratch fixture instead of the real bundled set. */
   readonly patternsDir?: string;
+  /** Generated library posters + APNGs (`patterns/thumbnails`). Served at `/thumbs`. */
+  readonly thumbsDir?: string;
   /** Where user-saved patterns are written. Defaults to `data/patterns` under the cwd. Ignored if `patternStore` is given. */
   readonly userPatternsDir?: string;
   readonly patternStore?: FileStore<StoredUserPattern>;
@@ -86,6 +89,17 @@ export function createApp(opts: CreateAppOptions = {}): Express {
     createPatternsRouter({
       ...(opts.patternsDir !== undefined ? { dir: opts.patternsDir } : {}),
       store: patternStore,
+    }),
+  );
+
+  app.use(
+    '/thumbs',
+    express.static(resolve(opts.thumbsDir ?? DEFAULT_THUMBS_DIR), {
+      index: false,
+      fallthrough: false,
+      setHeaders(res) {
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+      },
     }),
   );
 

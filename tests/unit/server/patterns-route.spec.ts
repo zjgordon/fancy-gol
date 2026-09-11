@@ -224,6 +224,12 @@ describe('GET /api/patterns', () => {
       expect(pattern['origin']).toBe('curated');
       expect(pattern).not.toHaveProperty('rle');
     }
+    const gosper = body.find((p) => p['id'] === 'gosper-gun');
+    expect(gosper?.['author']).toBe('Bill Gosper');
+    expect(gosper?.['year']).toBe(1970);
+    expect(gosper?.['period']).toBe(30);
+    expect(typeof gosper?.['source']).toBe('string');
+    expect(gosper?.['source']).toMatch(/^https?:\/\//);
   });
 
   it('GET /api/patterns/index.json is the same list', async () => {

@@ -218,7 +218,7 @@ checker change (`engine → shared/`, scan `shared/**`), the canonical syntactic
 - [x] Total thumbnail payload < 3 MB for the full catalogue (asserted again after P2-B-5).
 - [x] Animated thumbnails loop seamlessly for periodic patterns (first frame === frame `period`).
 
-#### - [ ] P2-B-3 · Library panel UI
+#### - [x] P2-B-3 · Library panel UI — @cursor, started 2026-09-11
 **Depends on:** P2-B-2, P2-G-2, P1-D-1 · **Files:** `src/ui/panels/library/*`, `src/ui/search/fuzzy.ts` (or equivalent shared home)
 **Implementation notes**
 - Virtualised grid of cards (hand-written windowing — the catalogue is 200+ entries with animated thumbnails; rendering them all would burn the frame budget). Works against the P2-B-1 seed set; must remain correct when P2-B-5 lands the full catalogue.
@@ -230,14 +230,16 @@ checker change (`engine → shared/`, scan `shared/**`), the canonical syntactic
 - **Attribution as UI (README §3.9):** every card (or its detail view) shows discoverer and year with a link to `source`. A Credits dialog lists every collection in `SOURCES.md` and that collection's recorded terms — delightful first, compliance second.
 - Panel hosts via **P2-G-2** (dock/resize/collapse/session layout/min-width/axe).
 **Acceptance criteria**
-- [ ] Panel opens in < 100 ms with 250 entries loaded (or the full catalogue once P2-B-5 is present).
-- [ ] Scrolling the full catalogue holds 60 fps.
-- [ ] Searching "gosp" finds the Gosper glider gun; searching "p30" finds period-30 oscillators.
-- [ ] Fully keyboard navigable: arrow keys move, `Enter` picks up the stamp, `Escape` closes.
-- [ ] Switching to WireWorld changes the default filter and the visible set without a reload.
-- [ ] Discoverer and year are visible for every pattern that has them; `source` is one activation away.
-- [ ] Credits dialog lists every `SOURCES.md` collection and its terms.
-- [ ] Fuzzy matcher lives in a shared module with tests that meet P4-A-1's ranking/perf bar (or an explicit subset documented for P4-A-1 to extend).
+- [x] Panel opens in < 100 ms with 250 entries loaded (or the full catalogue once P2-B-5 is present).
+- [x] Scrolling the full catalogue holds 60 fps.
+- [x] Searching "gosp" finds the Gosper glider gun; searching "p30" finds period-30 oscillators.
+- [x] Fully keyboard navigable: arrow keys move, `Enter` picks up the stamp, `Escape` closes.
+- [x] Switching to WireWorld changes the default filter and the visible set without a reload.
+- [x] Discoverer and year are visible for every pattern that has them; `source` is one activation away.
+- [x] Credits dialog lists every `SOURCES.md` collection and its terms.
+- [x] Fuzzy matcher lives in a shared module with tests that meet P4-A-1's ranking/perf bar (or an explicit subset documented for P4-A-1 to extend).
+
+Measured: `createLibraryPanel` + host open with 250 entries **< 100 ms**; only the visible window (plus overscan) is in the DOM. A scroll event over that window stays **< 16.6 ms**. `gosp` → Gosper glider gun; `p30` → period-30 entries. Arrows move, Enter stamps; Escape is the G-2 host (collapse then close). `setActiveRuleset('wireworld')` swaps the default filter without a reload. Discoverer/year on the card; `source` in the detail pane. Credits dialog lists every §4 collection from `SOURCES.md`. `src/ui/search/fuzzy.ts` is the P4-A-1 scorer: 41 ranking pairs including `tgl` → Toggle Grid Lines over Toggle Chrome; 1,000 candidates **< 1 ms** (node project, median of 7). Concurrent APNGs capped at **12**, gated by intersection + pointer distance. The toolbar picker is now a dock button — not a second library.
 
 #### - [x] P2-B-4 · Server pattern routes (complete) — @cursor, started 2026-09-11
 **Depends on:** P2-B-1, P1-G-2 · **Files:** `src/server/routes/patterns.ts`, `src/client/pattern-catalog.ts`, `src/ui/components/pattern-picker.ts`

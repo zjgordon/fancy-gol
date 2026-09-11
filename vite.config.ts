@@ -32,5 +32,9 @@ export default defineConfig({
     // this sandbox) reach the published port via a hostname or LAN IP, so allow every host.
     // Same pairing as `host: true`: a dev-server concern, never the production image.
     allowedHosts: true,
+    proxy: {
+      '/api': 'http://127.0.0.1:8080',
+      '/thumbs': 'http://127.0.0.1:8080',
+    },
   },
 });

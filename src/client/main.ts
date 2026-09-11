@@ -6,6 +6,7 @@
 import { CONWAY, getBuiltin } from '@engine/rules/builtin';
 import { Canvas2DRenderer } from '@render/canvas2d';
 import type { Viewport as RenderViewport } from '@render/types';
+import { decode as decodeRle } from '@shared/rle';
 import { CHUNK_AREA, type PaintOp, type RuleSet } from '@shared/types';
 import type { SessionDoc } from '@shared/session';
 import { WorkerClient, type FrameEvent } from '@worker/client';
@@ -25,7 +26,6 @@ import { createTransportControls } from '@ui/components/transport';
 import { createSpeedControl, TpsMeter } from '@ui/components/speed';
 import { createStatusBar, STATUS_THROTTLE_MS, zoomPercent } from '@ui/components/statusbar';
 import { attachRulesetPicker } from '@ui/components/ruleset-picker';
-import { attachPatternPicker } from '@ui/components/pattern-picker';
 import { confirmDialog, openDialog } from '@ui/components/dialog';
 import { createToastRegion } from '@ui/components/toast';
 import type { FillTool } from '@ui/tools/fill';
@@ -36,6 +36,7 @@ import { ThemeRegistry } from '@themes/registry';
 import { DEFAULT_DARK_THEME, DEFAULT_THEME } from '@themes/default/theme';
 import { chartTokensFromSet } from '@ui/charts/chart';
 import { createStatisticsPanel } from '@ui/panels/statistics/panel';
+import { LIBRARY_DRAG_TYPE, createLibraryPanel } from '@ui/panels/library/panel';
 import { createAppContext } from './app-context';
 import { createViewEditCommands } from './app-commands';
 import { playColdStart } from './cold-start';
@@ -474,6 +475,7 @@ function main(): void {
         activeRuleset = target;
         lastPerState = new Uint32Array(target.states.length);
         rulesetPicker.setActive(id);
+        libraryPanel.setActiveRuleset(id);
         autosave.scheduleSave();
       })();
     },
@@ -483,29 +485,88 @@ function main(): void {
   const stampTool = toolContext.toolRegistry.get('stamp') as StampTool;
   let catalog: readonly CatalogPattern[] = bundledCatalog();
 
-  async function pickPattern(id: string): Promise<void> {
+  async function resolvePatternRle(id: string): Promise<{ entry: CatalogPattern; rle: string } | null> {
     const entry = catalog.find((p) => p.id === id);
-    if (!entry) return;
-    let rle = entry.rle;
-    if (!rle) rle = await fetchPatternRle(id);
+    if (!entry) return null;
+    const rle = entry.rle ?? (await fetchPatternRle(id));
+    return { entry, rle };
+  }
+
+  async function pickPattern(id: string): Promise<void> {
+    const resolved = await resolvePatternRle(id);
+    if (!resolved) return;
+    const { entry, rle } = resolved;
     stampTool.replaceLibrary([...stampTool.list().filter((s) => s.id !== id), { id, name: entry.name, rle }]);
     stampTool.select(id);
     toolContext.toolRegistry.activate('stamp');
     canvas.style.cursor = stampTool.cursor;
   }
 
-  const patternPicker = attachPatternPicker({
+  async function isolatePattern(id: string): Promise<void> {
+    const resolved = await resolvePatternRle(id);
+    if (!resolved) return;
+    const confirmed = await confirmDialog({
+      title: 'Run in isolation?',
+      message: `Clear the grid and place ${resolved.entry.name} alone? The current pattern will be lost.`,
+      confirmLabel: 'Run alone',
+      destructive: true,
+    });
+    if (!confirmed) return;
+    await client.send({ cmd: 'clear' });
+    mirror.reset();
+    const ops = decodeRle(resolved.rle)
+      .cells.filter((c) => c.state !== 0)
+      .map((c) => ({ x: c.x, y: c.y, state: c.state }));
+    if (ops.length > 0) await client.send({ cmd: 'paint', ops });
+    if (hasFrame) renderer.draw({ cells: mirror.view(), dirty: null, tick: lastTick });
+  }
+
+  const libraryPanel = createLibraryPanel({
     entries: catalog,
-    source: 'bundled',
+    catalogSource: 'bundled',
+    activeRuleset: activeRuleset.id,
     onPick: (id) => void pickPattern(id),
+    onIsolate: (id) => void isolatePattern(id),
   });
-  shell.toolbar.appendChild(patternPicker.root);
+  panelHost.register(libraryPanel.spec);
+
+  const libraryToggle = document.createElement('button');
+  libraryToggle.type = 'button';
+  libraryToggle.className = 'pattern-toggle';
+  libraryToggle.setAttribute('aria-label', 'Open pattern library');
+  libraryToggle.textContent = 'Library';
+  libraryToggle.addEventListener('click', () => panelHost.open('library'));
+  shell.toolbar.appendChild(libraryToggle);
+
+  canvas.addEventListener('dragover', (e) => {
+    if (!e.dataTransfer) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  });
+  canvas.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const id = e.dataTransfer?.getData(LIBRARY_DRAG_TYPE) || e.dataTransfer?.getData('text/plain');
+    if (!id) return;
+    const rect = canvas.getBoundingClientRect();
+    const world = camera.screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+    void (async () => {
+      const resolved = await resolvePatternRle(id);
+      if (!resolved) return;
+      await pickPattern(id);
+      const origin = { x: Math.round(world.x), y: Math.round(world.y) };
+      const ops = decodeRle(resolved.rle)
+        .cells.filter((c) => c.state !== 0)
+        .map((c) => ({ x: origin.x + c.x, y: origin.y + c.y, state: c.state }));
+      if (ops.length > 0) commitPaint(ops);
+    })();
+  });
 
   void loadPatternCatalog().then((result) => {
     catalog = result.patterns;
-    patternPicker.setEntries(result.patterns, result.source);
+    libraryPanel.setEntries(result.patterns, result.source);
     const withRle = stampsFromCatalog(result.patterns);
     if (withRle.length > 0) stampTool.replaceLibrary(withRle);
+    libraryToggle.textContent = result.source === 'bundled' ? 'Library · starter' : 'Library';
     if (result.source === 'bundled') toasts.show(LIBRARY_OFFLINE_NOTICE);
   });
 
@@ -647,6 +708,7 @@ function main(): void {
       sessionSeed = restored.seed;
       lastPerState = new Uint32Array(restored.ruleset.states.length);
       rulesetPicker.setActive(restored.ruleset.id);
+      libraryPanel.setActiveRuleset(restored.ruleset.id);
       await client.send({
         cmd: 'init',
         ruleset: restored.ruleset,

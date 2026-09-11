@@ -26,6 +26,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Live stats charts draw from that window with nice ticks, a log Y that survives zero, and a shared 20 Hz redraw so six of them stay under 2 ms. (P2-D-1)
 - Stats charts stack per-state populations, show a min/max envelope on downsampled data, and draw a phase-space trail that fades with the theme. (P2-D-2)
 - A Statistics panel: three big numbers and a sparkline, or every metric the engine collects, including a dismissible cycle finding. (P2-D-3)
+- A searchable, filterable pattern library with near-pointer animated thumbnails, stamp-or-drag placement, and a Credits dialog. (P2-B-3)
 
 ### Changed
 

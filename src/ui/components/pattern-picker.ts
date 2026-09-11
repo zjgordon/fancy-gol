@@ -1,7 +1,6 @@
 /**
- * P2-B-4's interim library surface — a toolbar picker, not the virtualised panel (that's P2-B-3,
- * blocked on P2-G-2). Lists curated and user-saved patterns together, with origin as a visible
- * badge, and degrades to the bundled starter set when the client says so.
+ * P2-B-4's interim toolbar picker. P2-B-3's virtualised library panel is the real
+ * catalogue surface; this file stays as a testable listbox, not a second library.
  */
 export type PatternOrigin = 'curated' | 'user' | 'bundled';
 
