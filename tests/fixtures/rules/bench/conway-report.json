@@ -1,0 +1,68 @@
+{
+  "cases": [
+    {
+      "id": "soup-10",
+      "stabilizationGeneration": null,
+      "finalPopulation": 45,
+      "growthKind": "chaotic",
+      "period": null,
+      "thumbnailDigest": "5445d716"
+    },
+    {
+      "id": "soup-20",
+      "stabilizationGeneration": 252,
+      "finalPopulation": 51,
+      "growthKind": "chaotic",
+      "period": 2,
+      "thumbnailDigest": "7a9ea89e"
+    },
+    {
+      "id": "soup-30",
+      "stabilizationGeneration": null,
+      "finalPopulation": 40,
+      "growthKind": "quadratic",
+      "period": null,
+      "thumbnailDigest": "9d1b1397"
+    },
+    {
+      "id": "soup-40",
+      "stabilizationGeneration": null,
+      "finalPopulation": 75,
+      "growthKind": "chaotic",
+      "period": null,
+      "thumbnailDigest": "080c232e"
+    },
+    {
+      "id": "soup-50",
+      "stabilizationGeneration": 133,
+      "finalPopulation": 43,
+      "growthKind": "constant",
+      "period": 2,
+      "thumbnailDigest": "0e3341fc"
+    },
+    {
+      "id": "single",
+      "stabilizationGeneration": 1,
+      "finalPopulation": 0,
+      "growthKind": "constant",
+      "period": null,
+      "thumbnailDigest": "1f116dc5"
+    },
+    {
+      "id": "block",
+      "stabilizationGeneration": 0,
+      "finalPopulation": 4,
+      "growthKind": "constant",
+      "period": 1,
+      "thumbnailDigest": "a5208cf9"
+    },
+    {
+      "id": "soup-8x8",
+      "stabilizationGeneration": 22,
+      "finalPopulation": 11,
+      "growthKind": "constant",
+      "period": 1,
+      "thumbnailDigest": "d3e8caf8"
+    }
+  ]
+}

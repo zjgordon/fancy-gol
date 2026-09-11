@@ -11,6 +11,7 @@ import type { Viewport as RenderViewport } from '@render/types';
 import { decode as decodeRle } from '@shared/rle';
 import { CHUNK_AREA, type PaintOp, type RuleSet } from '@shared/types';
 import type { SessionDoc } from '@shared/session';
+import { createBenchClient } from '@worker/bench-client';
 import { WorkerClient, type FrameEvent } from '@worker/client';
 import { FrameGridMirror } from '@worker/frame-view';
 import { Camera, EASE_OUT_CUBIC } from '@ui/camera';
@@ -550,6 +551,10 @@ function main(): void {
   libraryToggle.addEventListener('click', () => panelHost.open('library'));
   shell.toolbar.appendChild(libraryToggle);
 
+  const benchClient = createBenchClient(() =>
+    toWorkerLike(new Worker(new URL('../worker/bench.worker.ts', import.meta.url), { type: 'module' })),
+  );
+
   const studioPanel = createRulesetStudioPanel({
     initialText: JSON.stringify(activeRuleset, null, 2),
     validate: (value) => {
@@ -560,6 +565,7 @@ function main(): void {
         throw error;
       }
     },
+    runBattery: (value, opts) => benchClient.run(value, opts),
     onApply: async (value, { reset }) => {
       const target = validateRuleSet(value);
       let migration: number[] | undefined;

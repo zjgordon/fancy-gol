@@ -1,7 +1,7 @@
 /**
- * Ruleset Studio (P2-E-1, P2-E-2). "Rule-God Status." A G-2 panel that hosts
- * the form builder and the hand-written JSON editor — this file only mounts
- * content; it does not invent a second dock.
+ * Ruleset Studio (P2-E-1, P2-E-2, P2-E-3). "Rule-God Status." A G-2 panel that
+ * hosts the form builder, the JSON editor, and the test bench — this file only
+ * mounts content; it does not invent a second dock.
  *
  * Validation is injected: `ui/` cannot import `@engine`, so the composition root
  * passes `validateRuleSet` (and the apply path that talks to the worker).
@@ -13,6 +13,7 @@ import {
   type EditorTimers,
   type JsonEditor,
 } from './editor';
+import { createStudioBench, type StudioBench, type StudioRunBattery } from './bench';
 import { createStudioForm, type StudioForm } from './form';
 import { locatePointer, syntaxErrorLocation } from './json-pointer';
 import {
@@ -33,6 +34,7 @@ export interface RulesetStudioOptions {
   readonly initialText?: string;
   readonly validate: StudioValidate;
   readonly onApply?: (value: unknown, opts: { reset: boolean }) => void | Promise<void>;
+  readonly runBattery?: StudioRunBattery;
   readonly validateDelayMs?: number;
   readonly timers?: EditorTimers;
   readonly lineHeightPx?: () => number;
@@ -45,6 +47,7 @@ export interface RulesetStudioPanel {
   readonly root: HTMLElement;
   readonly editor: JsonEditor;
   readonly form: StudioForm;
+  readonly bench: StudioBench;
   getText(): string;
   setText(text: string): void;
   setDocument(value: unknown): void;
@@ -151,7 +154,13 @@ export function createRulesetStudioPanel(opts: RulesetStudioOptions): RulesetStu
     },
   });
 
-  root.append(toolbar, status, form.root, editor.root, issueList);
+  const bench = createStudioBench({
+    ...(opts.runBattery ? { runBattery: opts.runBattery } : {}),
+    getCandidate: () => parsed,
+    isValid: () => valid,
+  });
+
+  root.append(toolbar, status, form.root, bench.root, editor.root, issueList);
 
   function paintIssues(located: readonly LocatedStudioIssue[]): void {
     editor.setIssues(located);
@@ -179,6 +188,7 @@ export function createRulesetStudioPanel(opts: RulesetStudioOptions): RulesetStu
       status.textContent = 'The editor is empty.';
       applyBtn.disabled = true;
       paintIssues([]);
+      bench.sync();
       return [];
     }
     let value: unknown;
@@ -196,6 +206,7 @@ export function createRulesetStudioPanel(opts: RulesetStudioOptions): RulesetStu
       status.textContent = `1 issue — line ${String(loc.line)}`;
       applyBtn.disabled = true;
       paintIssues(located);
+      bench.sync();
       return located;
     }
     const result = opts.validate(value);
@@ -208,6 +219,7 @@ export function createRulesetStudioPanel(opts: RulesetStudioOptions): RulesetStu
       applyBtn.disabled = applying;
       paintIssues([]);
       if (formDoc && !syncingFromForm) form.setDocument(formDoc);
+      bench.sync();
       return [];
     }
     const located = locateIssues(text, result.issues);
@@ -218,6 +230,7 @@ export function createRulesetStudioPanel(opts: RulesetStudioOptions): RulesetStu
       located.length === 1 ? '1 issue' : `${String(located.length)} issues`;
     applyBtn.disabled = true;
     paintIssues(located);
+    bench.sync();
     return located;
   }
 
@@ -255,6 +268,7 @@ export function createRulesetStudioPanel(opts: RulesetStudioOptions): RulesetStu
     root,
     editor,
     form,
+    bench,
     getText: () => editor.getValue(),
     setText(text) {
       editor.setValue(text);
@@ -271,6 +285,7 @@ export function createRulesetStudioPanel(opts: RulesetStudioOptions): RulesetStu
     },
     locateIssues: () => editor.getIssues(),
     dispose() {
+      bench.dispose();
       form.dispose();
       editor.dispose();
       root.remove();

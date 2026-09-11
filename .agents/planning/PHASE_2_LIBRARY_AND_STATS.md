@@ -416,14 +416,16 @@ Measured: `createRulesetStudioPanel` registers on the G-2 host (`id: 'studio'`, 
 
 Measured: Form chips, the notation field, the Birth/Survive table, and the JSON editor share one `StudioDocument`. A 40-step property test toggles chips, types notation, and patches JSON and asserts `viewsAgree` after every edit. The neighbourhood diagram's painted cells equal `compileNeighborhood(...).offsetsByParity` for Moore r=1/r=2, von Neumann, hex (both row parities), and custom. `randomiseDocument` × 100 with a seeded RNG all pass `validateRuleSet`. Temperament is a B/S-density look (`this one looks explosive`) using the catalogue tags — not a pretend `GrowthClassifier` run; E-3 will confirm with a real battery. Studio min-width is 400. Axe stays clean.
 
-#### - [ ] P2-E-3 · Rule test bench
+#### - [x] P2-E-3 · Rule test bench — @cursor, started 2026-09-11, finished 2026-09-11
 **Depends on:** P2-E-2, P2-C-4
 **Intent:** Do not make people guess whether their rule is any good.
 **Implementation notes** Runs the candidate rule against a standard battery in background workers: random soups at 5 densities, a single cell, a small block, a random 8×8. Reports for each: stabilisation generation, final population, growth class, detected period, and a thumbnail. Results appear as a small card grid within ~2 seconds.
 **Acceptance criteria**
-- [ ] The battery completes in < 3 s for a typical rule on a mid-range machine.
-- [ ] It never blocks the UI (runs in workers, cancellable).
-- [ ] Conway scores as expected against a committed reference report (regression guard on the whole stats stack).
+- [x] The battery completes in < 3 s for a typical rule on a mid-range machine.
+- [x] It never blocks the UI (runs in workers, cancellable).
+- [x] Conway scores as expected against a committed reference report (regression guard on the whole stats stack).
+
+Measured: `runBattery` steps eight fixed seeds on a 32×32 toroidal arena (five soups, a cell, a 2×2, an 8×8) with history on so cycle confirmation is real. A dedicated `bench.worker` isolate runs it — Cancel is `terminate()`, the live sim worker is untouched. Growth is classified on the attractor tail once a seed has 64 post-stabilisation samples; fewer than 64 still says insufficient data. Conway's block is p1 / 4 / constant, a lone cell dies at gen 1, and the full report is pinned at `tests/fixtures/rules/bench/conway-report.json`. The Conway battery measures ~365 ms here (budget 3 s; skipped under coverage). Studio cards paint a 32×32 occupancy thumb from CSS tokens. `ui/` never imports `@engine`.
 
 #### - [ ] P2-E-4 · Save, share, import
 **Depends on:** P2-E-1, P1-G-1

@@ -1121,9 +1121,107 @@
       }
       .studio-apply:focus-visible,
       .studio-reset:focus-within,
-      .studio-input:focus-visible {
+      .studio-input:focus-visible,
+      .studio-bench-run:focus-visible,
+      .studio-bench-cancel:focus-visible {
         outline: 2px solid var(--gol-color-accent);
         outline-offset: 2px;
+      }
+      .studio-bench {
+        display: flex;
+        flex-direction: column;
+        gap: var(--gol-space-2);
+      }
+      .studio-bench-toolbar {
+        display: flex;
+        align-items: center;
+        gap: var(--gol-space-2);
+        flex-wrap: wrap;
+      }
+      .studio-bench-heading {
+        margin: 0;
+        flex: 1;
+        font-size: var(--gol-font-size-sm);
+        font-weight: var(--gol-font-weight-medium);
+        color: var(--gol-color-text);
+      }
+      .studio-bench-run,
+      .studio-bench-cancel {
+        font: inherit;
+        border: none;
+        border-radius: var(--gol-radius-sm);
+        padding: var(--gol-space-1) var(--gol-space-3);
+        cursor: pointer;
+      }
+      .studio-bench-run {
+        color: var(--gol-color-on-accent);
+        background: var(--gol-color-accent);
+      }
+      .studio-bench-run:disabled {
+        background: var(--gol-color-elevated);
+        color: var(--gol-color-muted);
+        cursor: not-allowed;
+      }
+      .studio-bench-cancel {
+        color: var(--gol-color-danger);
+        background: var(--gol-color-elevated);
+        border: 1px solid var(--gol-color-danger);
+      }
+      .studio-bench-status {
+        margin: 0;
+        font-size: var(--gol-font-size-xs);
+        color: var(--gol-color-muted);
+      }
+      .studio-bench-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--gol-space-2);
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .studio-bench-card {
+        display: flex;
+        gap: var(--gol-space-2);
+        padding: var(--gol-space-2);
+        border: 1px solid var(--gol-color-border);
+        border-radius: var(--gol-radius-sm);
+        background: var(--gol-color-elevated);
+      }
+      .studio-bench-thumb {
+        width: var(--gol-space-7);
+        height: var(--gol-space-7);
+        flex: none;
+        image-rendering: pixelated;
+        color: var(--gol-color-accent);
+        background: var(--gol-color-bg);
+        border: 1px solid var(--gol-color-border);
+        border-radius: var(--gol-radius-sm);
+      }
+      .studio-bench-body {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--gol-space-1);
+      }
+      .studio-bench-title {
+        margin: 0;
+        font-size: var(--gol-font-size-sm);
+        font-weight: var(--gol-font-weight-medium);
+        color: var(--gol-color-text);
+      }
+      .studio-bench-period {
+        margin: 0;
+        font-family: var(--gol-font-mono);
+        font-size: var(--gol-font-size-xl);
+        color: var(--gol-color-accent);
+      }
+      .studio-bench-pop,
+      .studio-bench-growth,
+      .studio-bench-stab {
+        margin: 0;
+        font-size: var(--gol-font-size-xs);
+        color: var(--gol-color-muted);
       }
       .studio-editor {
         position: relative;
