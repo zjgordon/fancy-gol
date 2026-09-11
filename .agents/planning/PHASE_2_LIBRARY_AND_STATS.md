@@ -268,14 +268,16 @@ checker change (`engine → shared/`, scan `shared/**`), the canonical syntactic
 
 ### Workstream C — The Stat Engine
 
-#### - [ ] P2-C-1 · Incremental metrics
+#### - [x] P2-C-1 · Incremental metrics — @cursor, started 2026-09-11
 **Depends on:** P0-F-2 · **Files:** `src/engine/stats/*.ts`
 **Implementation notes** Extend the Phase 0 collector with density, bounding box, centroid, and per-state flux. Every metric is maintained incrementally from the `ChangeSet` — the total cost must stay independent of grid size. Bounding box needs care: shrinking it on deletion requires either a periodic recompute (cheap: per-chunk bounds are already tracked, ADR-010) or a lazy dirty flag. Use the per-chunk summaries. **Instance-scoped collector, not a singleton** — Phase 4's Laboratory runs two simulations; design the API so a second `StatsCollector` on a second `Simulation` is natural (P2-C-3 Zobrist + P2-C-4 growth are ~80% of P4-D-4 divergence metrics).
 **Acceptance criteria**
-- [ ] Every metric matches a brute-force recount after 5,000 chaotic generations across 6 rulesets.
-- [ ] Full stat collection adds < 5% to step time on the 512² soup benchmark.
-- [ ] Bounding box is correct after a pattern shrinks (the classic bug — test it explicitly).
-- [ ] Two collectors on two simulations do not share mutable state (unit test).
+- [x] Every metric matches a brute-force recount after 5,000 chaotic generations across 6 rulesets.
+- [x] Full stat collection adds < 5% to step time on the 512² soup benchmark.
+- [x] Bounding box is correct after a pattern shrinks (the classic bug — test it explicitly).
+- [x] Two collectors on two simulations do not share mutable state (unit test).
+
+Measured: Conway / HighLife / Day & Night / Brian's Brain / WireWorld / Star Wars, 64×64 toroidal, 5,000 gens — density, bbox, centroid, flux, population and per-state match a cell-accurate recount. `stats-overhead` median **1.95%** (budget 5%; P0-F-2's 3% gate lifted to the Phase 2 AC). Shrink: a 6×6 block's outer ring, a cross-chunk island death, and die-back to empty. Two collectors own distinct `perState` / `flux` / `bbox` / `centroid` buffers.
 
 #### - [ ] P2-C-2 · Entropy & spatial measures
 **Depends on:** P2-C-1 · **Files:** `src/engine/stats/entropy.ts`

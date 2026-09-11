@@ -154,6 +154,15 @@ export interface ChunkView {
   readonly cy: number;
   /** Count of cells whose state is not {@link DEAD}. */
   readonly population: number;
+  /**
+   * Inclusive local live-cell box (`0..31`). Meaningless when {@link population} is 0.
+   * Derived from the page when the view is built so a stats collector can shrink a
+   * world bbox by unioning these extents — O(chunks), never O(cells).
+   */
+  readonly liveMinX: number;
+  readonly liveMinY: number;
+  readonly liveMaxX: number;
+  readonly liveMaxY: number;
   /** Read a single cell by its local index within the chunk (`(y & 31) << 5 | (x & 31)`). */
   at(localIndex: number): StateId;
 }
@@ -180,6 +189,10 @@ export function localIndex(x: number, y: number): number {
  */
 export interface GridView {
   readonly boundary: 'bounded' | 'toroidal' | 'infinite';
+  /** Logical world width. Present for `bounded`/`toroidal`; omitted or 0 when infinite. */
+  readonly width?: number;
+  /** Logical world height. Present for `bounded`/`toroidal`; omitted or 0 when infinite. */
+  readonly height?: number;
   get(x: number, y: number): StateId;
   /** The bounding box of live cells. */
   bounds(): Rect;

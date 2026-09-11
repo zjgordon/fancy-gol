@@ -198,7 +198,9 @@ export const cases: BenchCase[] = [
     id: 'stats-overhead',
     name: 'StatsCollector.apply overhead on 512² soup',
     unit: '%',
-    budget: 3,
+    // P0-F-2 gated this at 3%; P2-C-1's acceptance criterion is < 5% once
+    // density / bbox / centroid / flux join the incremental fold.
+    budget: 5,
     higherIsBetter: false,
     baselineGate: false,
     warmup: 3,
@@ -211,18 +213,20 @@ export const cases: BenchCase[] = [
       const jitSim = soup(512, 512, 0.5, 99);
       const cs = jitSim.step();
       for (let i = 0; i < 20_000; i++) jit.apply(cs);
+      const view = statsWith.view();
       for (let i = 0; i < 80; i++) {
         statsBaseline.step();
-        statsCollector.apply(statsWith.step());
+        statsCollector.apply(statsWith.step(), view);
       }
     },
     run() {
       const STEPS = 180;
+      const view = statsWith!.view();
       const t0 = performance.now();
       for (let i = 0; i < STEPS; i++) statsBaseline!.step();
       const stepMs = performance.now() - t0;
       const t1 = performance.now();
-      for (let i = 0; i < STEPS; i++) statsCollector!.apply(statsWith!.step());
+      for (let i = 0; i < STEPS; i++) statsCollector!.apply(statsWith!.step(), view);
       const combinedMs = performance.now() - t1;
       return ((combinedMs - stepMs) / stepMs) * 100;
     },

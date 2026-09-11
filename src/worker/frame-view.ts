@@ -51,6 +51,10 @@ interface MutableChunkView {
   cx: number;
   cy: number;
   population: number;
+  liveMinX: number;
+  liveMinY: number;
+  liveMaxX: number;
+  liveMaxY: number;
   at(localIndex: number): number;
 }
 
@@ -65,6 +69,10 @@ export class FrameGridMirror {
     cx: 0,
     cy: 0,
     population: 0,
+    liveMinX: 0,
+    liveMinY: 0,
+    liveMaxX: 0,
+    liveMaxY: 0,
     at: (li) => this.scratchData[li] ?? DEAD,
   };
   private readonly gridView: GridView = {
@@ -110,8 +118,30 @@ export class FrameGridMirror {
     this.reusableChunkView.cy = unpackChunkY(key);
     this.scratchData = data;
     let population = 0;
-    for (let i = 0; i < CHUNK_AREA; i++) if (data[i] !== DEAD) population++;
+    let minX = 0;
+    let minY = 0;
+    let maxX = 0;
+    let maxY = 0;
+    for (let i = 0; i < CHUNK_AREA; i++) {
+      if (data[i] === DEAD) continue;
+      const lx = i & 31;
+      const ly = i >>> 5;
+      if (population === 0) {
+        minX = maxX = lx;
+        minY = maxY = ly;
+      } else {
+        if (lx < minX) minX = lx;
+        if (lx > maxX) maxX = lx;
+        if (ly < minY) minY = ly;
+        if (ly > maxY) maxY = ly;
+      }
+      population++;
+    }
     this.reusableChunkView.population = population;
+    this.reusableChunkView.liveMinX = minX;
+    this.reusableChunkView.liveMinY = minY;
+    this.reusableChunkView.liveMaxX = maxX;
+    this.reusableChunkView.liveMaxY = maxY;
     return this.reusableChunkView;
   }
 

@@ -228,10 +228,11 @@ describe('P0-F-2 throughput smoke guard', () => {
 
       const withStats = soup(4);
       const collector = new StatsCollector();
-      collector.reset(withStats.view(), 0);
-      for (let i = 0; i < STEP_WARM; i++) collector.apply(withStats.step());
+      const view = withStats.view();
+      collector.reset(view, 0);
+      for (let i = 0; i < STEP_WARM; i++) collector.apply(withStats.step(), view);
       const t1 = performance.now();
-      for (let i = 0; i < STEPS; i++) collector.apply(withStats.step());
+      for (let i = 0; i < STEPS; i++) collector.apply(withStats.step(), view);
       combinedTimes.push(performance.now() - t1);
     }
 

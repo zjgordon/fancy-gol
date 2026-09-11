@@ -11,6 +11,7 @@
 import { DEAD, type ChunkView, type GridView, type Rect, type StateId } from '../types.js';
 import { Chunk } from './chunk.js';
 import {
+  CHUNK_AREA,
   CHUNK_SIZE,
   chunkToWorld,
   localIndex,
@@ -165,10 +166,32 @@ export class ChunkedGrid {
   }
 
   private toChunkView(key: number, chunk: Chunk): ChunkView {
+    let liveMinX = 0;
+    let liveMinY = 0;
+    let liveMaxX = 0;
+    let liveMaxY = 0;
+    if (chunk.population > 0) {
+      liveMinX = 31;
+      liveMinY = 31;
+      const data = chunk.data;
+      for (let i = 0; i < CHUNK_AREA; i++) {
+        if (data[i] === DEAD) continue;
+        const lx = i & 31;
+        const ly = i >>> 5;
+        if (lx < liveMinX) liveMinX = lx;
+        if (lx > liveMaxX) liveMaxX = lx;
+        if (ly < liveMinY) liveMinY = ly;
+        if (ly > liveMaxY) liveMaxY = ly;
+      }
+    }
     return {
       cx: unpackChunkX(key),
       cy: unpackChunkY(key),
       population: chunk.population,
+      liveMinX,
+      liveMinY,
+      liveMaxX,
+      liveMaxY,
       at: (i: number) => chunk.at(i),
     };
   }
@@ -222,6 +245,7 @@ export class ChunkedGrid {
   view(): GridView {
     return {
       boundary: this.boundary,
+      ...(this.width > 0 ? { width: this.width, height: this.height } : {}),
       get: (x, y) => this.get(x, y),
       bounds: () => this.bounds(),
       forEachChunkInRect: (rect, fn) => this.forEachChunkInRect(rect, fn),

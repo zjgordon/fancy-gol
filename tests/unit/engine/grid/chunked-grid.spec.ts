@@ -120,6 +120,10 @@ describe('ChunkedGrid — GridView', () => {
 
     const view = grid.view();
     expect(view.getChunk(0, 0)?.population).toBe(2);
+    expect(view.getChunk(0, 0)?.liveMinX).toBe(0);
+    expect(view.getChunk(0, 0)?.liveMaxX).toBe(1);
+    expect(view.getChunk(0, 0)?.liveMinY).toBe(0);
+    expect(view.getChunk(0, 0)?.liveMaxY).toBe(0);
     expect(view.getChunk(5, 5)).toBeUndefined();
 
     const seen: Array<[number, number]> = [];
