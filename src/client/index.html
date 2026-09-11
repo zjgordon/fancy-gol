@@ -447,6 +447,100 @@
       }
       .ruleset-migration-row select {
         font: inherit;
+      }
+
+      /*
+       * P2-B-4's interim library picker (the virtualised panel is P2-B-3, blocked on the
+       * panel host). Same popover geometry as the ruleset picker so the two sit as a pair
+       * in the toolbar. Origin badges are how user-saved patterns read as "yours".
+       */
+      .pattern-picker {
+        position: relative;
+      }
+      .pattern-toggle {
+        font: inherit;
+        color: var(--gol-color-text);
+        background: var(--gol-color-surface);
+        border: 1px solid var(--gol-color-border);
+        border-radius: var(--gol-radius-sm);
+        padding: var(--gol-space-2) var(--gol-space-3);
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .pattern-toggle:hover {
+        border-color: var(--gol-color-accent);
+      }
+      .pattern-toggle:focus-visible {
+        outline: 2px solid var(--gol-color-accent);
+        outline-offset: 2px;
+      }
+      .pattern-toggle-name {
+        font-weight: var(--gol-font-weight-medium);
+      }
+      .pattern-popover {
+        position: absolute;
+        left: calc(100% + var(--gol-space-2));
+        top: 50%;
+        transform: translateY(-50%);
+        width: 320px;
+        max-height: min(70vh, 480px);
+        overflow-y: auto;
+        z-index: 20;
+        padding: var(--gol-space-2);
+      }
+      .pattern-offline-hint {
+        margin: 0 0 var(--gol-space-2);
+        font-size: var(--gol-font-size-sm);
+        color: var(--gol-color-muted);
+      }
+      .pattern-listbox:focus-visible {
+        outline: 2px solid var(--gol-color-accent);
+        outline-offset: -2px;
+      }
+      .pattern-group-title {
+        margin: var(--gol-space-2) 0 var(--gol-space-1);
+        font-size: var(--gol-font-size-sm);
+        font-weight: var(--gol-font-weight-medium);
+        color: var(--gol-color-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .pattern-group-title:first-child {
+        margin-top: 0;
+      }
+      .pattern-entry {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--gol-space-2);
+        padding: var(--gol-space-1) var(--gol-space-2);
+        border-radius: var(--gol-radius-sm);
+        cursor: pointer;
+      }
+      .pattern-entry:hover,
+      .pattern-entry--highlighted {
+        background: var(--gol-color-elevated);
+      }
+      .pattern-entry[aria-selected='true'] {
+        outline: 1px solid var(--gol-color-accent);
+      }
+      .pattern-entry-name {
+        font-weight: var(--gol-font-weight-medium);
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .pattern-origin {
+        flex: none;
+        font-size: var(--gol-font-size-sm);
+        color: var(--gol-color-muted);
+        letter-spacing: 0.04em;
+        text-transform: lowercase;
+      }
+      .pattern-origin--user {
+        color: var(--gol-color-accent);
+      }
         color: var(--gol-color-text);
         background: var(--gol-color-elevated);
         border: 1px solid var(--gol-color-border);

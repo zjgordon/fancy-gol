@@ -1,0 +1,835 @@
+[
+  {
+    "id": "acorn",
+    "name": "Acorn",
+    "aliases": [],
+    "description": "Seven cells, 5,206 generations to settle. Small enough to type, large enough to fill a screen.",
+    "author": "Charles Corderman",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "methuselah",
+    "tags": [
+      "methuselah",
+      "conway",
+      "staple"
+    ],
+    "width": 7,
+    "height": 3,
+    "population": 7,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "b-heptomino",
+    "name": "B-heptomino",
+    "aliases": [],
+    "description": "The B-shaped seven. It throws off a block and keeps walking — grandparent of several puffers.",
+    "author": "John H. Conway",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "methuselah",
+    "tags": [
+      "methuselah",
+      "conway",
+      "heptomino"
+    ],
+    "width": 4,
+    "height": 3,
+    "population": 7,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "barge",
+    "name": "Barge",
+    "aliases": [],
+    "description": "A long diamond of six cells. The skinny cousin of the boat.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway"
+    ],
+    "width": 4,
+    "height": 4,
+    "population": 6,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "beacon",
+    "name": "Beacon",
+    "aliases": [],
+    "description": "Two blocks a knight-move apart. The inner corners flash on and off; the blocks never leave.",
+    "author": "Simon Norton",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway"
+    ],
+    "width": 4,
+    "height": 4,
+    "population": 8,
+    "period": 2,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "beehive",
+    "name": "Beehive",
+    "aliases": [],
+    "description": "A six-cell hexagon. Second-commonest still life in soup, after the block.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway"
+    ],
+    "width": 4,
+    "height": 3,
+    "population": 6,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "blinker",
+    "name": "Blinker",
+    "aliases": [],
+    "description": "Three cells in a line that flip between horizontal and vertical every generation. Period 2, population 3.",
+    "author": "John H. Conway",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway",
+      "staple"
+    ],
+    "width": 3,
+    "height": 1,
+    "population": 3,
+    "period": 2,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "block",
+    "name": "Block",
+    "aliases": [
+      "2x2",
+      "square"
+    ],
+    "description": "Four cells in a square. The smallest still life, and the one everyone meets first.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "staple"
+    ],
+    "width": 2,
+    "height": 2,
+    "population": 4,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "boat",
+    "name": "Boat",
+    "aliases": [],
+    "description": "Five cells: a block with one extra corner cell. Tiny, common, and a useful eater fragment.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway"
+    ],
+    "width": 3,
+    "height": 3,
+    "population": 5,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "brians-brain-spark",
+    "name": "Brian's Brain spark",
+    "aliases": [],
+    "description": "Four firing cells around a cooling centre. In Brian's Brain they flash, decay, and scatter — a multi-state spark, not a Life still life.",
+    "author": "Brian Silverman",
+    "year": 1994,
+    "ruleset": "brians-brain",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "brians-brain",
+      "multi-state"
+    ],
+    "width": 3,
+    "height": 3,
+    "population": 5,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "day-night-seed",
+    "name": "Day & Night seed",
+    "aliases": [],
+    "description": "A compact Day & Night seed. Self-complementary rules treat this island differently than Conway ever would.",
+    "author": "Nathan Thompson",
+    "year": 1997,
+    "ruleset": "day-and-night",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "day-and-night"
+    ],
+    "width": 9,
+    "height": 5,
+    "population": 14,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "diehard",
+    "name": "Diehard",
+    "aliases": [],
+    "description": "Seven cells that live 130 generations and then leave nothing. A methuselah whose last trick is emptiness.",
+    "author": "unknown",
+    "year": null,
+    "ruleset": "conway",
+    "category": "methuselah",
+    "tags": [
+      "methuselah",
+      "conway"
+    ],
+    "width": 8,
+    "height": 3,
+    "population": 7,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "eater1",
+    "name": "Eater 1",
+    "aliases": [
+      "fishhook"
+    ],
+    "description": "A seven-cell fishhook that can swallow gliders and still sit down afterwards. The original eater.",
+    "author": "Bill Gosper",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway",
+      "eater"
+    ],
+    "width": 4,
+    "height": 4,
+    "population": 7,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "glider",
+    "name": "Glider",
+    "aliases": [
+      "featherweight spaceship"
+    ],
+    "description": "Five cells that walk diagonally one cell every four generations. The smallest spaceship, and the one that made Life famous.",
+    "author": "Richard K. Guy",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "spaceship",
+    "tags": [
+      "spaceship",
+      "conway",
+      "staple"
+    ],
+    "width": 3,
+    "height": 3,
+    "population": 5,
+    "period": 4,
+    "speed": "c/4 diagonal",
+    "origin": "curated"
+  },
+  {
+    "id": "gosper-gun",
+    "name": "Gosper glider gun",
+    "aliases": [],
+    "description": "Two queen-bee shuttles back-to-back. Every 30 generations a glider leaves, and population never looks back.",
+    "author": "Bill Gosper",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "gun",
+    "tags": [
+      "gun",
+      "conway",
+      "staple"
+    ],
+    "width": 36,
+    "height": 9,
+    "population": 36,
+    "period": 30,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "highlife-seed",
+    "name": "HighLife seed",
+    "aliases": [],
+    "description": "Eight cells that are not a Conway still life. HighLife's extra birth-on-6 is enough to pull this seed apart.",
+    "author": "Nathan Thompson",
+    "year": 1994,
+    "ruleset": "highlife",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "highlife"
+    ],
+    "width": 4,
+    "height": 4,
+    "population": 8,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "hwss",
+    "name": "Heavyweight spaceship",
+    "aliases": [
+      "HWSS"
+    ],
+    "description": "Thirteen cells, still c/2 orthogonal. The heaviest of the three standard spaceships Conway found in 1970.",
+    "author": "John H. Conway",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "spaceship",
+    "tags": [
+      "spaceship",
+      "conway"
+    ],
+    "width": 7,
+    "height": 5,
+    "population": 13,
+    "period": 4,
+    "speed": "c/2 orthogonal",
+    "origin": "curated"
+  },
+  {
+    "id": "integral",
+    "name": "Integral",
+    "aliases": [
+      "integral sign"
+    ],
+    "description": "Nine cells in an ∫-shape. A still life named for a joke about calculus, not for any calculus it performs.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway"
+    ],
+    "width": 5,
+    "height": 5,
+    "population": 9,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "loaf",
+    "name": "Loaf",
+    "aliases": [],
+    "description": "A seven-cell still life with a bite taken out of one corner. Stable, slightly lopsided.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway"
+    ],
+    "width": 4,
+    "height": 4,
+    "population": 7,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "long-barge",
+    "name": "Long barge",
+    "aliases": [],
+    "description": "A barge with one extra pair of cells. Nine cells, still, and a step along the barge sequence.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway"
+    ],
+    "width": 5,
+    "height": 5,
+    "population": 9,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "long-boat",
+    "name": "Long boat",
+    "aliases": [],
+    "description": "A boat stretched by one cell. Seven cells, still, and a step on the long-boat ladder.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway"
+    ],
+    "width": 4,
+    "height": 4,
+    "population": 7,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "long-canoe",
+    "name": "Long canoe",
+    "aliases": [],
+    "description": "A canoe stretched by one. Eight cells on a diagonal, still as a boat that forgot how to float.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway"
+    ],
+    "width": 5,
+    "height": 5,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "long-ship",
+    "name": "Long ship",
+    "aliases": [],
+    "description": "A ship with an extra row. Eight cells of still life, one longer than the namesake.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway"
+    ],
+    "width": 4,
+    "height": 4,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "lwss",
+    "name": "Lightweight spaceship",
+    "aliases": [
+      "LWSS"
+    ],
+    "description": "Nine cells, period 4, c/2 along an axis. The smallest orthogonal spaceship.",
+    "author": "John H. Conway",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "spaceship",
+    "tags": [
+      "spaceship",
+      "conway",
+      "staple"
+    ],
+    "width": 5,
+    "height": 4,
+    "population": 9,
+    "period": 4,
+    "speed": "c/2 orthogonal",
+    "origin": "curated"
+  },
+  {
+    "id": "mango",
+    "name": "Mango",
+    "aliases": [
+      "cigar"
+    ],
+    "description": "Eight cells with a diagonal shear. Sometimes called a cigar; it does not smoke.",
+    "author": "unknown",
+    "year": 1971,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway"
+    ],
+    "width": 5,
+    "height": 4,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "mwss",
+    "name": "Middleweight spaceship",
+    "aliases": [
+      "MWSS"
+    ],
+    "description": "The middle sibling of the XWSS family: eleven cells, same period and speed as the LWSS, one row taller.",
+    "author": "John H. Conway",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "spaceship",
+    "tags": [
+      "spaceship",
+      "conway"
+    ],
+    "width": 6,
+    "height": 5,
+    "population": 11,
+    "period": 4,
+    "speed": "c/2 orthogonal",
+    "origin": "curated"
+  },
+  {
+    "id": "pentadecathlon",
+    "name": "Pentadecathlon",
+    "aliases": [],
+    "description": "A row of ten, sparking at both ends on a 15-generation loop. Conway found it in the first month.",
+    "author": "John H. Conway",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway"
+    ],
+    "width": 10,
+    "height": 3,
+    "population": 12,
+    "period": 15,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "pi-heptomino",
+    "name": "Pi-heptomino",
+    "aliases": [
+      "pi"
+    ],
+    "description": "Seven cells in a pi shape. A short-lived methuselah and a common spark in larger machinery.",
+    "author": "John H. Conway",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "methuselah",
+    "tags": [
+      "methuselah",
+      "conway",
+      "heptomino"
+    ],
+    "width": 3,
+    "height": 3,
+    "population": 7,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "pond",
+    "name": "Pond",
+    "aliases": [],
+    "description": "An eight-cell ring around a 2×2 hole. Looks like a beehive that ate a block.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway"
+    ],
+    "width": 4,
+    "height": 4,
+    "population": 8,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "pulsar",
+    "name": "Pulsar",
+    "aliases": [],
+    "description": "Forty-eight cells in four-fold symmetry, breathing on a 13×13 stage every three generations.",
+    "author": "John H. Conway",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway",
+      "staple"
+    ],
+    "width": 13,
+    "height": 13,
+    "population": 48,
+    "period": 3,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "queen-bee-shuttle",
+    "name": "Queen bee shuttle",
+    "aliases": [],
+    "description": "A queen-bee spark bounces between two blocks every 30 generations. The oscillator that taught guns to exist.",
+    "author": "Bill Gosper",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway",
+      "shuttle"
+    ],
+    "width": 22,
+    "height": 7,
+    "population": 20,
+    "period": 30,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "r-pentomino",
+    "name": "R-pentomino",
+    "aliases": [],
+    "description": "Five cells that refuse to sit down for 1,103 generations. The methuselah that started the hunt.",
+    "author": "John H. Conway",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "methuselah",
+    "tags": [
+      "methuselah",
+      "conway",
+      "staple"
+    ],
+    "width": 3,
+    "height": 3,
+    "population": 5,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "seeds-cluster",
+    "name": "Seeds cluster",
+    "aliases": [],
+    "description": "Twelve cells packed into a 4×4. In Seeds every live cell dies, so this is a fuse, not a still life.",
+    "author": "Brian Silverman",
+    "year": null,
+    "ruleset": "seeds",
+    "category": "seed",
+    "tags": [
+      "seed",
+      "seeds"
+    ],
+    "width": 4,
+    "height": 4,
+    "population": 12,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "ship",
+    "name": "Ship",
+    "aliases": [],
+    "description": "A six-cell still life, boat plus one. Not a spaceship — it sits there.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway"
+    ],
+    "width": 3,
+    "height": 3,
+    "population": 6,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "ship-tie",
+    "name": "Ship tie",
+    "aliases": [],
+    "description": "Two ships sharing a side. Twelve cells, one object — a still-life siamese, not a collision in progress.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway"
+    ],
+    "width": 6,
+    "height": 6,
+    "population": 12,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "snake",
+    "name": "Snake",
+    "aliases": [],
+    "description": "Six cells in a 4×2 S-bend. Flat, snappy, and easy to miss in a stamp sheet.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway"
+    ],
+    "width": 4,
+    "height": 2,
+    "population": 6,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "thunderbird",
+    "name": "Thunderbird",
+    "aliases": [],
+    "description": "A T of six cells. It runs for a couple of hundred generations, then the usual junk.",
+    "author": "unknown",
+    "year": null,
+    "ruleset": "conway",
+    "category": "methuselah",
+    "tags": [
+      "methuselah",
+      "conway"
+    ],
+    "width": 3,
+    "height": 5,
+    "population": 6,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "toad",
+    "name": "Toad",
+    "aliases": [],
+    "description": "Two offset rows of three. They rock past each other every generation — a p2 neighbour of the blinker.",
+    "author": "Simon Norton",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "oscillator",
+    "tags": [
+      "oscillator",
+      "conway"
+    ],
+    "width": 4,
+    "height": 2,
+    "population": 6,
+    "period": 2,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "tub",
+    "name": "Tub",
+    "aliases": [],
+    "description": "Four cells on the diagonals of a 3×3. Same population as a block, completely different shape.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway"
+    ],
+    "width": 3,
+    "height": 3,
+    "population": 4,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "very-long-ship",
+    "name": "Very long ship",
+    "aliases": [],
+    "description": "A ship stretched twice. Ten cells of still life on a 5×5 diamond — the long-ship ladder's next rung.",
+    "author": "unknown",
+    "year": 1970,
+    "ruleset": "conway",
+    "category": "still-life",
+    "tags": [
+      "still-life",
+      "conway"
+    ],
+    "width": 5,
+    "height": 5,
+    "population": 10,
+    "period": 1,
+    "speed": null,
+    "origin": "curated"
+  },
+  {
+    "id": "wireworld-diode",
+    "name": "WireWorld diode",
+    "aliases": [],
+    "description": "A one-way conductor gap. Electrons that approach from the tail side pass; the other direction dies in the pocket.",
+    "author": "Brian Silverman",
+    "year": 1987,
+    "ruleset": "wireworld",
+    "category": "logic",
+    "tags": [
+      "logic",
+      "wireworld",
+      "multi-state"
+    ],
+    "width": 7,
+    "height": 3,
+    "population": 17,
+    "period": null,
+    "speed": null,
+    "origin": "curated"
+  }
+]

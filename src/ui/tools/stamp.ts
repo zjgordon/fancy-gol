@@ -17,7 +17,8 @@
  *
  * `BUILTIN_STAMPS`' RLE text was generated from hand-verified cell coordinates for each pattern
  * (period/translation behaviour checked against a real `Simulation`) and round-tripped through
- * the shared RLE codec.
+ * the shared RLE codec. P2-B-4's catalog client swaps the array via {@link StampTool.replaceLibrary}
+ * — the tool itself still only knows `{id, name, rle}`.
  */
 import { decode as decodeRLE } from '@shared/rle';
 import type { PaintOp, StateId } from '@shared/types';
@@ -75,7 +76,7 @@ export class StampTool implements Tool {
   readonly cursor = 'crosshair';
   state: StateId;
 
-  private readonly library: readonly StampDefinition[];
+  private library: readonly StampDefinition[];
   private activeId: string | null = null;
   private pattern: ClipboardPattern | null = null;
   private anchor: { x: number; y: number } | null = null;
@@ -89,6 +90,15 @@ export class StampTool implements Tool {
   /** The stamp library this tool was constructed with (defaults to {@link BUILTIN_STAMPS}). */
   list(): readonly StampDefinition[] {
     return this.library;
+  }
+
+  /**
+   * Swap the data source without reconstructing the tool (P2-B-4: API catalogue, or the bundled
+   * starter set when the server is unreachable). Deselects if the active id is gone.
+   */
+  replaceLibrary(library: readonly StampDefinition[]): void {
+    this.library = library;
+    if (this.activeId !== null && !library.some((s) => s.id === this.activeId)) this.deselect();
   }
 
   /** The currently selected stamp's id, or `null` when nothing is selected. */

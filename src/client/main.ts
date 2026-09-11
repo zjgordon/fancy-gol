@@ -81,14 +81,24 @@ import { createTransportControls } from '@ui/components/transport';
 import { createSpeedControl, TpsMeter } from '@ui/components/speed';
 import { createStatusBar, STATUS_THROTTLE_MS, zoomPercent } from '@ui/components/statusbar';
 import { attachRulesetPicker, type RulesetSummary } from '@ui/components/ruleset-picker';
+import { attachPatternPicker } from '@ui/components/pattern-picker';
 import { confirmDialog, openDialog } from '@ui/components/dialog';
 import { createToastRegion } from '@ui/components/toast';
 import type { FillTool } from '@ui/tools/fill';
 import type { Brush } from '@ui/tools/brush';
 import type { SelectTool } from '@ui/tools/select';
+import type { StampTool } from '@ui/tools/stamp';
 import { ThemeRegistry } from '@themes/registry';
 import { DEFAULT_THEME } from '@themes/default/theme';
 import { createAppContext } from './app-context';
+import {
+  LIBRARY_OFFLINE_NOTICE,
+  bundledCatalog,
+  fetchPatternRle,
+  loadPatternCatalog,
+  stampsFromCatalog,
+} from './pattern-catalog';
+import type { CatalogPattern } from './pattern-catalog';
 import { connectLiveViewer, type LiveConnectionState } from './live-client';
 import { isTestMode, type FancyGolHarness } from './harness';
 import {
@@ -778,6 +788,35 @@ function main(): void {
     },
   });
   shell.toolbar.appendChild(rulesetPicker.root);
+
+  const stampTool = toolContext.toolRegistry.get('stamp') as StampTool;
+  let catalog: readonly CatalogPattern[] = bundledCatalog();
+
+  async function pickPattern(id: string): Promise<void> {
+    const entry = catalog.find((p) => p.id === id);
+    if (!entry) return;
+    let rle = entry.rle;
+    if (!rle) rle = await fetchPatternRle(id);
+    stampTool.replaceLibrary([...stampTool.list().filter((s) => s.id !== id), { id, name: entry.name, rle }]);
+    stampTool.select(id);
+    toolContext.toolRegistry.activate('stamp');
+    canvas.style.cursor = stampTool.cursor;
+  }
+
+  const patternPicker = attachPatternPicker({
+    entries: catalog,
+    source: 'bundled',
+    onPick: (id) => void pickPattern(id),
+  });
+  shell.toolbar.appendChild(patternPicker.root);
+
+  void loadPatternCatalog().then((result) => {
+    catalog = result.patterns;
+    patternPicker.setEntries(result.patterns, result.source);
+    const withRle = stampsFromCatalog(result.patterns);
+    if (withRle.length > 0) stampTool.replaceLibrary(withRle);
+    if (result.source === 'bundled') toasts.show(LIBRARY_OFFLINE_NOTICE);
+  });
 
   function snapshotDoc(): SessionDoc {
     return buildSessionDoc({

@@ -37,7 +37,7 @@ COPY --from=build --chown=node:node /app/patterns ./patterns
 # seeds a named volume's first mount from whatever the image already has at that path, so getting
 # the ownership right in the image is what makes an *empty* named volume work too, not just a
 # host bind mount that already has the right owner.
-RUN mkdir -p /app/data/sessions && chown -R node:node /app/data
+RUN mkdir -p /app/data/sessions /app/data/rulesets /app/data/patterns && chown -R node:node /app/data
 
 # node:22-alpine already ships a non-root `node` user (uid 1000) — no need to create one.
 USER node

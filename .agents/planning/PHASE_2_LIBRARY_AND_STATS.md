@@ -218,8 +218,9 @@ checker change (`engine → shared/`, scan `shared/**`), the canonical syntactic
 - [x] Total thumbnail payload < 3 MB for the full catalogue (asserted again after P2-B-5).
 - [x] Animated thumbnails loop seamlessly for periodic patterns (first frame === frame `period`).
 
-#### - [ ] P2-B-3 · Library panel UI
+#### - [!] P2-B-3 · Library panel UI
 **Depends on:** P2-B-2, P2-G-2, P1-D-1 · **Files:** `src/ui/panels/library/*`, `src/ui/search/fuzzy.ts` (or equivalent shared home)
+**Blocked on:** P2-G-2 (panel host; itself depends on P2-G-1). Workstream G was appended after F so IDs would not be renumbered, which means a top-to-bottom scan and the dashboard "Next up" banner both land here after P2-B-2 even though the host does not exist yet. Do not start until G-1 → G-2 land.
 **Implementation notes**
 - Virtualised grid of cards (hand-written windowing — the catalogue is 200+ entries with animated thumbnails; rendering them all would burn the frame budget). Works against the P2-B-1 seed set; must remain correct when P2-B-5 lands the full catalogue.
 - Filter by ruleset (defaults to the active one), category, tag, size, period. Free-text search across name, alias, discoverer and description with a hand-written fuzzy matcher (subsequence + gap-penalty scoring, ~50–80 lines).
@@ -239,13 +240,13 @@ checker change (`engine → shared/`, scan `shared/**`), the canonical syntactic
 - [ ] Credits dialog lists every `SOURCES.md` collection and its terms.
 - [ ] Fuzzy matcher lives in a shared module with tests that meet P4-A-1's ranking/perf bar (or an explicit subset documented for P4-A-1 to extend).
 
-#### - [ ] P2-B-4 · Server pattern routes (complete)
-**Depends on:** P2-B-1, P1-G-2 · **Files:** `src/server/routes/patterns.ts`
-**Implementation notes** Serve `patterns/index.json` with query filtering, and individual RLE bodies. Also accept `POST /api/patterns` for user-saved patterns (validated, size-capped, stored in the data volume). The client must still work fully offline from a bundled subset. Remains correct when P2-B-5 expands the catalogue.
+#### - [x] P2-B-4 · Server pattern routes (complete) — @cursor, started 2026-09-11
+**Depends on:** P2-B-1, P1-G-2 · **Files:** `src/server/routes/patterns.ts`, `src/client/pattern-catalog.ts`, `src/ui/components/pattern-picker.ts`
+**Implementation notes** Serve `patterns/index.json` with query filtering (`ruleset`, `q`, `category`, `tag`), and individual RLE bodies at `GET /api/patterns/:id`. Also accept `POST /api/patterns` for user-saved patterns (validated RLE, 1 MB cap, stored in `data/patterns` on the volume). The client degrades to the ten bundled stamps when the API is unreachable, with a toast plus a starter-set hint on the toolbar picker. That picker is an **interim** surface so user-saved vs curated origin is visible before P2-B-3's panel host exists — P2-B-3 replaces it, it must not grow into a second library.
 **Acceptance criteria**
-- [ ] Filtered queries return in < 20 ms for the full catalogue.
-- [ ] The client degrades to its bundled subset when the API is unreachable, with a visible but non-blocking notice.
-- [ ] User-saved patterns appear in the library alongside curated ones, visually distinguished.
+- [x] Filtered queries return in < 20 ms for the full catalogue.
+- [x] The client degrades to its bundled subset when the API is unreachable, with a visible but non-blocking notice.
+- [x] User-saved patterns appear in the library alongside curated ones, visually distinguished.
 
 #### - [ ] P2-B-5 · Catalogue completion
 **Depends on:** P2-B-1 · **Files:** `patterns/**`

@@ -25,6 +25,7 @@
     "boundaries": "node scripts/check-boundaries.mjs",
     "pattern-licenses": "node scripts/check-pattern-licenses.mjs",
     "thumbnails": "node --import tsx scripts/gen-thumbnails.mjs",
+    "pattern-index": "node --import tsx scripts/gen-pattern-index.mjs",
     "verify": "npm run typecheck && npm run lint && npm run boundaries && npm run pattern-licenses && npm run test && npm run build",
     "prepare": "node -e \"try{require('node:child_process').execSync('git config core.hooksPath .githooks')}catch(e){}\""
   },

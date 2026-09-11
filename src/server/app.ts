@@ -17,7 +17,7 @@ import express, { type Express } from 'express';
 // `.js`, not `.ts` (`allowImportingTsExtensions: false` here, and Node's ESM loader needs a
 // resolvable extension on a relative specifier) — the same convention `index.ts`'s own `./app.js`
 // import already established.
-import { createPatternsRouter } from './routes/patterns.js';
+import { createPatternsRouter, type StoredUserPattern } from './routes/patterns.js';
 import { createRulesetsRouter } from './routes/rulesets.js';
 import { createSessionsRouter } from './routes/sessions.js';
 import type { RuleSetDocument } from '../engine/rules/schema.js';
@@ -31,6 +31,7 @@ const PACKAGE_JSON_PATH = fileURLToPath(new URL('../../package.json', import.met
  * mounts a volume onto. Sessions and rulesets are separate subdirectories of that same volume. */
 const DEFAULT_SESSIONS_DIR = join(process.cwd(), 'data/sessions');
 const DEFAULT_RULESETS_DIR = join(process.cwd(), 'data/rulesets');
+const DEFAULT_USER_PATTERNS_DIR = join(process.cwd(), 'data/patterns');
 
 function readPackageVersion(): string {
   const pkg = JSON.parse(readFileSync(PACKAGE_JSON_PATH, 'utf8')) as { version: string };
@@ -51,6 +52,9 @@ export interface CreateAppOptions {
   readonly rulesetStore?: FileStore<RuleSetDocument>;
   /** Directory `.rle` pattern files are read from. Defaults to the repo-root `patterns/`; overridable so a test uses a scratch fixture instead of the real bundled set. */
   readonly patternsDir?: string;
+  /** Where user-saved patterns are written. Defaults to `data/patterns` under the cwd. Ignored if `patternStore` is given. */
+  readonly userPatternsDir?: string;
+  readonly patternStore?: FileStore<StoredUserPattern>;
 }
 
 /** Vite's hashed asset filenames (`assets/index-<hash>.js`) never change contents under a given URL — safe to cache forever. `index.html` names the *current* hashed assets, so it must always be revalidated. */
@@ -65,6 +69,8 @@ export function createApp(opts: CreateAppOptions = {}): Express {
   const sessionStore = opts.sessionStore ?? createFileSessionStore(opts.sessionsDir ?? DEFAULT_SESSIONS_DIR);
   const rulesetStore =
     opts.rulesetStore ?? createFileStore<RuleSetDocument>(opts.rulesetsDir ?? DEFAULT_RULESETS_DIR);
+  const patternStore =
+    opts.patternStore ?? createFileStore<StoredUserPattern>(opts.userPatternsDir ?? DEFAULT_USER_PATTERNS_DIR);
 
   const app = express();
   app.disable('x-powered-by');
@@ -75,7 +81,13 @@ export function createApp(opts: CreateAppOptions = {}): Express {
 
   app.use('/api/sessions', createSessionsRouter(sessionStore));
   app.use('/api/rulesets', createRulesetsRouter(rulesetStore));
-  app.use('/api/patterns', opts.patternsDir ? createPatternsRouter(opts.patternsDir) : createPatternsRouter());
+  app.use(
+    '/api/patterns',
+    createPatternsRouter({
+      ...(opts.patternsDir !== undefined ? { dir: opts.patternsDir } : {}),
+      store: patternStore,
+    }),
+  );
 
   app.use(
     express.static(distDir, {

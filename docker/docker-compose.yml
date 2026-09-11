@@ -12,9 +12,8 @@ services:
       - PORT=8080
     restart: unless-stopped
     volumes:
-      # ADR-002: "file-backed JSON on a mounted volume" — P1-F-2's shared sessions today, P1-G-1's
-      # user rulesets later, both under this same directory. A named volume, not a bind mount:
-      # nothing on the host needs to read these files directly.
+      # ADR-002: "file-backed JSON on a mounted volume" — sessions, user rulesets, and
+      # user-saved patterns (P2-B-4) all live under this same directory.
       - data:/app/data
 
 volumes:

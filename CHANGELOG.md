@@ -15,6 +15,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Pattern identity: the same object hashes the same in every rotation and reflection. (P2-A-4)
 - A 40-pattern starter library with per-file provenance, MIT for code, and a licence gate in `verify`. (P2-B-1)
 - 128×128 greyscale library thumbnails (PNG poster + looping APNG) generated from the real engine. (P2-B-2)
+- Pattern library API: filterable index, per-pattern RLE, and user-saved patterns that sit beside the catalogue. (P2-B-4)
 
 ## [0.2.0] — 2026-09-08
 

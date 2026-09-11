@@ -84,6 +84,15 @@ describe('StampTool', () => {
 
       expect(() => stamp.select('glider')).toThrow(/no stamp registered/); // not in this library
     });
+
+    it('replaceLibrary swaps the data source and deselects a missing id', () => {
+      const stamp = new StampTool();
+      stamp.select('glider');
+      stamp.replaceLibrary([{ id: 'dot', name: 'Dot', rle: 'x = 1, y = 1\no!' }]);
+      expect(stamp.selectedId).toBeNull();
+      stamp.select('dot');
+      expect(stamp.selectedId).toBe('dot');
+    });
   });
 
   describe('selection and placement', () => {

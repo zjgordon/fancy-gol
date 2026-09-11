@@ -22,7 +22,7 @@ playwright-report/
 blob-report/
 .bench-tmp/
 
-# server-side file-backed storage (ADR-002) -- shared sessions (P1-F-2), user rulesets later
+# server-side file-backed storage (ADR-002) — sessions, user rulesets, user patterns
 /data/
 
 # env
