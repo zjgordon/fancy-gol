@@ -64,6 +64,93 @@ export function defaultMigration(
   return map;
 }
 
+export interface StateMigrationDialogOptions {
+  readonly title: string;
+  readonly oldStates: readonly StateDef[];
+  readonly newStates: readonly StateDef[];
+  readonly onClose?: () => void;
+  /** Called synchronously on Apply so the picker tests (and the picker itself) stay last-write-wins. */
+  readonly onConfirm?: (migration: ReadonlyMap<StateId, StateId>) => void;
+}
+
+/**
+ * The picker's state-migration prompt, exported so the Ruleset Studio can reuse it
+ * instead of inventing a second dialog (P2-E-1).
+ */
+export function openStateMigrationDialog(
+  opts: StateMigrationDialogOptions,
+): { handle: DialogHandle; result: Promise<ReadonlyMap<StateId, StateId> | null> } {
+  let settled = false;
+  let resolve: (value: ReadonlyMap<StateId, StateId> | null) => void = () => {};
+  const result = new Promise<ReadonlyMap<StateId, StateId> | null>((r) => {
+    resolve = r;
+  });
+  const handle = openDialog({
+    title: opts.title,
+    onClose: () => {
+      opts.onClose?.();
+      if (!settled) {
+        settled = true;
+        resolve(null);
+      }
+    },
+  });
+
+  const hint = document.createElement('p');
+  hint.className = 'ruleset-migration-hint';
+  hint.textContent = 'These states don’t match. Choose where each one goes.';
+  handle.panel.appendChild(hint);
+
+  const rowsEl = document.createElement('div');
+  rowsEl.className = 'ruleset-migration-rows';
+  const defaults = defaultMigration(opts.oldStates, opts.newStates);
+  const rows: Array<{ readonly oldState: StateDef; readonly select: HTMLSelectElement }> = [];
+  for (const oldState of opts.oldStates) {
+    const row = document.createElement('div');
+    row.className = 'ruleset-migration-row';
+    const label = document.createElement('label');
+    const select = document.createElement('select');
+    select.id = `ruleset-migration-${oldState.id}`;
+    label.htmlFor = select.id;
+    label.textContent = oldState.name;
+    for (const newState of opts.newStates) {
+      const option = document.createElement('option');
+      option.value = String(newState.id);
+      option.textContent = newState.name;
+      select.appendChild(option);
+    }
+    select.value = String(defaults.get(oldState.id) ?? 0);
+    row.append(label, select);
+    rowsEl.appendChild(row);
+    rows.push({ oldState, select });
+  }
+  handle.panel.appendChild(rowsEl);
+
+  const controls = document.createElement('div');
+  controls.className = 'controls dialog-controls';
+  const applyButton = document.createElement('button');
+  applyButton.type = 'button';
+  applyButton.textContent = 'Apply';
+  const cancelButton = document.createElement('button');
+  cancelButton.type = 'button';
+  cancelButton.textContent = 'Cancel';
+  controls.append(applyButton, cancelButton);
+  handle.panel.appendChild(controls);
+
+  applyButton.addEventListener('click', () => {
+    const migration = new Map<StateId, StateId>();
+    for (const { oldState, select } of rows) migration.set(oldState.id, Number(select.value));
+    settled = true;
+    handle.close();
+    opts.onConfirm?.(migration);
+    resolve(migration);
+  });
+  cancelButton.addEventListener('click', () => handle.close());
+  applyButton.focus();
+
+  return { handle, result };
+}
+
 export interface RulesetPickerOptions {
   readonly entries: readonly RulesetSummary[];
   readonly activeId: string;
@@ -209,68 +296,19 @@ export function attachRulesetPicker(options: RulesetPickerOptions): RulesetPicke
 
     popover.hidden = true;
 
-    const handle = openDialog({
+    const { handle } = openStateMigrationDialog({
       title: `Switch to ${target.name}`,
-      // Fires for *every* close reason (Escape, Cancel, or Apply below all end by calling
-      // handle.close()) — nulling the handle here before calling the picker's own close() is
-      // what keeps that mutual call safe rather than an infinite loop (see close()'s own note).
+      oldStates: current.states,
+      newStates: target.states,
+      // Fires for *every* close reason — nulling the handle here before calling the picker's
+      // own close() is what keeps that mutual call safe rather than an infinite loop.
       onClose: () => {
         migrationHandle = null;
         close();
       },
+      onConfirm: (migration) => options.onConfirm(target.id, migration),
     });
     migrationHandle = handle;
-
-    const hint = document.createElement('p');
-    hint.className = 'ruleset-migration-hint';
-    hint.textContent = 'These states don’t match. Choose where each one goes.';
-    handle.panel.appendChild(hint);
-
-    const rowsEl = document.createElement('div');
-    rowsEl.className = 'ruleset-migration-rows';
-    const defaults = defaultMigration(current.states, target.states);
-    const rows: Array<{ readonly oldState: StateDef; readonly select: HTMLSelectElement }> = [];
-    for (const oldState of current.states) {
-      const row = document.createElement('div');
-      row.className = 'ruleset-migration-row';
-      const label = document.createElement('label');
-      const select = document.createElement('select');
-      select.id = `ruleset-migration-${oldState.id}`;
-      label.htmlFor = select.id;
-      label.textContent = oldState.name;
-      for (const newState of target.states) {
-        const option = document.createElement('option');
-        option.value = String(newState.id);
-        option.textContent = newState.name;
-        select.appendChild(option);
-      }
-      select.value = String(defaults.get(oldState.id) ?? 0);
-      row.append(label, select);
-      rowsEl.appendChild(row);
-      rows.push({ oldState, select });
-    }
-    handle.panel.appendChild(rowsEl);
-
-    const controls = document.createElement('div');
-    controls.className = 'controls dialog-controls';
-    const applyButton = document.createElement('button');
-    applyButton.type = 'button';
-    applyButton.textContent = 'Apply';
-    const cancelButton = document.createElement('button');
-    cancelButton.type = 'button';
-    cancelButton.textContent = 'Cancel';
-    controls.append(applyButton, cancelButton);
-    handle.panel.appendChild(controls);
-
-    applyButton.addEventListener('click', () => {
-      const migration = new Map<StateId, StateId>();
-      for (const { oldState, select } of rows) migration.set(oldState.id, Number(select.value));
-      handle.close(); // triggers onClose above, closing the picker too, before onConfirm fires
-      options.onConfirm(target.id, migration);
-    });
-    cancelButton.addEventListener('click', () => handle.close());
-
-    applyButton.focus();
   }
 
   // --- Selection --------------------------------------------------------------------------

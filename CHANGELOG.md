@@ -28,6 +28,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A Statistics panel: three big numbers and a sparkline, or every metric the engine collects, including a dismissible cycle finding. (P2-D-3)
 - A searchable, filterable pattern library with near-pointer animated thumbnails, stamp-or-drag placement, and a Credits dialog. (P2-B-3)
 - Export statistics as labelled CSV or JSON, charts as 2× PNGs, and the grid or selection as RLE or a view PNG. (P2-D-4)
+- A Ruleset Studio with a live JSON editor: validate as you type, and apply B3/S23 → B36/S23 without resetting the grid. (P2-E-1)
 
 ### Changed
 

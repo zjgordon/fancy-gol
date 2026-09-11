@@ -4,6 +4,8 @@
  * only composes them. Panels register on the P2-G-2 host — do not invent a second layout.
  */
 import { CONWAY, getBuiltin } from '@engine/rules/builtin';
+import { RuleValidationError } from '@engine/rules/errors';
+import { validateRuleSet } from '@engine/rules/validate';
 import { Canvas2DRenderer } from '@render/canvas2d';
 import type { Viewport as RenderViewport } from '@render/types';
 import { decode as decodeRle } from '@shared/rle';
@@ -25,7 +27,11 @@ import { attachPanelHost } from '@ui/shell/panel-host';
 import { createTransportControls } from '@ui/components/transport';
 import { createSpeedControl, TpsMeter } from '@ui/components/speed';
 import { createStatusBar, STATUS_THROTTLE_MS, zoomPercent } from '@ui/components/statusbar';
-import { attachRulesetPicker } from '@ui/components/ruleset-picker';
+import {
+  attachRulesetPicker,
+  openStateMigrationDialog,
+  palettesMatch,
+} from '@ui/components/ruleset-picker';
 import { confirmDialog, openDialog } from '@ui/components/dialog';
 import { createToastRegion } from '@ui/components/toast';
 import type { FillTool } from '@ui/tools/fill';
@@ -39,6 +45,7 @@ import { createStatisticsPanel } from '@ui/panels/statistics/panel';
 import { openExportDialog } from '@ui/export/dialog';
 import { CHART_EXPORT_SCALE, canvasToPngBlob } from '@ui/export/png';
 import { LIBRARY_DRAG_TYPE, createLibraryPanel } from '@ui/panels/library/panel';
+import { createRulesetStudioPanel } from '@ui/panels/ruleset-studio/panel';
 import { createAppContext } from './app-context';
 import { createViewEditCommands } from './app-commands';
 import { playColdStart } from './cold-start';
@@ -480,6 +487,7 @@ function main(): void {
         lastPerState = new Uint32Array(target.states.length);
         rulesetPicker.setActive(id);
         libraryPanel.setActiveRuleset(id);
+        studioPanel.setDocument(target);
         autosave.scheduleSave();
       })();
     },
@@ -541,6 +549,56 @@ function main(): void {
   libraryToggle.textContent = 'Library';
   libraryToggle.addEventListener('click', () => panelHost.open('library'));
   shell.toolbar.appendChild(libraryToggle);
+
+  const studioPanel = createRulesetStudioPanel({
+    initialText: JSON.stringify(activeRuleset, null, 2),
+    validate: (value) => {
+      try {
+        return { ok: true, value: validateRuleSet(value) };
+      } catch (error) {
+        if (error instanceof RuleValidationError) return { ok: false, issues: error.issues };
+        throw error;
+      }
+    },
+    onApply: async (value, { reset }) => {
+      const target = validateRuleSet(value);
+      let migration: number[] | undefined;
+      if (!palettesMatch(activeRuleset.states, target.states)) {
+        const { result } = openStateMigrationDialog({
+          title: `Apply ${target.name}`,
+          oldStates: activeRuleset.states,
+          newStates: target.states,
+        });
+        const map = await result;
+        if (!map) return;
+        migration = activeRuleset.states.map((s) => map.get(s.id) ?? 0);
+      }
+      await client.send({
+        cmd: 'setRuleset',
+        ruleset: target,
+        ...(migration ? { migration } : {}),
+      });
+      activeRuleset = target;
+      lastPerState = new Uint32Array(target.states.length);
+      rulesetPicker.setActive(target.id);
+      libraryPanel.setActiveRuleset(target.id);
+      if (reset) {
+        await client.send({ cmd: 'clear' });
+        mirror.reset();
+        if (hasFrame) renderer.draw({ cells: mirror.view(), dirty: null, tick: lastTick });
+      }
+      autosave.scheduleSave();
+    },
+  });
+  panelHost.register(studioPanel.spec);
+
+  const studioToggle = document.createElement('button');
+  studioToggle.type = 'button';
+  studioToggle.className = 'pattern-toggle';
+  studioToggle.setAttribute('aria-label', 'Open ruleset studio');
+  studioToggle.textContent = 'Studio';
+  studioToggle.addEventListener('click', () => panelHost.open('studio'));
+  shell.toolbar.appendChild(studioToggle);
 
   function copyCanvas(src: HTMLCanvasElement): HTMLCanvasElement {
     const dest = document.createElement('canvas');
@@ -754,6 +812,7 @@ function main(): void {
       lastPerState = new Uint32Array(restored.ruleset.states.length);
       rulesetPicker.setActive(restored.ruleset.id);
       libraryPanel.setActiveRuleset(restored.ruleset.id);
+      studioPanel.setDocument(restored.ruleset);
       await client.send({
         cmd: 'init',
         ruleset: restored.ruleset,

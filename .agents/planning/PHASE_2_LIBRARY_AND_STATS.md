@@ -384,7 +384,7 @@ Measured: CSV header names the window, tier, and per-column aggregation (`exact`
 
 ### Workstream E — The Ruleset Studio
 
-#### - [ ] P2-E-1 · Studio shell & JSON editor
+#### - [x] P2-E-1 · Studio shell & JSON editor — @cursor, started 2026-09-11, finished 2026-09-11
 **Depends on:** P0-D-2, P1-D-5, P2-G-2 · **Files:** `src/ui/panels/ruleset-studio/*`
 **Intent:** "Rule-God Status." This panel is the single most differentiating feature in the product.
 **Implementation notes**
@@ -393,10 +393,12 @@ Measured: CSV header names the window, tier, and per-column aggregation (`exact`
 - Validation runs on every keystroke (debounced 150 ms) using the engine's `validateRuleSet`; `issues[].path` maps to a line via a small JSON-pointer→offset index. Errors appear **next to the offending line**, with the `hint`.
 - Live apply: valid changes hot-swap into the running simulation without resetting it (with a "reset on apply" toggle for the common case).
 **Acceptance criteria**
-- [ ] Editing `B3/S23` → `B36/S23` and applying changes behaviour within one tick, with no reload and no reset.
-- [ ] Every validator issue renders on its correct line with its hint text.
-- [ ] The editor handles a 2,000-line ruleset without input lag (> 55 fps while typing).
-- [ ] `Mod+Z` in the editor undoes text, not grid edits (focus-scoped keybindings — verify).
+- [x] Editing `B3/S23` → `B36/S23` and applying changes behaviour within one tick, with no reload and no reset.
+- [x] Every validator issue renders on its correct line with its hint text.
+- [x] The editor handles a 2,000-line ruleset without input lag (> 55 fps while typing).
+- [x] `Mod+Z` in the editor undoes text, not grid edits (focus-scoped keybindings — verify).
+
+Measured: `createRulesetStudioPanel` registers on the G-2 host (`id: 'studio'`, min-width 360). The editor is a transparent `<textarea>` over a tokenised `<pre>`, with a virtualised gutter. `validateRuleSet` is injected from the composition root (ADR-009: `ui/` does not import `engine/`). JSON pointers map to lines via a recursive-descent index; each issue paints on its line with the validator `hint`. Apply hot-swaps via `setRuleset` and does not `clear` unless "Reset grid on apply" is checked; Conway→HighLife (`born: [3]` → `[3, 6]`) needs no migration. Palette changes reuse the picker's `openStateMigrationDialog`. A 2,000-line keystroke stays on a hot path (visible lines + `textContent`; token colour on the 150 ms idle) and measures under 18.2 ms in the spec (skipped under coverage). `Mod+Z` in the textarea is ignored by `attachKeymap` (text-input skip), so native undo wins. Axe is clean on the panel root.
 
 #### - [ ] P2-E-2 · Form-based rule builder
 **Depends on:** P2-E-1
