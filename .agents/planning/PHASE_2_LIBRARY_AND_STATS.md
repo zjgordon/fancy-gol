@@ -180,13 +180,13 @@ checker change (`engine → shared/`, scan `shared/**`), the canonical syntactic
 - [x] Life 1.06 coordinate lists round-trip, including negative coordinates.
 - [x] Format sniffing picks the right decoder for all fixtures without an extension hint.
 
-#### - [ ] P2-A-4 · Pattern normalisation & identity
+#### - [x] P2-A-4 · Pattern normalisation & identity — @cursor, started 2026-09-11
 **Depends on:** P2-A-1 · **Files:** `src/engine/patterns/normalize.ts`
 **Intent:** So the library can say "you just drew a loaf" and so duplicates are detectable.
 **Implementation notes** Canonical form = translate to origin, then choose the lexicographically smallest of the 8 dihedral transforms. Hash that. Store the hash in the catalogue index.
 **Acceptance criteria**
-- [ ] All 8 orientations of an asymmetric pattern produce the same canonical hash.
-- [ ] The catalogue contains no two entries with the same canonical hash and different names (build-time check).
+- [x] All 8 orientations of an asymmetric pattern produce the same canonical hash.
+- [x] The catalogue contains no two entries with the same canonical hash and different names (build-time check).
 
 ---
 
