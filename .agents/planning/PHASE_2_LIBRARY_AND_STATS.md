@@ -164,8 +164,8 @@ patterns/<ruleset>/*.rle  +  patterns/index.json
 ### Workstream B — The Library
 
 #### - [ ] P2-B-1 · Catalogue schema & content
-**Depends on:** P2-A-1 · **Files:** `patterns/**`, `src/engine/patterns/catalog-types.ts`
-**Metadata per entry:** `id, name, aliases[], ruleset, category, discoverer, year, width, height, population, period, speed (e.g. "c/4 diagonal"), heat, description, source (URL/citation), tags[], canonicalHash`.
+**Depends on:** P2-A-1 · **Files:** `patterns/**`, `patterns/SOURCES.md`, `LICENSE`, `LICENSES/**`, `NOTICE`, `scripts/check-pattern-licenses.mjs`, `package.json` (`license` field), `src/engine/patterns/catalog-types.ts`
+**Metadata per entry:** `id, name, aliases[], ruleset, category, discoverer, year, width, height, population, period, speed (e.g. "c/4 diagonal"), heat, description, source (URL/citation), tags[], canonicalHash`, plus in-file SPDX provenance (`SPDX-License-Identifier`, `SPDX-FileCopyrightText`, `source:`, `verified:` on `#C` lines).
 **Categories:** `still-life`, `oscillator`, `spaceship`, `puffer`, `rake`, `gun`, `methuselah`, `wick`, `agar`, `reflector`, `logic` (for WireWorld), `seed`, `curiosity`.
 **Minimum content to ship:**
 - **Conway: ≥ 120 patterns** spanning every category — all common still lifes, oscillators to period 30, LWSS/MWSS/HWSS, the standard glider guns, a puffer, a rake, a breeder, the classic methuselahs, and at least one Turing-relevant construction with a citation.
@@ -175,10 +175,16 @@ patterns/<ruleset>/*.rle  +  patterns/index.json
 - **WireWorld: ≥ 10** — diode, AND/OR/XOR gates, a clock, a full adder if available.
 - **Generations rules: ≥ 5 each** for the two shipped.
 - **The multi-state terrain rule: ≥ 4** documented seeds.
-**Implementation notes** Every entry is licence-clean and attributed. Where a pattern comes from LifeWiki or the jslife collection, record the source URL and licence in `patterns/SOURCES.md`. **Do not ship a pattern we cannot attribute.**
+**Licensing (binding — `planning/README.md` §3.9, decided 2026-09-11):** two layers. Code is **MIT** (`LICENSE` + `"license": "MIT"` beside `"private": true`). Pattern content is per-item: **take facts, write your own words**; never paste wiki prose. Provenance classes A/B/C allowed, D omitted. Repo shape: `LICENSES/` (full texts), `NOTICE` (attribution roll-up), `patterns/SOURCES.md` (policy + per-source table with the LifeWiki footer string verified 2026-09-11), REUSE-style SPDX on every `.rle`. Gate: `scripts/check-pattern-licenses.mjs` in `verify` — every pattern needs `#N`, `#O` (discoverer; `unknown` ok, blank not), `source:` URL, and an allowlisted `SPDX-License-Identifier`. Retrofit the existing ten patterns to the schema before adding more. **Do not ship a pattern we cannot attribute.**
+**Implementation notes** Land the licence scaffolding and `SOURCES.md` policy **before** importing any third-party catalogue content. Descriptions in the library are original. Hand-pick entries; do not mirror an archive wholesale.
 **Acceptance criteria**
+- [ ] `LICENSE` is MIT; `package.json` has `"license": "MIT"` while remaining `"private": true`.
+- [ ] `patterns/SOURCES.md` states the two-layer policy, the Class A–D allowlist, and records the LifeWiki footer licence string verbatim with verification date 2026-09-11.
+- [ ] `LICENSES/` holds the full text of every content licence in use; `NOTICE` rolls up attributions.
+- [ ] `scripts/check-pattern-licenses.mjs` runs in `npm run verify` and fails on missing `#N`, blank `#O`, missing `source:`, or non-allowlisted SPDX.
+- [ ] Every shipped `.rle` carries SPDX + provenance `#C` lines; the pre-existing ten patterns are retrofitted.
 - [ ] Build-time validation: every entry decodes, matches its declared width/height/population, and its declared period is verified by actually running it.
-- [ ] Every entry has a `source`; `patterns/SOURCES.md` is complete and licence-clear.
+- [ ] Every entry has a `source`; catalogue descriptions are original (no pasted wiki prose).
 - [ ] Declared `speed` values are verified by simulation for all spaceships.
 
 #### - [ ] P2-B-2 · Thumbnail generation
@@ -197,12 +203,15 @@ patterns/<ruleset>/*.rle  +  patterns/index.json
 - Thumbnails animate **only when the card is visible and the pointer is near** — an `IntersectionObserver` plus a distance check. 200 simultaneously animating thumbnails is a frame-budget catastrophe; this is the difference between fabulous and unusable.
 - Select a pattern → the Phase 1 stamp tool activates with a ghost preview; drag from the card onto the canvas also works.
 - A detail view shows full metadata, the source citation, and a "run this in isolation" button.
+- **Attribution as UI (README §3.9):** every card (or its detail view) shows discoverer and year with a link to `source`. A Credits dialog lists every collection in `SOURCES.md` and that collection's recorded terms — delightful first, compliance second.
 **Acceptance criteria**
 - [ ] Panel opens in < 100 ms with 250 entries loaded.
 - [ ] Scrolling the full catalogue holds 60 fps.
 - [ ] Searching "gosp" finds the Gosper glider gun; searching "p30" finds period-30 oscillators.
 - [ ] Fully keyboard navigable: arrow keys move, `Enter` picks up the stamp, `Escape` closes.
 - [ ] Switching to WireWorld changes the default filter and the visible set without a reload.
+- [ ] Discoverer and year are visible for every pattern that has them; `source` is one activation away.
+- [ ] Credits dialog lists every `SOURCES.md` collection and its terms.
 
 #### - [ ] P2-B-4 · Server pattern routes (complete)
 **Depends on:** P2-B-1, P1-G-2 · **Files:** `src/server/routes/patterns.ts`
@@ -354,7 +363,7 @@ patterns/<ruleset>/*.rle  +  patterns/index.json
 | All Phase 0 & 1 gates | still green |
 | Engine coverage | ≥ 95% maintained (codecs and stats are engine code) |
 | RLE corpus | ≥ 40 real-world files decode correctly; 500-pattern round-trip property test green |
-| Catalogue integrity | every entry decodes, metadata verified by simulation, every entry attributed |
+| Catalogue integrity | every entry decodes, metadata verified by simulation, every entry attributed; `check-pattern-licenses` green |
 | Stat accuracy | every metric matches brute force after 5,000 generations, 6 rulesets |
 | Stat overhead | < 5% added to step time |
 | Cycle detection | zero false positives over 20 × 5,000-generation chaotic runs |
@@ -370,7 +379,7 @@ patterns/<ruleset>/*.rle  +  patterns/index.json
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Pattern licensing/attribution is unclear for community patterns. | Legal and ethical exposure at launch. | `patterns/SOURCES.md` is a build-gated requirement: an entry without a `source` fails the build. When in doubt, omit the pattern. |
+| Pattern licensing/attribution is unclear for community patterns. | Legal and ethical exposure at launch. | Binding policy in `planning/README.md` §3.9 (MIT code / per-item content). `SOURCES.md` + SPDX headers + `check-pattern-licenses.mjs` in `verify`. Facts only, original descriptions; Class D omitted. When in doubt, omit the pattern. |
 | Animated thumbnails destroy the frame budget in the library. | The marquee feature feels broken. | Visibility + proximity gating (P2-B-3), a hard cap of 12 concurrently animating thumbnails, and a bench that asserts 60 fps over the full catalogue. |
 | The hand-written chart module becomes a half-finished chart library. | Months lost reinventing D3. | Scope is fixed to the seven renderers in §2.3. Anything beyond that is out of scope and gets a task ID in a later phase, not an improvisation. |
 | Cycle detection produces false positives on large chaotic fields (hash collisions). | Users are told a lie about their simulation. | 32-bit hash + population match is only a *candidate*; confirmation is an exact state comparison via the journal. Zero-false-positive test is a gate. |

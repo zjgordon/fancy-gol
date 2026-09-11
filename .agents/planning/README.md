@@ -170,6 +170,89 @@ injected, seedable PRNG (`Mulberry32`, hand-written, ~10 lines). This is what ma
 Time-Traveler, the Laboratory diff, and the test oracles possible — it is a load-bearing property,
 not a nicety. Phase 0 ships a cross-run determinism test; every later phase keeps it green.
 
+### 3.9 Licensing & attribution (two layers — decided 2026-09-11)
+
+Licensing is **two decisions**, not one. Code and content do not share a licence.
+
+#### Code (MIT)
+
+Everything under `src/`, `scripts/`, `tests/`, and project config ships under **MIT**. Root
+`LICENSE` carries the MIT text. `package.json` keeps `"private": true` **and** adds
+`"license": "MIT"` (those do not conflict — private only blocks accidental npm publish).
+
+Apache-2.0 was considered and rejected: the patent grant is not needed for this project, and
+GPLv2 incompatibility would only matter if we vendored Golly (we will not).
+
+#### Content (`patterns/`, and any non-code docs that carry third-party material)
+
+Per-item provenance, per-item licence. No blanket content licence. Policy in one sentence:
+
+> **Take facts, write your own words.** Name, discoverer, discovery year, period, speed,
+> population, bounding box, and the cell layout are treated as facts. Library-panel descriptions
+> are written fresh by this project — never paste LifeWiki (or other wiki) prose.
+
+Attribute generously anyway: discoverer and year on every pattern; a Credits dialog listing every
+collection and its terms. Community norm first; compliance second — they coincide here.
+
+**Do not** wholesale-mirror a pattern archive. Hand-pick entries with recorded provenance.
+A downstream repackager's licence (e.g. an npm pattern dump under ISC) does **not** launder
+upstream terms — never copy that model.
+
+#### LifeWiki terms (operator-verified 2026-09-11)
+
+Read from the LifeWiki site footer (conwaylife.com), recorded verbatim:
+
+> All structured data from the main, Property, Lexeme, and EntitySchema namespaces is available
+> under the Creative Commons CC0 License; text in the other namespaces is available under the
+> Creative Commons Attribution-ShareAlike License; additional terms may apply.
+
+The footer does **not** state a BY-SA version number. When `patterns/SOURCES.md` is written
+(P2-B-1), copy this string and the verification date into it. Prefer facts / structured data
+(CC0) and original descriptions; do not embed wiki prose (BY-SA / possible GFDL confusion in
+older secondary sources) into the app.
+
+#### Repo shape (implemented by P2-B-1 — planning only until that task runs)
+
+```
+LICENSE                     MIT, covering code
+LICENSES/                   full text of every content licence in use
+  CC0-1.0.txt
+  CC-BY-SA-4.0.txt          (and others only when a Class-C source requires them)
+NOTICE                      human-readable attribution roll-up
+patterns/
+  SOURCES.md                this policy, then the per-source table
+  <name>.rle                SPDX + provenance in #C lines
+scripts/check-pattern-licenses.mjs   runs in `npm run verify`
+```
+
+Per-pattern headers extend the existing `#N` / `#O` / `#C` convention:
+
+```
+#N Gosper glider gun
+#O Bill Gosper, 1970
+#C SPDX-License-Identifier: CC0-1.0
+#C SPDX-FileCopyrightText: none claimed (configuration; see SOURCES.md §2)
+#C source: https://conwaylife.com/wiki/Gosper_glider_gun
+#C verified: fancy-gol P2-B-1, period 30, emits glider every 30 gens
+```
+
+#### Provenance classes (allowlist — the gate's teeth)
+
+| Class | Meaning | SPDX / disposition |
+|---|---|---|
+| **A** | Originated here (agent-generated, hand-drawn, own soup search) | `CC0-1.0` |
+| **B** | Canonical historical configuration; attributed; treated as fact | `CC0-1.0` + `SPDX-FileCopyrightText: none claimed …` |
+| **C** | Named collection with published terms that permit redistribution | Terms recorded verbatim in `SOURCES.md`; per-file SPDX from allowlist |
+| **D** | Unclear provenance | **Omitted.** Never shipped. |
+
+`scripts/check-pattern-licenses.mjs` (wired into `verify`) fails the build unless every
+`patterns/**/*.rle` has: a name (`#N`), a discoverer field (`#O` — `unknown` permitted, blank
+not), a `source:` URL, and an `SPDX-License-Identifier` drawn from the allowlist. Same leverage
+pattern as `no-literal-design-tokens`: the policy is a gate, not a convention.
+
+UI (P2-B-3): library cards show discoverer + year with a link to `source`; a Credits dialog lists
+every collection and its recorded terms.
+
 ---
 
 ## 4. Target repository layout
@@ -188,9 +271,13 @@ fancy-gol/
 │   ├── Dockerfile.dev
 │   ├── docker-compose.yml
 │   └── docker-compose.dev.yml
-├── patterns/                        RLE catalogue, per ruleset
+├── LICENSE                          MIT (code)
+├── LICENSES/                        full texts of content licences in use
+├── NOTICE                           attribution roll-up for pattern sources
+├── patterns/                        RLE catalogue, per ruleset (+ SOURCES.md)
 ├── scripts/
 │   ├── check-boundaries.mjs         layering enforcement (hand-written)
+│   ├── check-pattern-licenses.mjs   pattern provenance gate (Phase 2)
 │   ├── bench.mjs                    benchmark runner + budget gate
 │   └── gen-thumbnails.mjs           build-time pattern thumbnails
 ├── src/

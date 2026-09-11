@@ -316,7 +316,9 @@ Do not:
   informative confirmation. This is a gate in Phase 4 and a launch criterion in Phase 6.
 - **Present an approximation as exact.** Sampled entropy, downsampled charts and reduced-quality
   rendering are all *labelled* as such. A tool that quietly lies about its own numbers is worthless.
-- **Ship a pattern you cannot attribute** (Phase 2) or a claim you have not verified (Phase 6).
+- **Ship a pattern you cannot attribute**, or one that fails the provenance gate in
+  `planning/README.md` §3.9 (Phase 2) — or a claim you have not verified (Phase 6).
+  Code is MIT; pattern content is per-item with SPDX + `source:`. Class D (unclear) is omitted.
 
 ---
 
@@ -352,7 +354,7 @@ node .agents/scripts/build-dashboard.mjs --check   # CI: fail if stale
 |---|---|
 | know the vision and the standard | `.agents/docs/INCEPTION.md` |
 | know the next task | `.agents/dashboard.html` |
-| know the rules that apply everywhere | `.agents/planning/README.md` §3 |
+| know the rules that apply everywhere | `.agents/planning/README.md` §3 (incl. §3.9 licensing) |
 | know why the architecture is the way it is | `.agents/planning/ARCHITECTURE_DECISIONS.md` |
 | know exactly what to build | `.agents/planning/PHASE_<n>_*.md` |
 | know how to work and commit | this file |
