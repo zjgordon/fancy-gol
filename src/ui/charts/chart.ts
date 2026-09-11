@@ -1,7 +1,7 @@
 /**
  * Canvas chart host (P2-D-1). Owns the surface, the scales, the legend, the crosshair, and
- * brush-to-zoom. Series *geometry* (area, stacked, band, sparkline, histogram, phase) is P2-D-2;
- * this file draws a polyline so six live charts can be timed against the 2 ms budget now.
+ * brush-to-zoom. Series geometry (line, area, stacked, band) lives in {@link series.ts};
+ * this host calls those renderers so a downsampled window always shows its min/max envelope.
  *
  * Data is a P2-C-6 `statsWindow` reply — never an engine `Series`. Approximations are labelled
  * on the plot. Colours and type come from a resolved {@link ChartTokens} snapshot so a theme
@@ -10,7 +10,6 @@
  * Charts opt into a shared {@link ChartLoop} throttled at {@link CHART_HZ} (20). The simulation
  * can tick faster than that; a human cannot read faster than that.
  */
-import { parseCssColor } from '@shared/color';
 import type { StatsWindowPoint } from '@shared/protocol';
 import type { TokenSet } from '@themes/types';
 import {
@@ -23,6 +22,7 @@ import {
   type PlotRect,
 } from './axis';
 import { linearScale, logScale, niceTicks, timeScale, type Scale } from './scale';
+import { drawBand, drawLine, withChartAlpha } from './series';
 
 type Canvas2DContext = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
@@ -142,12 +142,6 @@ function colorOf(tokens: ChartTokens, role: SeriesColorRole): string {
   return tokens[role];
 }
 
-function withAlpha(css: string, a: number): string {
-  const p = parseCssColor(css);
-  if (!p) return css;
-  return `rgba(${p.r}, ${p.g}, ${p.b}, ${a})`;
-}
-
 function finiteMinMax(lo: number, hi: number, fallback: readonly [number, number]): [number, number] {
   if (!(lo <= hi)) return [fallback[0], fallback[1]];
   if (lo === hi) {
@@ -169,6 +163,8 @@ function scanDomains(
   for (const p of points) {
     if (p.tick < xLo) xLo = p.tick;
     if (p.tick > xHi) xHi = p.tick;
+    if (p.populationMin < yLo) yLo = p.populationMin;
+    if (p.populationMax > yHi) yHi = p.populationMax;
     for (const s of series) {
       if (hidden.has(s.id)) continue;
       const v = s.value(p);
@@ -472,7 +468,7 @@ export class Chart {
       palette: {
         text: t.text,
         muted: t.muted,
-        grid: withAlpha(t.border, 0.45),
+        grid: withChartAlpha(t.border, 0.45),
         axis: t.border,
         font,
       },
@@ -506,24 +502,23 @@ export class Chart {
   private drawSeries(ctx: Canvas2DContext, points: readonly StatsWindowPoint[]): void {
     const xScale = this.xScale!;
     const yScale = this.yScale!;
+    const data = this.data;
+    const showBand =
+      Boolean(data) &&
+      (data!.tier >= 1 || data!.aggregated || data!.downsampled);
+    if (showBand) {
+      drawBand(ctx, points, xScale, yScale, {
+        min: (p) => p.populationMin,
+        max: (p) => p.populationMax,
+        fill: withChartAlpha(this.tokens.accent, 0.22),
+      });
+    }
     for (const s of this.series) {
       if (this.hidden.has(s.id)) continue;
-      ctx.strokeStyle = colorOf(this.tokens, s.color);
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      let started = false;
-      for (const p of points) {
-        const x = xScale.convert(p.tick);
-        const y = yScale.convert(s.value(p));
-        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
-        if (!started) {
-          ctx.moveTo(x, y);
-          started = true;
-        } else {
-          ctx.lineTo(x, y);
-        }
-      }
-      if (started) ctx.stroke();
+      drawLine(ctx, points, xScale, yScale, s.value, {
+        stroke: colorOf(this.tokens, s.color),
+        lineWidth: 1.5,
+      });
     }
   }
 
@@ -566,7 +561,7 @@ export class Chart {
     const plot = this.plot;
     const x0 = clamp(Math.min(this.brush.x0, this.brush.x1), plot.x, plot.x + plot.width);
     const x1 = clamp(Math.max(this.brush.x0, this.brush.x1), plot.x, plot.x + plot.width);
-    ctx.fillStyle = withAlpha(this.tokens.accent, 0.18);
+    ctx.fillStyle = withChartAlpha(this.tokens.accent, 0.18);
     ctx.fillRect(x0, plot.y, Math.max(1, x1 - x0), plot.height);
   }
 
@@ -649,7 +644,7 @@ export class Chart {
     const w = ctx.measureText(label).width + space2;
     const x = this.plot.x + this.plot.width - w;
     const y = this.plot.y + space2;
-    ctx.fillStyle = withAlpha(t.surface, 0.9);
+    ctx.fillStyle = withChartAlpha(t.surface, 0.9);
     ctx.fillRect(x, y, w, fontXs + 4);
     ctx.fillStyle = t.muted;
     ctx.textAlign = 'right';

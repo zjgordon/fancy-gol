@@ -24,6 +24,7 @@ class FakeCtx {
   readonly fillTexts: { text: string; x: number; y: number; style: string }[] = [];
   readonly lineTos: { x: number; y: number }[] = [];
   readonly moveTos: { x: number; y: number }[] = [];
+  readonly pathFills: { style: string }[] = [];
   strokeCount = 0;
 
   private path: { x: number; y: number }[] = [];
@@ -51,7 +52,10 @@ class FakeCtx {
   stroke(): void {
     this.strokeCount++;
   }
-  fill(): void {}
+  fill(): void {
+    this.pathFills.push({ style: this.fillStyle });
+  }
+  closePath(): void {}
   fillRect(x: number, y: number, w: number, h: number): void {
     this.fillRects.push({ style: this.fillStyle, x, y, w, h });
   }
@@ -235,6 +239,24 @@ describe('Chart', () => {
       expect(Number.isFinite(p.y), `y=${p.y}`).toBe(true);
     }
   });
+
+  it('draws a population envelope when the window is aggregated', () => {
+    const { chart, ctx } = makeChart();
+    const data = windowOf(8, { downsampled: true, label: 'tier 1 · min/max' });
+    chart.setData({
+      ...data,
+      tier: 1,
+      aggregated: true,
+      points: data.points.map((p) => ({
+        ...p,
+        populationMin: p.population - 3,
+        populationMax: p.population + 3,
+        tier: 1,
+      })),
+    });
+    chart.draw();
+    expect(ctx.pathFills.some((f) => f.style.includes('rgba'))).toBe(true);
+  });
 });
 
 describe('ChartLoop', () => {
@@ -276,6 +298,7 @@ describe('six live charts budget', () => {
       arc(): void {}
       stroke(): void {}
       fill(): void {}
+      closePath(): void {}
       fillRect(): void {}
       strokeRect(): void {}
       measureText(text: string): { width: number } {

@@ -345,13 +345,15 @@ Measured: dedicated `{ id, type: 'statsWindow' }` reply (not `ok.result`) carryi
 
 Measured: `src/ui/charts/{scale,axis,chart}.ts` — linear / log / generation-time scales, 1/2/5 × 10ⁿ ticks, collision-dropping axis labels, dpr-correct canvas host. Data is a `statsWindow` `ChartWindow` (points + `label`); `ui/` still does not import `@engine/stats`. Log Y clamps ≤0 to the range start (all-non-positive domains fall back to linear) so `convert(0)` / `convert(-5)` stay finite. `setTokens` + `draw` swaps Default dark → light with no reload. `ChartLoop` at `CHART_HZ = 20`. Six 400×180 charts × 200 points, median of 21 frames **< 2 ms** (skipped under `VITEST_COVERAGE`). Labels at 200 / 400 / 800 / 1200 px neither collide nor overflow. Not wired into the shell — that is P2-D-3.
 
-#### - [ ] P2-D-2 · Series renderers
+#### - [x] P2-D-2 · Series renderers
 **Depends on:** P2-D-1 · **Files:** `src/ui/charts/{series,sparkline,histogram,phase}.ts`
 **Implementation notes** Line, stepped, area, **stacked area** (for per-state populations — this is the chart that makes multi-state rulesets legible), min/max envelope band (for downsampled tiers), sparkline, histogram, and a phase-space plot with a fading trail. The phase plot (population vs. birth rate, or activity vs. entropy) is the "wow" chart: chaotic rules trace visibly different attractors, and it costs almost nothing to draw.
 **Acceptance criteria**
-- [ ] Stacked areas sum exactly to total population at every sample (no gaps or overdraw).
-- [ ] The envelope band renders correctly from tier 1–3 aggregated data.
-- [ ] The phase plot's trail fade is driven by a motion token and is stable at 20 Hz.
+- [x] Stacked areas sum exactly to total population at every sample (no gaps or overdraw).
+- [x] The envelope band renders correctly from tier 1–3 aggregated data.
+- [x] The phase plot's trail fade is driven by a motion token and is stable at 20 Hz.
+
+Measured: `stackStateAreas` skips dead (state 0); live-state heights sum to `population` at every sample and adjacent layers share a boundary (no gap, no overdraw). `drawBand` from tier 1–3 `populationMin`/`populationMax` contains the mean in canvas space. `Chart` now calls `drawLine` / `drawBand` so an aggregated `statsWindow` always shows the envelope. Phase trail alpha is `MotionSignature.easings.*` over a tail sized by `durationMs` at `CHART_HZ`; same window redrawn twice is byte-identical alphas. Sparkline and histogram are standalone for P2-D-3. Not hosted in the shell — that is still P2-D-3.
 
 #### - [ ] P2-D-3 · Statistics panel
 **Depends on:** P2-D-2, P2-G-2 · **Files:** `src/ui/panels/statistics/*`
