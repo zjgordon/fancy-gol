@@ -289,14 +289,16 @@ Measured: Conway / HighLife / Day & Night / Brian's Brain / WireWorld / Star War
 
 Measured on a 128×128 field (64 blocks of 16×16; H_max = log₂(257) ≈ 8.01 bits): uniform 50% soup **4.2–6.0 bits**; a single still-life block **< 0.5**; a 16×16-tile checkerboard agar **≈ 1 bit** (two occupancy classes). A *cell*-level checkerboard is one occupancy class and is not the fixture — occupancy entropy sees structure at the 16×16 scale it is defined on. Sampled vs exact: 20 chaotic 256×256 fixtures (HighLife / Brian's Brain / Star Wars / Day & Night × 5 seeds), 75% spatial sample, relative error ≤ 5%. `describeEntropy` / `StatsCollector.entropyLabel()` always name the period and the block fraction; `apply` marks a held reading not-exact. The statistics panel (P2-D-3) renders that string — `StatSample.entropy` is the number only.
 
-#### - [ ] P2-C-3 · Zobrist hashing & cycle detection
+#### - [x] P2-C-3 · Zobrist hashing & cycle detection — @cursor, started 2026-09-11
 **Depends on:** P2-C-1 · **Files:** `src/engine/stats/{zobrist,cycle-detect}.ts`
 **Implementation notes** Incremental XOR from the `ChangeSet`. Candidate cycle on a hash+population repeat, confirmed by exact comparison against the history journal. Detect both true periodicity and **translational periodicity** (spaceships: same shape, displaced) by hashing the pattern normalised to its bounding-box origin as a second hash.
 **Acceptance criteria**
-- [ ] Blinker → period 2; pulsar → period 3; pentadecathlon → period 15; Gosper gun → period 30 (with translational awareness so the emitted gliders do not defeat detection — document the windowing used).
-- [ ] A glider is reported as a translating oscillator of period 4 with displacement (1,1).
-- [ ] Zero false positives across 20 chaotic 5,000-generation runs.
-- [ ] Hash update cost is O(changes) — proven by a benchmark showing flat cost as grid size grows 100×.
+- [x] Blinker → period 2; pulsar → period 3; pentadecathlon → period 15; Gosper gun → period 30 (with translational awareness so the emitted gliders do not defeat detection — document the windowing used).
+- [x] A glider is reported as a translating oscillator of period 4 with displacement (1,1).
+- [x] Zero false positives across 20 chaotic 5,000-generation runs.
+- [x] Hash update cost is O(changes) — proven by a benchmark showing flat cost as grid size grows 100×.
+
+Measured: blinker p2, pulsar p3, pentadecathlon p15 (absolute Zobrist, journal-confirmed). Glider is a spaceship of period 4 with displacement (1,1) via the bbox-normalised shape hash. Gosper gun is **windowed** period 30: the core is the live bounding box at `reset`, expanded by `WINDOW_PAD` (8) cells and frozen in world space; after the first outbound glider leaves the pad (~32 gens at c/4) the window is the gun mechanism plus the in-production glider at the same phase. 20 chaotic 64×64 toroidal 5,000-gen runs (Conway / HighLife / Day & Night / Brian's Brain / Star Wars × 4 seeds) produced no unconfirmed claims. `zobrist-update` median ratio **1.007** (320² / 32², same ChangeSet, budget 1.5). `stats-overhead` **3.20%** (budget 5%) with abs-hash in `apply`; shape/window XOR arms only when `observeCycle` is called.
 
 #### - [ ] P2-C-4 · Growth classification
 **Depends on:** P2-C-1 · **Files:** `src/engine/stats/growth.ts`

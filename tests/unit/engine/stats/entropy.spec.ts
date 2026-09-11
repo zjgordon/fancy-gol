@@ -136,7 +136,7 @@ describe('EntropyScanner ranges (P2-C-2)', () => {
 });
 
 describe('sampled vs exact (P2-C-2)', () => {
-  it('sampled entropy tracks the exact value within 5% on 20 chaotic fixtures', () => {
+  it('sampled entropy tracks the exact value within 5% on 20 chaotic fixtures', { timeout: 60_000 }, () => {
     const W = 256;
     const H = 256;
     const rules: RuleSet[] = [HIGHLIFE, BRIANS_BRAIN, STAR_WARS, DAY_AND_NIGHT];

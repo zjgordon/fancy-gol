@@ -1,7 +1,8 @@
 import { CONWAY } from '../../src/engine/rules/builtin/index.ts';
 import { Simulation } from '../../src/engine/simulation.ts';
 import { StatsCollector } from '../../src/engine/stats/collector.ts';
-import type { PaintOp } from '../../src/engine/types.ts';
+import { ZobristHasher } from '../../src/engine/stats/zobrist.ts';
+import type { ChangeSet, PaintOp } from '../../src/engine/types.ts';
 import { gc, soup, toroidalConway } from './helpers.ts';
 import type { BenchCase } from './types.ts';
 
@@ -20,6 +21,11 @@ let memMb = 0;
 let statsBaseline: Simulation | undefined;
 let statsWith: Simulation | undefined;
 let statsCollector: StatsCollector | undefined;
+let zobristSmall: Simulation | undefined;
+let zobristLarge: Simulation | undefined;
+let zobristHasherSmall: ZobristHasher | undefined;
+let zobristHasherLarge: ZobristHasher | undefined;
+let zobristCs: ChangeSet | undefined;
 
 export const cases: BenchCase[] = [
   {
@@ -234,6 +240,73 @@ export const cases: BenchCase[] = [
       statsBaseline = undefined;
       statsWith = undefined;
       statsCollector = undefined;
+    },
+  },
+  {
+    id: 'zobrist-update',
+    name: 'Zobrist apply cost ratio, 320² / 32² (same ChangeSet)',
+    unit: 'ratio',
+    // O(changes): the same glider ChangeSet must not slow down as the
+    // world grows 100× in area. 1.5 leaves room for timer noise; a
+    // mistaken O(cells) scan would land near 100.
+    budget: 1.5,
+    higherIsBetter: false,
+    baselineGate: false,
+    warmup: 3,
+    setup() {
+      zobristSmall = soup(32, 32, 0.02, 7);
+      zobristLarge = soup(320, 320, 0.02, 7);
+      zobristHasherSmall = new ZobristHasher();
+      zobristHasherLarge = new ZobristHasher();
+      const bSmall = zobristSmall.bounds();
+      const bLarge = zobristLarge.bounds();
+      zobristHasherSmall.reset(zobristSmall.view(), {
+        x: bSmall.x,
+        y: bSmall.y,
+        width: bSmall.width,
+        height: bSmall.height,
+      });
+      zobristHasherLarge.reset(zobristLarge.view(), {
+        x: bLarge.x,
+        y: bLarge.y,
+        width: bLarge.width,
+        height: bLarge.height,
+      });
+      const step = soup(32, 32, 0.02, 7).step();
+      zobristCs = {
+        tick: step.tick,
+        coords: step.coords.slice(0, step.count),
+        from: step.from.slice(0, step.count),
+        to: step.to.slice(0, step.count),
+        count: step.count,
+        dirtyChunks: new Int32Array(0),
+      };
+    },
+    run() {
+      const N = 8_000;
+      const cs = zobristCs!;
+      const small = zobristHasherSmall!;
+      const large = zobristHasherLarge!;
+      const viewS = zobristSmall!.view();
+      const viewL = zobristLarge!.view();
+      const bS = zobristSmall!.bounds();
+      const bL = zobristLarge!.bounds();
+      const ctxS = { originX: bS.x, originY: bS.y, newOriginX: bS.x, newOriginY: bS.y };
+      const ctxL = { originX: bL.x, originY: bL.y, newOriginX: bL.x, newOriginY: bL.y };
+      const t0 = performance.now();
+      for (let i = 0; i < N; i++) small.apply(cs, ctxS, viewS);
+      const smallMs = performance.now() - t0;
+      const t1 = performance.now();
+      for (let i = 0; i < N; i++) large.apply(cs, ctxL, viewL);
+      const largeMs = performance.now() - t1;
+      return largeMs / Math.max(smallMs, 1e-9);
+    },
+    teardown() {
+      zobristSmall = undefined;
+      zobristLarge = undefined;
+      zobristHasherSmall = undefined;
+      zobristHasherLarge = undefined;
+      zobristCs = undefined;
     },
   },
 ];

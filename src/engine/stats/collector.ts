@@ -26,15 +26,22 @@
  * refreshes on the scanner's period. `apply` never scans — it only marks
  * the held value stale. Always display {@link StatsCollector.entropyLabel},
  * never the raw number, when `entropyExact` is false.
+ *
+ * Zobrist hashes (P2-C-3) XOR from the same `ChangeSet` — O(changes).
+ * Cycle confirmation is opt-in via {@link observeCycle} (journal
+ * materialize is not O(changes); hash-map lookup is, exact compare is
+ * only on candidates).
  */
 import { CHUNK_AREA, CHUNK_SIZE, unpackCellX, unpackCellY } from '../grid/coords.js';
-import { DEAD, type ChangeSet, type GridView, type StatSample } from '../types.js';
+import { DEAD, type ChangeSet, type GridView, type Snapshot, type StatSample } from '../types.js';
+import { CycleDetector, type CycleReport } from './cycle-detect.js';
 import {
   DEFAULT_PERIOD,
   describeEntropy,
   EntropyScanner,
   type EntropySample,
 } from './entropy.js';
+import { ZobristHasher } from './zobrist.js';
 
 /** A `StateId` is a grid byte; 256 slots always fits the palette. */
 const STATE_SLOTS = 256;
@@ -77,6 +84,8 @@ export interface StatsCollectorOptions {
 
 export class StatsCollector {
   readonly entropyScanner: EntropyScanner;
+  readonly hasher: ZobristHasher;
+  readonly cycleDetector: CycleDetector;
 
   private readonly stats: CollectorStats = {
     tick: 0,
@@ -101,12 +110,17 @@ export class StatsCollector {
   private sumY = 0;
   private hasExtent = false;
   private bboxDirty = false;
+  /** Shape/window XOR only while a caller is observing cycles. */
+  private cycleTracking = false;
+  private lastView: GridView | undefined;
 
   constructor(opts: StatsCollectorOptions = {}) {
     this.entropyScanner = new EntropyScanner({
       period: opts.entropyPeriod ?? DEFAULT_PERIOD,
       blockStride: opts.entropyBlockStride ?? 1,
     });
+    this.hasher = new ZobristHasher();
+    this.cycleDetector = new CycleDetector();
   }
 
   get snapshot(): Readonly<CollectorStats> {
@@ -115,8 +129,9 @@ export class StatsCollector {
 
   /**
    * A `StatSample` for the series / wire shape. Entropy is the last
-   * occupancy-histogram reading; hash stays 0 until P2-C-3. Copies buffers
-   * so a caller can keep the sample past the next `apply`.
+   * occupancy-histogram reading; `hash` is the absolute Zobrist of live
+   * cells (P2-C-3). Copies buffers so a caller can keep the sample past
+   * the next `apply`.
    *
    * `entropy` is an approximation whenever {@link CollectorStats.entropyExact}
    * is false — pair it with {@link entropyLabel}.
@@ -135,8 +150,13 @@ export class StatsCollector {
       bbox: { x: s.bbox.x, y: s.bbox.y, width: s.bbox.width, height: s.bbox.height },
       centroid: { x: s.centroid.x, y: s.centroid.y },
       entropy: s.entropy,
-      hash: 0,
+      hash: this.hasher.absHash,
     };
+  }
+
+  /** Last confirmed cycle, or `null` until {@link observeCycle} proves one. */
+  get cycle(): CycleReport | null {
+    return this.cycleDetector.current;
   }
 
   /**
@@ -159,12 +179,45 @@ export class StatsCollector {
   }
 
   /**
+   * Look for a hash+population repeat and confirm it against the history
+   * journal. Not called from {@link apply} — confirmation materializes
+   * snapshots, and the detector's maps are per-tick bookkeeping the 512²
+   * soup apply path must not grow. Call after each `apply` (or `reset`)
+   * when a journal is recording.
+   */
+  observeCycle(materialize: (t: number) => Snapshot): CycleReport | null {
+    if (!this.cycleTracking) {
+      this.cycleTracking = true;
+      const view = this.lastView;
+      if (view) {
+        this.hasher.recomputeShape(view, this.stats.bbox.x, this.stats.bbox.y);
+        this.hasher.recomputeWindow(view);
+      }
+    }
+    const s = this.stats;
+    return this.cycleDetector.observe({
+      tick: s.tick,
+      population: s.population,
+      absHash: this.hasher.absHash,
+      shapeHash: this.hasher.shapeHash,
+      windowHash: this.hasher.windowHash,
+      windowPop: this.hasher.windowPop,
+      bbox: s.bbox,
+      core: this.hasher.core,
+      shapeValid: this.hasher.shapeValid,
+      materialize,
+    });
+  }
+
+  /**
    * Seed the running counters from a full grid scan via the public
    * `GridView` surface. Call once at construction, and again after anything
    * that isn't itself a `ChangeSet` — `restore`, a fresh `seedRandom`, cells
    * stamped in with raw `set` calls.
    */
   reset(view: GridView, tick = 0): void {
+    this.lastView = view;
+    this.cycleTracking = false;
     this.captureWorld(view);
     const s = this.stats;
     s.perState.fill(0);
@@ -215,6 +268,8 @@ export class StatsCollector {
     this.bboxDirty = false;
     this.writeExtent(any, minX, minY, maxX, maxY);
     this.refreshDerived();
+    this.hasher.reset(view, s.bbox);
+    this.cycleDetector.reset();
     // Reset already walked the grid; take an exact occupancy scan so the
     // baseline entropy matches the cells we just counted.
     this.syncEntropy(
@@ -237,8 +292,14 @@ export class StatsCollector {
    * per-chunk live extents. Without it the box only expands.
    */
   apply(cs: ChangeSet, view?: GridView): void {
-    if (view) this.captureWorld(view);
+    if (view) {
+      this.lastView = view;
+      this.captureWorld(view);
+    }
     const s = this.stats;
+    const prevOx = s.bbox.x;
+    const prevOy = s.bbox.y;
+    this.hasher.beginApply(prevOx, prevOy, this.cycleTracking);
     const { from, to, coords, count } = cs;
     const perState = s.perState;
     const flux = s.flux;
@@ -261,6 +322,7 @@ export class StatsCollector {
       const packed = coords[i]!;
       const x = unpackCellX(packed);
       const y = unpackCellY(packed);
+      this.hasher.note(x, y, f, t);
       if (f === DEAD) {
         population += 1;
         births += 1;
@@ -294,6 +356,7 @@ export class StatsCollector {
       this.tightenBBox(view);
     }
     this.refreshDerived();
+    this.hasher.endApply(s.bbox.x, s.bbox.y, view);
     // The occupancy histogram is O(cells) and is not folded from the
     // ChangeSet. Mark the held value stale until {@link observeEntropy}.
     s.entropyExact = false;

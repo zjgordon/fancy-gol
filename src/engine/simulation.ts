@@ -428,6 +428,18 @@ export class Simulation {
     this.applySnapshot(this.journal.materialize(t));
   }
 
+  /**
+   * Reconstruct the grid at retained tick `t` without seeking the live
+   * simulation. Cycle confirmation (P2-C-3) compares these snapshots so
+   * a hash collision cannot be reported as a period.
+   */
+  materialize(t: number): Snapshot {
+    if (!this.journal) {
+      throw new Error('history is disabled; construct with history: true');
+    }
+    return this.journal.materialize(t);
+  }
+
   /** Phase 4 timeline fork: drop recorded ticks after `t`. */
   truncateAfter(t: number): void {
     if (!this.journal) {
