@@ -1,0 +1,4 @@
+#N Twin bees shuttle
+#O Bill Gosper, 1971
+x = 24, y = 17, rule = B3/S23
+2o20b2o$2o20b2o2$8bo6bo$6bo2bo4bo2bo$4b2o2bo6bo2b2o$4bo2bo8bo2bo$5b2o10b2o7$2o20b2o$2o20b2o!

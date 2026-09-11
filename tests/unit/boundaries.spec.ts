@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   SRC,
+  MATRIX,
+  PURE_LAYERS,
   isImportAllowed,
   resolveSpecifier,
   scanForbiddenGlobals,
@@ -21,8 +24,11 @@ describe('boundary matrix (ADR-009)', () => {
     expect(isImportAllowed('engine', 'shared/types.ts')).toBe(true);
   });
 
-  it('rejects engine/ importing shared/ outside types', () => {
-    expect(isImportAllowed('engine', 'shared/protocol')).toBe(false);
+  it('allows engine/ to import any shared/ module (pure-logic lane, P2-A-1)', () => {
+    expect(MATRIX['engine']).toContain('shared');
+    expect(isImportAllowed('engine', 'shared/rle')).toBe(true);
+    expect(isImportAllowed('engine', 'shared/rng')).toBe(true);
+    expect(isImportAllowed('engine', 'shared/protocol')).toBe(true);
   });
 
   it('allows a layer to import from itself', () => {
@@ -65,7 +71,7 @@ describe('specifier resolution', () => {
   });
 });
 
-describe('forbidden globals in src/engine/**', () => {
+describe('forbidden globals in src/engine/** and src/shared/**', () => {
   it('catches a window reference', () => {
     const hits = scanForbiddenGlobals('export function boot() {\n  window.title = "x";\n}');
     expect(hits).toContainEqual({ global: 'window', line: 2 });
@@ -102,8 +108,30 @@ describe('forbidden globals in src/engine/**', () => {
     expect(hits).toContainEqual({ global: 'window', line: 1 });
   });
 
-  it('is clean for pure engine code', () => {
+  it('is clean for pure engine and shared code', () => {
     const hits = scanForbiddenGlobals('export const add = (a: number, b: number) => a + b;');
     expect(hits).toHaveLength(0);
+  });
+
+  it('treats engine and shared as the same purity scan (ADR-009)', () => {
+    expect(PURE_LAYERS.has('engine')).toBe(true);
+    expect(PURE_LAYERS.has('shared')).toBe(true);
+    expect(PURE_LAYERS.has('ui')).toBe(false);
+  });
+
+  it('finds no forbidden globals in the real shared/ tree', () => {
+    const files: string[] = [];
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir)) {
+        const full = join(dir, entry);
+        if (statSync(full).isDirectory()) walk(full);
+        else if (/\.tsx?$/.test(entry)) files.push(full);
+      }
+    };
+    walk(join(SRC, 'shared'));
+    expect(files.length).toBeGreaterThan(0);
+    for (const file of files) {
+      expect(scanForbiddenGlobals(readFileSync(file, 'utf8')), file).toEqual([]);
+    }
   });
 });

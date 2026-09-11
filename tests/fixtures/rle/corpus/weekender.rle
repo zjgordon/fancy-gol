@@ -1,0 +1,4 @@
+#N Weekender
+#O David Eppstein, 2000
+x = 16, y = 11, rule = B3/S23
+bo12bo$bo12bo$obo10bobo$bo12bo$bo12bo$2bo10bo$o2bo8bo2bo$4bo6bo$2o2b2o4b2o2b2o$2b2o8b2o$2b2o8b2o!

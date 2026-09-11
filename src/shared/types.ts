@@ -3,7 +3,8 @@
  * or network boundary (ADR-006, ADR-009: the `shared` layer may only import from itself,
  * so anything `src/shared/protocol.ts` needs — `RuleSet`, `PaintOp`, `ChangeSet`, … — has
  * to live here rather than in `src/engine/`). `src/engine/types.ts` re-exports this module
- * in full, so every existing `@engine/types` import keeps working unchanged.
+ * in full, so every existing `@engine/types` import keeps working unchanged. `engine/` may
+ * import all of `shared/` (ADR-009 amendment 2026-09-11).
  *
  * Mostly pure data shapes, no imports beyond itself — plus the small amount of chunk-coordinate
  * maths (`CHUNK_SIZE`, `chunkToWorld`, `localIndex`) that any layer walking a `ChunkView` needs

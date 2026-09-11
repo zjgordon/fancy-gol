@@ -14,11 +14,10 @@
  * move this tool does receive and always locks to the exact click position on placement; smooth
  * hover tracking is a follow-up once the router (or a sibling hover-only listener) supports it.
  *
- * Ships a minimal, hand-written RLE codec (states 0–24: `b`, `o`, `A`–`X`) sufficient to
- * round-trip a selection through the system clipboard. Phase 2's P2-A-1/P2-A-2 are the real,
- * full-spec codec (the complete multi-state extension, `#C`/`#N`/`#O`/`#r` headers, a 40-file
- * corpus) — this one is superseded then, not extended.
+ * Ships no local RLE codec: encode/decode live in `@shared/rle` (P2-A-1, syntactic, Golly
+ * multi-state). Clipboard round-trips go through that module.
  */
+import { decode as decodeRLE, encode as encodeRLE } from '@shared/rle';
 import { DEAD, type GridView, type PaintOp, type Rect, type StateId } from '@shared/types';
 import type { Tool, ToolContext } from './tool';
 
@@ -118,91 +117,7 @@ function normalizeRect(anchor: { x: number; y: number }, point: { x: number; y: 
   return { x: x0, y: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 };
 }
 
-// --- the minimal RLE codec (see the module doc) ----------------------------------------------
-
-function tagForState(state: StateId): string {
-  if (state === 0) return 'b';
-  if (state === 1) return 'o';
-  if (state >= 2 && state <= 24) return String.fromCharCode('A'.charCodeAt(0) + (state - 2));
-  throw new RangeError(
-    `state ${state} is outside this minimal RLE codec's supported range (0-24); Phase 2's ` +
-      'full codec (P2-A-1/P2-A-2) lifts this limit',
-  );
-}
-
-function stateForTag(tag: string): StateId {
-  if (tag === 'b') return 0;
-  if (tag === 'o') return 1;
-  return tag.charCodeAt(0) - 'A'.charCodeAt(0) + 2;
-}
-
-/** Encodes a pattern as RLE text (`x = W, y = H` header, run-length body, `!` terminator). */
-export function encodeRLE(pattern: ClipboardPattern): string {
-  const { width, height } = pattern;
-  const dense = denseGrid(pattern);
-  const rows: string[] = [];
-  for (let y = 0; y < height; y++) {
-    let lastLive = -1;
-    for (let x = width - 1; x >= 0; x--) {
-      if (dense[y * width + x] !== DEAD) {
-        lastLive = x;
-        break;
-      }
-    }
-    let row = '';
-    let x = 0;
-    while (x <= lastLive) {
-      const state = dense[y * width + x]!;
-      let j = x;
-      while (j <= lastLive && dense[y * width + j] === state) j++;
-      const count = j - x;
-      row += (count > 1 ? String(count) : '') + tagForState(state);
-      x = j;
-    }
-    rows.push(row);
-  }
-  return `x = ${width}, y = ${height}\n${rows.join('$\n')}!`;
-}
-
-/** Decodes RLE text (as produced by {@link encodeRLE}, or any similarly plain single/two-char-tag RLE) back into a pattern. */
-export function decodeRLE(text: string): ClipboardPattern {
-  const lines = text
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0 && !l.startsWith('#'));
-  const header = lines.shift();
-  if (!header) throw new RangeError('empty RLE input');
-  const m = /^x\s*=\s*(\d+)\s*,\s*y\s*=\s*(\d+)/.exec(header);
-  if (!m) throw new RangeError(`invalid RLE header: "${header}"`);
-  const width = Number(m[1]);
-  const height = Number(m[2]);
-
-  const body = lines.join('');
-  const cells: ClipboardCell[] = [];
-  let x = 0;
-  let y = 0;
-  let count = '';
-  for (const ch of body) {
-    if (ch >= '0' && ch <= '9') {
-      count += ch;
-      continue;
-    }
-    const n = count === '' ? 1 : Number(count);
-    count = '';
-    if (ch === '$') {
-      y += n;
-      x = 0;
-      continue;
-    }
-    if (ch === '!') break;
-    const state = stateForTag(ch);
-    if (state !== DEAD) {
-      for (let k = 0; k < n; k++) cells.push({ x: x + k, y, state });
-    }
-    x += n;
-  }
-  return { width, height, cells };
-}
+export { decodeRLE, encodeRLE };
 
 // --- the tool ----------------------------------------------------------------------------------
 

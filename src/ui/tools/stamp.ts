@@ -5,29 +5,29 @@
  * Shift while clicking keeps the same stamp selected for another placement instead of
  * deselecting; a plain click places once and returns to idle.
  *
- * The library is data (`StampDefinition.rle`, plain RLE text — reusing P1-B-5's minimal codec,
- * same layer, an ordinary import) — not code building `PaintOp[]` by hand. `StampTool`'s
- * `library` constructor option is what actually makes this the acceptance criterion's "no tool
- * changes" claim true: Phase 2 substitutes `BUILTIN_STAMPS` for its full catalogue by passing a
- * different array of the same shape, never touching this file.
+ * The library is data (`StampDefinition.rle`, plain RLE text — decoded by `@shared/rle`) — not
+ * code building `PaintOp[]` by hand. `StampTool`'s `library` constructor option is what actually
+ * makes this the acceptance criterion's "no tool changes" claim true: Phase 2 substitutes
+ * `BUILTIN_STAMPS` for its full catalogue by passing a different array of the same shape, never
+ * touching this file.
  *
  * Unlike P1-B-5's paste (which overwrites a selection's full bounding box, dead gaps included,
  * to replace whatever was there), a stamp only ever paints its own live cells — you stamp a
  * glider onto a mostly-empty area, not into a rectangular clearing cut out of existing content.
  *
  * `BUILTIN_STAMPS`' RLE text was generated from hand-verified cell coordinates for each pattern
- * (period/translation behaviour checked against a real `Simulation`, not merely transcribed from
- * memory) and round-tripped through `encodeRLE`/`decodeRLE` to confirm self-consistency — see
- * this task's closing note in the phase doc for exactly what was checked.
+ * (period/translation behaviour checked against a real `Simulation`) and round-tripped through
+ * the shared RLE codec.
  */
+import { decode as decodeRLE } from '@shared/rle';
 import type { PaintOp, StateId } from '@shared/types';
-import { decodeRLE, flipHorizontal, flipVertical, rotate90, type ClipboardPattern } from './select';
+import { flipHorizontal, flipVertical, rotate90, type ClipboardPattern } from './select';
 import type { Tool, ToolContext } from './tool';
 
 export interface StampDefinition {
   readonly id: string;
   readonly name: string;
-  /** Plain RLE text (P1-B-5's minimal codec) — data, not code. */
+  /** Plain RLE text (`@shared/rle`) — data, not code. */
   readonly rle: string;
 }
 

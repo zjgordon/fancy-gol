@@ -5,11 +5,10 @@
  * the colour-swatch row that lets a person pick one from the ruleset's palette is a DOM
  * component, out of this task's file scope; this class only ever needs the chosen id.
  *
- * The seeded PRNG below is a small hand-written *duplicate* of `engine/rng.ts`'s Mulberry32,
- * not a re-export or import: ADR-009's layering forbids `ui/` from reaching into `engine/` at
- * all. `shared/types.ts` documents the same treatment for its own independently-defined
- * chunk-coordinate maths — this is that same deliberate exception, not an oversight.
+ * Spray density uses the shared Mulberry32 (`@shared/rng`) so a given seed reproduces the
+ * same speckle pattern as the engine's soup generator. No local PRNG duplicate.
  */
+import { Mulberry32 } from '@shared/rng';
 import { type PaintOp, type StateId } from '@shared/types';
 import type { Tool, ToolContext } from './tool';
 
@@ -29,21 +28,6 @@ export interface BrushOptions {
   /** World-coordinate centre symmetry mirrors/rotates around. Defaults to the origin. */
   readonly center?: { readonly x: number; readonly y: number };
   readonly seed?: number;
-}
-
-/** Hand-written Mulberry32 duplicate — see the module doc for why this isn't an import. */
-class Rng {
-  private a: number;
-  constructor(seed: number) {
-    this.a = seed >>> 0;
-  }
-  next(): number {
-    this.a = (this.a + 0x6d2b79f5) | 0;
-    let t = this.a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  }
 }
 
 function clampSize(size: number): number {
@@ -112,8 +96,7 @@ function symmetryOffsets(mode: SymmetryMode, dx: number, dy: number): ReadonlyAr
 /**
  * Classic integer Bresenham — every cell from `(x0,y0)` to `(x1,y1)`, inclusive, none skipped.
  * Exported for reuse by `line.ts` (P1-B-4) rather than a second hand-written copy — both live in
- * the same `ui/` layer, so this is an ordinary import, not the ADR-009 boundary duplication the
- * PRNG above needed.
+ * the same `ui/` layer, so this is an ordinary import.
  */
 export function bresenham(x0: number, y0: number, x1: number, y1: number): Array<readonly [number, number]> {
   const points: Array<readonly [number, number]> = [];
@@ -159,7 +142,7 @@ export class Brush implements Tool {
   symmetry: SymmetryMode;
   center: { x: number; y: number };
 
-  private readonly rng: Rng;
+  private readonly rng: Mulberry32;
   private painted = new Map<number, PaintOp>();
   private lastCell: { x: number; y: number } | null = null;
 
@@ -170,7 +153,7 @@ export class Brush implements Tool {
     this.density = options.density ?? 1;
     this.symmetry = options.symmetry ?? 'none';
     this.center = { x: options.center?.x ?? 0, y: options.center?.y ?? 0 };
-    this.rng = new Rng(options.seed ?? 0x9e3779b9);
+    this.rng = new Mulberry32(options.seed ?? 0x9e3779b9);
   }
 
   onDown(ctx: ToolContext): void {

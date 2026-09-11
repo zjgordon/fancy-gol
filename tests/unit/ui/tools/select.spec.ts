@@ -270,17 +270,23 @@ describe('SelectTool', () => {
         ],
       };
       const rle = encodeRLE(pattern);
-      expect(decodeRLE(rle)).toEqual(pattern);
+      const got = decodeRLE(rle);
+      expect(got.width).toBe(pattern.width);
+      expect(got.height).toBe(pattern.height);
+      expect(got.cells).toEqual(pattern.cells);
     });
 
     it('round-trips an empty (all-dead) pattern', () => {
       const pattern: ClipboardPattern = { width: 3, height: 2, cells: [] };
-      expect(decodeRLE(encodeRLE(pattern))).toEqual(pattern);
+      const got = decodeRLE(encodeRLE(pattern));
+      expect(got.width).toBe(pattern.width);
+      expect(got.height).toBe(pattern.height);
+      expect(got.cells).toEqual(pattern.cells);
     });
 
-    it('rejects a state outside the 0-24 range with a clear error, not silent corruption', () => {
-      const pattern: ClipboardPattern = { width: 1, height: 1, cells: [{ x: 0, y: 0, state: 99 }] };
-      expect(() => encodeRLE(pattern)).toThrow(/0-24/);
+    it('rejects a state outside the 0-255 range with a clear error, not silent corruption', () => {
+      const pattern: ClipboardPattern = { width: 1, height: 1, cells: [{ x: 0, y: 0, state: 256 }] };
+      expect(() => encodeRLE(pattern)).toThrow(/0-255/);
     });
   });
 

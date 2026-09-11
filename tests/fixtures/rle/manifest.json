@@ -1,0 +1,202 @@
+{
+  "acorn.rle": {
+    "width": 7,
+    "height": 3,
+    "population": 7
+  },
+  "b-heptomino.rle": {
+    "width": 4,
+    "height": 3,
+    "population": 7
+  },
+  "barge.rle": {
+    "width": 4,
+    "height": 4,
+    "population": 6
+  },
+  "beacon.rle": {
+    "width": 4,
+    "height": 4,
+    "population": 8
+  },
+  "beehive.rle": {
+    "width": 4,
+    "height": 3,
+    "population": 6
+  },
+  "bipole.rle": {
+    "width": 5,
+    "height": 5,
+    "population": 9
+  },
+  "blinker.rle": {
+    "width": 3,
+    "height": 1,
+    "population": 3
+  },
+  "block.rle": {
+    "width": 2,
+    "height": 2,
+    "population": 4
+  },
+  "boat.rle": {
+    "width": 3,
+    "height": 3,
+    "population": 5
+  },
+  "brians-brain-cell.rle": {
+    "width": 3,
+    "height": 3,
+    "population": 4
+  },
+  "clock.rle": {
+    "width": 4,
+    "height": 4,
+    "population": 6
+  },
+  "copperhead.rle": {
+    "width": 10,
+    "height": 12,
+    "population": 34
+  },
+  "day-night-rocket.rle": {
+    "width": 9,
+    "height": 5,
+    "population": 14
+  },
+  "diehard.rle": {
+    "width": 8,
+    "height": 3,
+    "population": 7
+  },
+  "eater1.rle": {
+    "width": 4,
+    "height": 4,
+    "population": 7
+  },
+  "figure-eight.rle": {
+    "width": 6,
+    "height": 6,
+    "population": 20
+  },
+  "glider.rle": {
+    "width": 3,
+    "height": 3,
+    "population": 5
+  },
+  "gosper-gun.rle": {
+    "width": 36,
+    "height": 9,
+    "population": 36
+  },
+  "highlife-replicator.rle": {
+    "width": 4,
+    "height": 4,
+    "population": 8
+  },
+  "hwss.rle": {
+    "width": 7,
+    "height": 5,
+    "population": 13
+  },
+  "loaf.rle": {
+    "width": 4,
+    "height": 4,
+    "population": 7
+  },
+  "lwss.rle": {
+    "width": 5,
+    "height": 4,
+    "population": 9
+  },
+  "mwss.rle": {
+    "width": 6,
+    "height": 5,
+    "population": 11
+  },
+  "pentadecathlon.rle": {
+    "width": 10,
+    "height": 3,
+    "population": 12
+  },
+  "pi-heptomino.rle": {
+    "width": 3,
+    "height": 3,
+    "population": 7
+  },
+  "pond.rle": {
+    "width": 4,
+    "height": 4,
+    "population": 8
+  },
+  "pulsar.rle": {
+    "width": 13,
+    "height": 13,
+    "population": 48
+  },
+  "queen-bee-shuttle.rle": {
+    "width": 22,
+    "height": 7,
+    "population": 20
+  },
+  "r-pentomino.rle": {
+    "width": 3,
+    "height": 3,
+    "population": 5
+  },
+  "seeds-phoenix.rle": {
+    "width": 4,
+    "height": 4,
+    "population": 12
+  },
+  "ship.rle": {
+    "width": 3,
+    "height": 3,
+    "population": 6
+  },
+  "simkin-gun.rle": {
+    "width": 33,
+    "height": 21,
+    "population": 33
+  },
+  "snake.rle": {
+    "width": 4,
+    "height": 2,
+    "population": 6
+  },
+  "thunderbird.rle": {
+    "width": 3,
+    "height": 5,
+    "population": 6
+  },
+  "toad.rle": {
+    "width": 4,
+    "height": 2,
+    "population": 6
+  },
+  "tub.rle": {
+    "width": 3,
+    "height": 3,
+    "population": 4
+  },
+  "tumbler.rle": {
+    "width": 7,
+    "height": 6,
+    "population": 16
+  },
+  "twin-bees-shuttle.rle": {
+    "width": 24,
+    "height": 17,
+    "population": 36
+  },
+  "weekender.rle": {
+    "width": 16,
+    "height": 11,
+    "population": 36
+  },
+  "wireworld-diode.rle": {
+    "width": 8,
+    "height": 3,
+    "population": 17
+  }
+}

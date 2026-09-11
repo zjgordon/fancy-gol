@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * check-boundaries.mjs — machine-enforce ADR-009's layering matrix and the
- * "Pure Logic" rule (src/engine/** touches no DOM/Node/I-O global).
+ * "Pure Logic" rule (src/engine/** and src/shared/** touch no DOM/Node/I-O global).
  *
  * Hand-written per the no-bloat rule: a regex import scan, no TypeScript API.
  * Usage: node scripts/check-boundaries.mjs
@@ -15,7 +15,7 @@ export const SRC = join(ROOT, 'src');
 
 /** ADR-009 dependency matrix. Each layer may always import from itself. */
 export const MATRIX = {
-  engine: ['engine', 'shared/types'],
+  engine: ['engine', 'shared'],
   shared: ['shared'],
   worker: ['worker', 'engine', 'shared'],
   render: ['render', 'shared', 'themes/types'],
@@ -28,7 +28,10 @@ export const MATRIX = {
 
 const ALIASES = ['engine', 'shared', 'render', 'ui', 'themes', 'worker', 'server'];
 
-/** Global identifiers forbidden anywhere under src/engine/**. */
+/** Layers that must stay free of DOM / Node / I/O globals (ADR-009). */
+export const PURE_LAYERS = new Set(['engine', 'shared']);
+
+/** Global identifiers forbidden anywhere under src/engine/** and src/shared/**. */
 export const FORBIDDEN_ENGINE_GLOBALS = [
   'window',
   'document',
@@ -195,10 +198,12 @@ function main() {
       }
     }
 
-    if (layer === 'engine') {
+    if (PURE_LAYERS.has(layer)) {
       for (const hit of scanForbiddenGlobals(source)) {
         ok = false;
-        console.error(`✗ ${relative(ROOT, file)}:${hit.line}: forbidden global "${hit.global}" in src/engine/**`);
+        console.error(
+          `✗ ${relative(ROOT, file)}:${hit.line}: forbidden global "${hit.global}" in src/${layer}/**`,
+        );
       }
     }
   }

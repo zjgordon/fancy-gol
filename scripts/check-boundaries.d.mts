@@ -3,6 +3,7 @@
 // build step (P0-A-5).
 export declare const SRC: string;
 export declare const MATRIX: Record<string, string[]>;
+export declare const PURE_LAYERS: Set<string>;
 export declare const FORBIDDEN_ENGINE_GLOBALS: string[];
 
 export declare function extractImports(source: string): string[];

@@ -130,7 +130,7 @@ patterns/<ruleset>/*.rle  +  patterns/index.json
 
 ### Workstream A — Pattern codecs
 
-#### - [ ] P2-A-1 · RLE decoder (full spec, multi-state)
+#### - [x] P2-A-1 · RLE decoder (full spec, multi-state) — @cursor, started 2026-09-11
 **Depends on:** Phase 1 · **Files:** `src/shared/rle.ts` (syntactic codec), `scripts/check-boundaries.mjs`, `src/engine/rng.ts` → `src/shared/rng.ts` (or re-export), `src/ui/tools/select.ts`, `src/ui/tools/brush.ts`; optional thin `src/engine/patterns/*` wrappers for ruleset-aware helpers only
 **Boundary decision (ADR-009 amendment 2026-09-11, retro §3.4):** pure-logic lane is **all of
 `shared/`** — empirically clean under the forbidden-globals scan on 2026-09-11, so no
@@ -158,12 +158,12 @@ checker change (`engine → shared/`, scan `shared/**`), the canonical syntactic
 - Delete `select.ts`'s local RLE helpers; import `@shared/rle`. Delete `brush.ts`'s local
   Mulberry32; import `@shared/rng` (move the engine module or leave a one-line re-export).
 **Acceptance criteria**
-- [ ] `check-boundaries.mjs`: `engine` may import `shared/`; forbidden-globals scan covers `shared/**`; a fixture proves both.
-- [ ] `src/shared/rle.ts` is purely syntactic (no ruleset/state-alphabet imports); round-trip `decode(encode(p)) === p` for 500 random multi-state patterns (property test).
-- [ ] A corpus of ≥ 40 real-world `.rle` files from the wild (committed as fixtures, with provenance noted) all decode to expected dimensions and populations.
-- [ ] Decoding a 100k-cell RLE takes < 30 ms.
-- [ ] Every malformed fixture produces a line/column and a hint.
-- [ ] `ui/tools/select.ts` and `ui/tools/brush.ts` contain no duplicated RLE codec / Mulberry32 — both import `shared/`.
+- [x] `check-boundaries.mjs`: `engine` may import `shared/`; forbidden-globals scan covers `shared/**`; a fixture proves both.
+- [x] `src/shared/rle.ts` is purely syntactic (no ruleset/state-alphabet imports); round-trip `decode(encode(p)) === p` for 500 random multi-state patterns (property test).
+- [x] A corpus of ≥ 40 real-world `.rle` files from the wild (committed as fixtures, with provenance noted) all decode to expected dimensions and populations.
+- [x] Decoding a 100k-cell RLE takes < 30 ms.
+- [x] Every malformed fixture produces a line/column and a hint.
+- [x] `ui/tools/select.ts` and `ui/tools/brush.ts` contain no duplicated RLE codec / Mulberry32 — both import `shared/`.
 
 #### - [ ] P2-A-2 · RLE encoder
 **Depends on:** P2-A-1

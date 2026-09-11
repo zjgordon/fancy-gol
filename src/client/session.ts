@@ -34,7 +34,7 @@ import {
   type SessionDoc,
   type SessionRuleset,
 } from '@shared/session';
-import { decodeRLE, encodeRLE, type ClipboardCell, type ClipboardPattern } from '@ui/tools/select';
+import { decode as decodeRLE, encode as encodeRLE, type RleCell, type RlePattern } from '@shared/rle';
 
 const SESSION_STORAGE_KEY = 'gol.session';
 const DEFAULT_DEBOUNCE_MS = 2000;
@@ -50,20 +50,17 @@ export interface GridCapture {
 }
 
 /** Captures every live cell within `grid.bounds()` as RLE text plus that bounding box's
- * world-space origin. A fresh double loop, not `ui/tools/select.ts`'s own module-private
- * `captureCells` — the same deliberate per-module duplication this codebase already applies to
- * `Clock`/`Timers`/etc. (see e.g. `ui/components/shell.ts`'s own note), reusing only that
- * module's *exported* codec (`encodeRLE`/`decodeRLE`), not its internals. */
+ * world-space origin. */
 export function captureGridRLE(grid: GridView): GridCapture {
   const bounds = grid.bounds();
-  const cells: ClipboardCell[] = [];
+  const cells: RleCell[] = [];
   for (let dy = 0; dy < bounds.height; dy++) {
     for (let dx = 0; dx < bounds.width; dx++) {
       const state = grid.get(bounds.x + dx, bounds.y + dy);
       if (state !== DEAD) cells.push({ x: dx, y: dy, state });
     }
   }
-  const pattern: ClipboardPattern = { width: bounds.width, height: bounds.height, cells };
+  const pattern: RlePattern = { width: bounds.width, height: bounds.height, cells, comments: [] };
   return { rle: encodeRLE(pattern), origin: { x: bounds.x, y: bounds.y } };
 }
 
