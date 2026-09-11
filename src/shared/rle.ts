@@ -1,10 +1,15 @@
 /**
- * Syntactic RLE codec (P2-A-1). Parse and emit Life/Golly run-length encoding as coordinates
- * and raw state numbers — no ruleset objects, no state alphabets, no engine types.
+ * Syntactic RLE codec (P2-A-1 decoder, P2-A-2 canonical encoder). Parse and emit Life/Golly
+ * run-length encoding as coordinates and raw state numbers — no ruleset objects, no state
+ * alphabets, no engine types.
  *
  * Golly's multi-state tags (Help → RLE):
  *   0: `.` or `b`     1: `A` or `o`     2–24: `B`–`X`
  *   25+: `pA`…`pX`, `qA`…, up through `yO` (state 255).
+ *
+ * Two-state output uses `b`/`o`; multi-state (any live cell ≥ 2) uses `.`/`A`–`X`/`pA`… so a
+ * Golly paste reads the same grid. Encoder output is canonical: live bbox, counted `$` skips,
+ * `#N`/`#O`/`#C` when metadata is present, `rule =` when known, body wrapped at {@link RLE_WRAP}.
  *
  * `#C` / `#c` lines (including SPDX provenance) are opaque comments. An unknown `rule =`
  * string is returned as text for the caller to resolve — never rejected here.
@@ -45,18 +50,27 @@ export class PatternParseError extends Error {
 
 const MAX_STATE = 255;
 
-export function encode(pattern: Omit<RlePattern, 'comments'> & { readonly comments?: readonly string[] }): string {
-  const lines: string[] = [];
-  if (pattern.name !== undefined) lines.push(`#N ${pattern.name}`);
-  if (pattern.author !== undefined) lines.push(`#O ${pattern.author}`);
-  for (const c of pattern.comments ?? []) lines.push(`#C ${c}`);
-  if (pattern.offsetX !== undefined || pattern.offsetY !== undefined) {
-    lines.push(`#P ${pattern.offsetX ?? 0} ${pattern.offsetY ?? 0}`);
-  }
-  const rulePart = pattern.rule !== undefined ? `, rule = ${pattern.rule}` : '';
-  lines.push(`x = ${pattern.width}, y = ${pattern.height}${rulePart}`);
+/** Golly wraps RLE data at ~70 columns so patterns stay pasteable in mail and text files. */
+export const RLE_WRAP = 70;
 
-  const dense = new Uint8Array(pattern.width * pattern.height);
+export interface EncodeOptions {
+  /**
+   * Trim to the live-cell bounding box (P2-A-2 canonical). Default `true`.
+   * Clipboard paste passes `false` so a marquee's dead padding survives the round-trip.
+   */
+  readonly trim?: boolean;
+  /** Column budget for body and `#C` lines. Default {@link RLE_WRAP}. `0` disables wrapping. */
+  readonly wrap?: number;
+}
+
+export function encode(
+  pattern: Omit<RlePattern, 'comments'> & { readonly comments?: readonly string[] },
+  options?: EncodeOptions,
+): string {
+  const trim = options?.trim ?? true;
+  const wrap = options?.wrap ?? RLE_WRAP;
+
+  let multi = false;
   for (const cell of pattern.cells) {
     if (cell.state === 0) continue;
     if (cell.state < 0 || cell.state > MAX_STATE) {
@@ -65,33 +79,64 @@ export function encode(pattern: Omit<RlePattern, 'comments'> & { readonly commen
     if (cell.x < 0 || cell.y < 0 || cell.x >= pattern.width || cell.y >= pattern.height) {
       throw new RangeError(`cell (${cell.x},${cell.y}) is outside ${pattern.width}×${pattern.height}`);
     }
-    dense[cell.y * pattern.width + cell.x] = cell.state;
+    if (cell.state >= 2) multi = true;
   }
 
-  const body: string[] = [];
-  for (let y = 0; y < pattern.height; y++) {
-    let lastLive = -1;
-    const rowOff = y * pattern.width;
-    for (let x = pattern.width - 1; x >= 0; x--) {
-      if (dense[rowOff + x] !== 0) {
-        lastLive = x;
-        break;
-      }
+  let x0 = 0;
+  let y0 = 0;
+  let width = pattern.width;
+  let height = pattern.height;
+  if (trim) {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const cell of pattern.cells) {
+      if (cell.state === 0) continue;
+      if (cell.x < minX) minX = cell.x;
+      if (cell.y < minY) minY = cell.y;
+      if (cell.x > maxX) maxX = cell.x;
+      if (cell.y > maxY) maxY = cell.y;
     }
-    let row = '';
-    let x = 0;
-    while (x <= lastLive) {
-      const state = dense[rowOff + x]!;
-      let j = x + 1;
-      while (j <= lastLive && dense[rowOff + j] === state) j++;
-      const count = j - x;
-      row += (count > 1 ? String(count) : '') + tagForState(state);
-      x = j;
+    if (Number.isFinite(minX)) {
+      x0 = minX;
+      y0 = minY;
+      width = maxX - minX + 1;
+      height = maxY - minY + 1;
     }
-    body.push(row);
-    if (y < pattern.height - 1) body.push('$');
   }
-  lines.push(`${body.join('')}!`);
+
+  const dense = new Uint8Array(Math.max(0, width * height));
+  for (const cell of pattern.cells) {
+    if (cell.state === 0) continue;
+    dense[(cell.y - y0) * width + (cell.x - x0)] = cell.state;
+  }
+
+  const lines: string[] = [];
+  if (pattern.name !== undefined) lines.push(`#N ${pattern.name}`);
+  if (pattern.author !== undefined) lines.push(`#O ${pattern.author}`);
+  for (const c of pattern.comments ?? []) {
+    lines.push(...wrapPrefixed('#C ', c, wrap));
+  }
+  if (pattern.offsetX !== undefined || pattern.offsetY !== undefined) {
+    lines.push(`#P ${(pattern.offsetX ?? 0) + x0} ${(pattern.offsetY ?? 0) + y0}`);
+  }
+
+  const header = `x = ${width}, y = ${height}`;
+  if (pattern.rule !== undefined) {
+    const withRule = `${header}, rule = ${pattern.rule}`;
+    if (wrap > 0 && withRule.length > wrap) {
+      lines.push(`#r ${pattern.rule}`);
+      lines.push(header);
+    } else {
+      lines.push(withRule);
+    }
+  } else {
+    lines.push(header);
+  }
+
+  const tokens = encodeBodyTokens(dense, width, height, multi);
+  lines.push(...wrapTokens(tokens, wrap));
   return lines.join('\n');
 }
 
@@ -105,9 +150,9 @@ export const encodeRLE = encode;
 /** @deprecated Prefer {@link decode}. */
 export const decodeRLE = decode;
 
-function tagForState(state: number): string {
-  if (state === 0) return 'b';
-  if (state === 1) return 'o';
+function tagForState(state: number, multi: boolean): string {
+  if (state === 0) return multi ? '.' : 'b';
+  if (state === 1) return multi ? 'A' : 'o';
   if (state >= 2 && state <= 24) return String.fromCharCode(64 + state); // B=2 … X=24
   if (state >= 25 && state <= MAX_STATE) {
     const idx = state - 1;
@@ -116,6 +161,92 @@ function tagForState(state: number): string {
     return String.fromCharCode('p'.charCodeAt(0) + prefix - 1) + String.fromCharCode(65 + letter);
   }
   throw new RangeError(`state ${state} is outside RLE's supported range (0-${MAX_STATE})`);
+}
+
+function rowIsEmpty(dense: Uint8Array, width: number, y: number): boolean {
+  const off = y * width;
+  for (let x = 0; x < width; x++) if (dense[off + x] !== 0) return false;
+  return true;
+}
+
+function emitRow(dense: Uint8Array, width: number, y: number, multi: boolean, tokens: string[]): void {
+  const rowOff = y * width;
+  let lastLive = -1;
+  for (let x = width - 1; x >= 0; x--) {
+    if (dense[rowOff + x] !== 0) {
+      lastLive = x;
+      break;
+    }
+  }
+  let x = 0;
+  while (x <= lastLive) {
+    const state = dense[rowOff + x]!;
+    let j = x + 1;
+    while (j <= lastLive && dense[rowOff + j] === state) j++;
+    const count = j - x;
+    tokens.push((count > 1 ? String(count) : '') + tagForState(state, multi));
+    x = j;
+  }
+}
+
+function dollarToken(n: number): string {
+  return n === 1 ? '$' : `${n}$`;
+}
+
+function encodeBodyTokens(dense: Uint8Array, width: number, height: number, multi: boolean): string[] {
+  const tokens: string[] = [];
+  if (height <= 0 || width <= 0) {
+    tokens.push('!');
+    return tokens;
+  }
+  let y = 0;
+  while (y < height && rowIsEmpty(dense, width, y)) y++;
+  if (y === height) {
+    tokens.push('!');
+    return tokens;
+  }
+  if (y > 0) tokens.push(dollarToken(y));
+  while (y < height) {
+    emitRow(dense, width, y, multi, tokens);
+    let next = y + 1;
+    while (next < height && rowIsEmpty(dense, width, next)) next++;
+    if (next >= height) break;
+    tokens.push(dollarToken(next - y));
+    y = next;
+  }
+  tokens.push('!');
+  return tokens;
+}
+
+function wrapTokens(tokens: readonly string[], limit: number): string[] {
+  if (limit <= 0) return [tokens.join('')];
+  const lines: string[] = [];
+  let line = '';
+  for (const token of tokens) {
+    if (line.length > 0 && line.length + token.length > limit) {
+      lines.push(line);
+      line = token;
+    } else {
+      line += token;
+    }
+  }
+  if (line.length > 0) lines.push(line);
+  return lines;
+}
+
+function wrapPrefixed(prefix: string, text: string, limit: number): string[] {
+  if (limit <= 0 || prefix.length + text.length <= limit) return [prefix + text];
+  const budget = Math.max(1, limit - prefix.length);
+  const lines: string[] = [];
+  let rest = text;
+  while (rest.length > budget) {
+    let cut = rest.lastIndexOf(' ', budget);
+    if (cut <= 0) cut = budget;
+    lines.push(prefix + rest.slice(0, cut).trimEnd());
+    rest = rest.slice(cut).trimStart();
+  }
+  if (rest.length > 0) lines.push(prefix + rest);
+  return lines;
 }
 
 function stateForLetter(ch: string): number {

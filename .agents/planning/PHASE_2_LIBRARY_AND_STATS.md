@@ -165,13 +165,13 @@ checker change (`engine → shared/`, scan `shared/**`), the canonical syntactic
 - [x] Every malformed fixture produces a line/column and a hint.
 - [x] `ui/tools/select.ts` and `ui/tools/brush.ts` contain no duplicated RLE codec / Mulberry32 — both import `shared/`.
 
-#### - [ ] P2-A-2 · RLE encoder
+#### - [x] P2-A-2 · RLE encoder — @cursor, started 2026-09-11
 **Depends on:** P2-A-1
 **Implementation notes** Emit canonical, minimal output: trim to bounding box, wrap at 70 columns, emit the rule string, and include `#N`/`#O`/`#C` when metadata is present. Multi-state encoding must match what Golly reads.
 **Acceptance criteria**
-- [ ] Output for the standard glider is byte-identical to the canonical published RLE.
-- [ ] Encoded multi-state patterns re-import correctly into the decoder and produce identical grids.
-- [ ] Output line length never exceeds 70 characters.
+- [x] Output for the standard glider is byte-identical to the canonical published RLE.
+- [x] Encoded multi-state patterns re-import correctly into the decoder and produce identical grids.
+- [x] Output line length never exceeds 70 characters.
 
 #### - [ ] P2-A-3 · Plaintext & Life 1.06 codecs
 **Depends on:** P2-A-1 · **Files:** `src/engine/patterns/{plaintext,life106}.ts`

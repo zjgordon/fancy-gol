@@ -10,6 +10,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Full Golly-compatible RLE round-trip (headers, multi-state tags, `#C` provenance comments) shared by the clipboard, stamps, and session save. (P2-A-1)
+- Canonical RLE export: live bounding-box, Golly two-state/`A`–`X` tags, and 70-column wrap. (P2-A-2)
 
 ## [0.2.0] — 2026-09-08
 

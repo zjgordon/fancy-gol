@@ -50,7 +50,9 @@ export interface GridCapture {
 }
 
 /** Captures every live cell within `grid.bounds()` as RLE text plus that bounding box's
- * world-space origin. */
+ * world-space origin. `bounds()` is chunk-granular, so the encoder trims to the live cells
+ * and this origin is shifted to the trimmed top-left — restore then paints at the right world
+ * coordinates. */
 export function captureGridRLE(grid: GridView): GridCapture {
   const bounds = grid.bounds();
   const cells: RleCell[] = [];
@@ -60,8 +62,20 @@ export function captureGridRLE(grid: GridView): GridCapture {
       if (state !== DEAD) cells.push({ x: dx, y: dy, state });
     }
   }
+  let originX = bounds.x;
+  let originY = bounds.y;
+  if (cells.length > 0) {
+    let minX = cells[0]!.x;
+    let minY = cells[0]!.y;
+    for (const c of cells) {
+      if (c.x < minX) minX = c.x;
+      if (c.y < minY) minY = c.y;
+    }
+    originX += minX;
+    originY += minY;
+  }
   const pattern: RlePattern = { width: bounds.width, height: bounds.height, cells, comments: [] };
-  return { rle: encodeRLE(pattern), origin: { x: bounds.x, y: bounds.y } };
+  return { rle: encodeRLE(pattern), origin: { x: originX, y: originY } };
 }
 
 /** The inverse of {@link captureGridRLE}: world-space `PaintOp`s for every live cell the RLE

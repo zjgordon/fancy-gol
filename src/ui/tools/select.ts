@@ -17,7 +17,7 @@
  * Ships no local RLE codec: encode/decode live in `@shared/rle` (P2-A-1, syntactic, Golly
  * multi-state). Clipboard round-trips go through that module.
  */
-import { decode as decodeRLE, encode as encodeRLE } from '@shared/rle';
+import { decode, encode } from '@shared/rle';
 import { DEAD, type GridView, type PaintOp, type Rect, type StateId } from '@shared/types';
 import type { Tool, ToolContext } from './tool';
 
@@ -117,7 +117,11 @@ function normalizeRect(anchor: { x: number; y: number }, point: { x: number; y: 
   return { x: x0, y: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 };
 }
 
-export { decodeRLE, encodeRLE };
+export const decodeRLE = decode;
+/** Clipboard encode keeps the marquee size (dead padding included) so paste overwrites the same footprint. */
+export function encodeRLE(pattern: ClipboardPattern): string {
+  return encode(pattern, { trim: false });
+}
 
 // --- the tool ----------------------------------------------------------------------------------
 
@@ -271,12 +275,12 @@ export class SelectTool implements Tool {
     if (!this.clipboard) {
       throw new Error('no system clipboard available in this environment');
     }
-    await this.clipboard.writeText(encodeRLE(this.selection.pattern));
+    await this.clipboard.writeText(encode(this.selection.pattern, { trim: false }));
   }
 
   /** Decodes RLE text (e.g. pasted from the system clipboard) and enters placement mode with it. */
   pasteFromRLE(text: string): void {
-    this.buffer = decodeRLE(text);
+    this.buffer = decode(text);
     this.paste();
   }
 }

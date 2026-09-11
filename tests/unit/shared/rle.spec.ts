@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { extractImports } from '../../../scripts/check-boundaries.mjs';
 import { Mulberry32 } from '@shared/rng';
-import { decode, encode, PatternParseError, type RleCell, type RlePattern } from '@shared/rle';
+import { decode, encode, PatternParseError, RLE_WRAP, type RleCell, type RlePattern } from '@shared/rle';
 
 const UNDER_COVERAGE = process.env['VITEST_COVERAGE'] === '1';
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -95,14 +95,17 @@ bo$2bo$3o!`;
   });
 
   it('skips dead cells on encode and rejects out-of-range state or coordinates', () => {
-    const skipped = encode({
-      width: 2,
-      height: 1,
-      cells: [
-        { x: 0, y: 0, state: 0 },
-        { x: 1, y: 0, state: 1 },
-      ],
-    });
+    const skipped = encode(
+      {
+        width: 2,
+        height: 1,
+        cells: [
+          { x: 0, y: 0, state: 0 },
+          { x: 1, y: 0, state: 1 },
+        ],
+      },
+      { trim: false },
+    );
     expect(decode(skipped).cells).toEqual([{ x: 1, y: 0, state: 1 }]);
     expect(() => encode({ width: 1, height: 1, cells: [{ x: 0, y: 0, state: 256 }] })).toThrow(/0-255/);
     expect(() => encode({ width: 1, height: 1, cells: [{ x: 0, y: 0, state: -1 }] })).toThrow(/0-255/);
@@ -127,7 +130,7 @@ bo$2bo$3o!`;
         cells.push({ x, y, state });
       }
       const original: RlePattern = { width, height, cells, comments: [] };
-      const round = decode(encode(original));
+      const round = decode(encode(original, { trim: false }));
       expect(round.width).toBe(width);
       expect(round.height).toBe(height);
       expect(sortedKeys(round.cells)).toEqual(sortedKeys(cells));
@@ -198,7 +201,7 @@ bo$2bo$3o!`;
     expect(text).toMatch(/^#O test/m);
     expect(text).toMatch(/^#P 1 2/m);
     expect(text).toMatch(/^#C hello/m);
-    expect(text).toMatch(/obB!/);
+    expect(text).toMatch(/A\.B!/);
     const lower = decode('#c note\nx = 1, y = 1\no!');
     expect(lower.comments).toEqual(['note']);
   });
@@ -224,5 +227,119 @@ bo$2bo$3o!`;
         expect(e.hint.length, file).toBeGreaterThan(0);
       }
     }
+  });
+});
+
+const GLIDER_CELLS: readonly RleCell[] = [
+  { x: 1, y: 0, state: 1 },
+  { x: 2, y: 1, state: 1 },
+  { x: 0, y: 2, state: 1 },
+  { x: 1, y: 2, state: 1 },
+  { x: 2, y: 2, state: 1 },
+];
+
+function gridKey(cells: readonly RleCell[]): string[] {
+  return sortedKeys(cells);
+}
+
+function trimLive(p: { readonly width: number; readonly height: number; readonly cells: readonly RleCell[] }): {
+  width: number;
+  height: number;
+  cells: RleCell[];
+} {
+  if (p.cells.length === 0) return { width: p.width, height: p.height, cells: [] };
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const c of p.cells) {
+    if (c.x < minX) minX = c.x;
+    if (c.y < minY) minY = c.y;
+    if (c.x > maxX) maxX = c.x;
+    if (c.y > maxY) maxY = c.y;
+  }
+  return {
+    width: maxX - minX + 1,
+    height: maxY - minY + 1,
+    cells: p.cells.map((c) => ({ x: c.x - minX, y: c.y - minY, state: c.state })),
+  };
+}
+
+describe('shared/rle — canonical encoder (P2-A-2)', () => {
+  it('emits the canonical published glider byte-for-byte', () => {
+    const canonical = readFileSync(join(HERE, '../../fixtures/rle/canonical/glider.rle'), 'utf8').replace(/\n$/, '');
+    const padded: RlePattern = {
+      width: 8,
+      height: 8,
+      cells: GLIDER_CELLS.map((c) => ({ x: c.x + 2, y: c.y + 3, state: c.state })),
+      name: 'Glider',
+      author: 'Richard K. Guy',
+      rule: 'B3/S23',
+      comments: [],
+    };
+    expect(encode(padded)).toBe(canonical);
+    expect(encode(padded)).toBe(`#N Glider
+#O Richard K. Guy
+x = 3, y = 3, rule = B3/S23
+bo$2bo$3o!`);
+  });
+
+  it('re-imports encoded multi-state patterns to identical grids', () => {
+    const rng = new Mulberry32(0xa2);
+    for (let n = 0; n < 200; n++) {
+      const width = 4 + rng.nextInt(12);
+      const height = 4 + rng.nextInt(12);
+      const count = 1 + rng.nextInt(Math.min(24, width * height));
+      const seen = new Set<string>();
+      const cells: RleCell[] = [];
+      while (cells.length < count) {
+        const x = rng.nextInt(width);
+        const y = rng.nextInt(height);
+        const key = `${x},${y}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        cells.push({ x, y, state: 1 + rng.nextInt(40) });
+      }
+      const original: RlePattern = { width, height, cells, comments: [], rule: 'GenerationsDemo' };
+      const text = encode(original);
+      const round = decode(text);
+      const a = trimLive(original);
+      const b = trimLive(round);
+      expect(b.width).toBe(a.width);
+      expect(b.height).toBe(a.height);
+      expect(gridKey(b.cells)).toEqual(gridKey(a.cells));
+    }
+  });
+
+  it('never writes a line longer than 70 characters', () => {
+    const cells: RleCell[] = [];
+    for (let x = 0; x < 80; x++) cells.push({ x, y: 0, state: x % 2 === 0 ? 1 : 2 });
+    const text = encode({
+      width: 80,
+      height: 1,
+      cells,
+      comments: [
+        'SPDX-License-Identifier: CC0-1.0 and then a deliberately long provenance note that must wrap across a 70-column budget without splitting a token in the body',
+      ],
+      rule: 'B3/S23',
+    });
+    for (const line of text.split('\n')) {
+      expect(line.length, line).toBeLessThanOrEqual(RLE_WRAP);
+    }
+    const round = decode(text);
+    expect(round.cells).toHaveLength(80);
+    expect(round.comments.join(' ')).toMatch(/SPDX-License-Identifier/);
+  });
+
+  it('collapses empty rows to counted `$` and keeps two-state tags as b/o', () => {
+    const text = encode({
+      width: 3,
+      height: 5,
+      cells: [
+        { x: 0, y: 0, state: 1 },
+        { x: 0, y: 3, state: 1 },
+      ],
+    });
+    expect(text).toBe('x = 1, y = 4\no3$o!');
   });
 });
