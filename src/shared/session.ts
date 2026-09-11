@@ -39,6 +39,24 @@ export interface SessionToolState {
   readonly activeToolId: string;
 }
 
+/** Dock chrome shared by library / statistics / studio (P2-G-2). Optional on v1 so an older
+ * document still loads; missing means {@link DEFAULT_PANEL_LAYOUT}. */
+export type PanelDockSide = 'left' | 'right';
+
+export interface SessionPanelLayout {
+  readonly activeId: string | null;
+  readonly dock: PanelDockSide;
+  readonly widthPx: number;
+  readonly collapsed: boolean;
+}
+
+export const DEFAULT_PANEL_LAYOUT: SessionPanelLayout = {
+  activeId: null,
+  dock: 'right',
+  widthPx: 320,
+  collapsed: false,
+};
+
 export interface SessionDocV1 {
   readonly version: 1;
   readonly ruleset: SessionRuleset;
@@ -52,6 +70,7 @@ export interface SessionDocV1 {
   readonly camera: SessionCamera;
   readonly theme: string;
   readonly toolState: SessionToolState;
+  readonly panels?: SessionPanelLayout;
 }
 
 /** The current format. A union of every version this build can still *produce* — today, only
@@ -123,6 +142,19 @@ function isGridOrigin(value: unknown): value is SessionDocV1['gridOrigin'] {
   return isJsonRecord(value) && typeof value['x'] === 'number' && typeof value['y'] === 'number';
 }
 
+export function isSessionPanelLayout(value: unknown): value is SessionPanelLayout {
+  if (!isJsonRecord(value)) return false;
+  const dock = value['dock'];
+  return (
+    (value['activeId'] === null || typeof value['activeId'] === 'string') &&
+    (dock === 'left' || dock === 'right') &&
+    typeof value['widthPx'] === 'number' &&
+    Number.isFinite(value['widthPx']) &&
+    value['widthPx'] > 0 &&
+    typeof value['collapsed'] === 'boolean'
+  );
+}
+
 /** Structural validation for a document already confirmed to be `version: 1` — never trust
  * `localStorage` (a browser extension, a hand-edited value, a future build's document a user
  * downgraded into) to actually match the shape it claims. */
@@ -137,7 +169,8 @@ function isValidV1(doc: JsonRecord): doc is JsonRecord & SessionDocV1 {
     isSessionCamera(doc['camera']) &&
     typeof doc['theme'] === 'string' &&
     isJsonRecord(doc['toolState']) &&
-    typeof doc['toolState']['activeToolId'] === 'string'
+    typeof doc['toolState']['activeToolId'] === 'string' &&
+    (doc['panels'] === undefined || isSessionPanelLayout(doc['panels']))
   );
 }
 

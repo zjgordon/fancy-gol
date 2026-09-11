@@ -1,7 +1,7 @@
 /**
  * Composition root (P1-D-1, thinned by P2-G-1). Wires camera, worker, tools, chrome,
  * session, and pickers. Testable seams live in sibling `client/*` modules — this file
- * only composes them. Do not add a second panel layout here; that is P2-G-2.
+ * only composes them. Panels register on the P2-G-2 host — do not invent a second layout.
  */
 import { CONWAY, getBuiltin } from '@engine/rules/builtin';
 import { Canvas2DRenderer } from '@render/canvas2d';
@@ -20,6 +20,7 @@ import { EditStack } from '@ui/commands/edit-stack';
 import type { AppContext, SimControl } from '@ui/commands/registry';
 import { SIM_COMMANDS } from '@ui/commands/builtin/sim';
 import { attachShell } from '@ui/components/shell';
+import { attachPanelHost } from '@ui/shell/panel-host';
 import { createTransportControls } from '@ui/components/transport';
 import { createSpeedControl, TpsMeter } from '@ui/components/speed';
 import { createStatusBar, STATUS_THROTTLE_MS, zoomPercent } from '@ui/components/statusbar';
@@ -188,6 +189,10 @@ function main(): void {
   const autosave = createAutosave({
     buildDoc: snapshotDoc,
     notify: (message) => toasts.show(message),
+  });
+  const panelHost = attachPanelHost({
+    mount: shell.panelDock,
+    onLayoutChange: () => autosave.scheduleSave(),
   });
 
   function commitPaint(ops: readonly PaintOp[], record = true): void {
@@ -452,6 +457,7 @@ function main(): void {
       camera: { originX: camera.originX, originY: camera.originY, cellSize: camera.cellSize },
       theme: currentThemeId(),
       activeToolId: context.toolRegistry.active?.id ?? 'brush',
+      panels: panelHost.getLayout(),
     });
   }
 
@@ -592,6 +598,7 @@ function main(): void {
         context.toolRegistry.activate(restored.activeToolId);
         canvas.style.cursor = context.toolRegistry.active?.cursor ?? 'default';
       }
+      if (restored.panels) panelHost.applyLayout(restored.panels);
     } else {
       await client.send({ cmd: 'init', ruleset: CONWAY, width: WORLD_WIDTH, height: WORLD_HEIGHT, seed: sessionSeed });
       await client.send({ cmd: 'paint', ops: gunOps(20, 20, primaryLiveState(activeRuleset)) });

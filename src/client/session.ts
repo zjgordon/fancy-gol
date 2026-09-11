@@ -32,6 +32,7 @@ import {
   migrateSessionDoc,
   type SessionCamera,
   type SessionDoc,
+  type SessionPanelLayout,
   type SessionRuleset,
 } from '@shared/session';
 import { decode as decodeRLE, encode as encodeRLE, type RleCell, type RlePattern } from '@shared/rle';
@@ -99,6 +100,7 @@ export interface SessionSnapshot {
   readonly camera: SessionCamera;
   readonly theme: string;
   readonly activeToolId: string;
+  readonly panels?: SessionPanelLayout;
 }
 
 export function buildSessionDoc(snapshot: SessionSnapshot): SessionDoc {
@@ -113,6 +115,7 @@ export function buildSessionDoc(snapshot: SessionSnapshot): SessionDoc {
     camera: snapshot.camera,
     theme: snapshot.theme,
     toolState: { activeToolId: snapshot.activeToolId },
+    ...(snapshot.panels ? { panels: snapshot.panels } : {}),
   };
 }
 
@@ -124,6 +127,7 @@ export interface RestoredSession {
   readonly camera: SessionCamera;
   readonly theme: string;
   readonly activeToolId: string;
+  readonly panels?: SessionPanelLayout;
 }
 
 function resolveRuleset(ref: SessionRuleset): RuleSet {
@@ -146,6 +150,7 @@ export function applySessionDoc(doc: SessionDoc): RestoredSession {
     camera: doc.camera,
     theme: doc.theme,
     activeToolId: doc.toolState.activeToolId,
+    ...(doc.panels ? { panels: doc.panels } : {}),
   };
 }
 

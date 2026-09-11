@@ -124,11 +124,28 @@ describe('buildSessionDoc / applySessionDoc', () => {
     expect(restored.seed).toBe(999);
     expect(restored.theme).toBe('default');
     expect(restored.activeToolId).toBe('eraser');
+    expect(restored.panels).toBeUndefined();
 
     const restoredGrid = new ChunkedGrid({ boundary: 'infinite' });
     for (const op of restored.paintOps) restoredGrid.set(op.x, op.y, op.state);
     expect(restoredGrid.get(5, 5)).toBe(1);
     expect(restoredGrid.get(6, 5)).toBe(1);
+  });
+
+  it('round-trips the panel-host layout slice', () => {
+    const grid = new ChunkedGrid({ boundary: 'infinite' });
+    const panels = { activeId: 'stats', dock: 'left' as const, widthPx: 288, collapsed: true };
+    const doc = buildSessionDoc({
+      ruleset: { kind: 'builtin', id: 'conway' },
+      grid: grid.view(),
+      tick: 0,
+      seed: 1,
+      camera: { originX: 0, originY: 0, cellSize: 8 },
+      theme: 'default',
+      activeToolId: 'brush',
+      panels,
+    });
+    expect(applySessionDoc(doc).panels).toEqual(panels);
   });
 
   it('carries an inline ruleset through unchanged', () => {

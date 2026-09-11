@@ -29,6 +29,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - App startup is a thin composition root so the library, stats, and studio panels can share one host. (P2-G-1)
+- Side panels share one dock: they resize, collapse, move left or right, and come back after a reload. (P2-G-2)
 
 ## [0.2.0] — 2026-09-08
 

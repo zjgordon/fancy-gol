@@ -218,9 +218,8 @@ checker change (`engine → shared/`, scan `shared/**`), the canonical syntactic
 - [x] Total thumbnail payload < 3 MB for the full catalogue (asserted again after P2-B-5).
 - [x] Animated thumbnails loop seamlessly for periodic patterns (first frame === frame `period`).
 
-#### - [!] P2-B-3 · Library panel UI
+#### - [ ] P2-B-3 · Library panel UI
 **Depends on:** P2-B-2, P2-G-2, P1-D-1 · **Files:** `src/ui/panels/library/*`, `src/ui/search/fuzzy.ts` (or equivalent shared home)
-**Blocked on:** P2-G-2 (panel host; itself depends on P2-G-1). Workstream G was appended after F so IDs would not be renumbered, which means a top-to-bottom scan and the dashboard "Next up" banner both land here after P2-B-2 even though the host does not exist yet. Do not start until G-1 → G-2 land.
 **Implementation notes**
 - Virtualised grid of cards (hand-written windowing — the catalogue is 200+ entries with animated thumbnails; rendering them all would burn the frame budget). Works against the P2-B-1 seed set; must remain correct when P2-B-5 lands the full catalogue.
 - Filter by ruleset (defaults to the active one), category, tag, size, period. Free-text search across name, alias, discoverer and description with a hand-written fuzzy matcher (subsequence + gap-penalty scoring, ~50–80 lines).
@@ -355,9 +354,8 @@ Measured: `src/ui/charts/{scale,axis,chart}.ts` — linear / log / generation-ti
 
 Measured: `stackStateAreas` skips dead (state 0); live-state heights sum to `population` at every sample and adjacent layers share a boundary (no gap, no overdraw). `drawBand` from tier 1–3 `populationMin`/`populationMax` contains the mean in canvas space. `Chart` now calls `drawLine` / `drawBand` so an aggregated `statsWindow` always shows the envelope. Phase trail alpha is `MotionSignature.easings.*` over a tail sized by `durationMs` at `CHART_HZ`; same window redrawn twice is byte-identical alphas. Sparkline and histogram are standalone for P2-D-3. Not hosted in the shell — that is still P2-D-3.
 
-#### - [!] P2-D-3 · Statistics panel
+#### - [ ] P2-D-3 · Statistics panel
 **Depends on:** P2-D-2, P2-G-2 · **Files:** `src/ui/panels/statistics/*`
-**Blocked on:** P2-G-2 (panel host; itself depends on P2-G-1). Do not invent a second panel contract.
 **Implementation notes**
 - **Two modes.** *Simple*: three big numbers (population, births/deaths, generation) plus one sparkline — a child can read it. *Advanced*: the full chart grid, cycle/growth report, the phase plot, and the entropy trace. One toggle. This is the inception document's "child … or a serious researcher" requirement made concrete, and it should exist in every panel.
 - Dock/resize/collapse/session layout come from **P2-G-2** — do not invent a second panel contract here.
@@ -499,16 +497,18 @@ case is gated honestly, and dissolve the sandbox-vs-CI machine provenance proble
 
 Measured: `main.ts` 1088 → 639 lines (41%). Seams: seed, shell theme, tool-gate, thumbnail batch/loop, view/edit commands, cold-start, boot-session, worker adapter, harness factory. `src/client/**` gated at 85/75/75; only `main.ts` stays excluded. `npm run verify` green. Playwright browsers in this environment are chromium-1237 vs the suite's 1243, so e2e was not re-run here — the `FancyGolHarness` contract is unchanged and covered by unit tests.
 
-#### - [ ] P2-G-2 · Panel host / dock framework
+#### - [x] P2-G-2 · Panel host / dock framework
 **Depends on:** P2-G-1, P1-D-1 · **Files:** `src/ui/shell/panel-host.ts` (or equivalent), session layout slice
 **Intent:** One contract for library, statistics, and ruleset-studio panels — dock, focus, resize/collapse, session persistence, Escape/focus-trap (align with `dialog.ts`). Also the cheapest place for Phase 6 pre-emption: **minimum usable width** + **per-panel axe** (retro §5.4).
 **Implementation notes** `shell.ts` today has an empty `panel-dock`. Build the host here; P2-B-3, P2-D-3, P2-E-1 depend on this task and must not invent parallel layout systems.
 **Acceptance criteria**
-- [ ] Panels are dockable/resizable/collapsible; layout survives reload via session.
-- [ ] Focus trap + Escape match `dialog.ts` conventions; keyboard users never lose focus to the void.
-- [ ] Every panel declares and holds a minimum usable width (asserted; below-min layout does not clip controls into unusable states).
-- [ ] Every panel ships an axe-core assertion in its spec (zero violations on the panel root).
-- [ ] Adding a fourth panel requires no change to B-3/D-3/E-1 — only a new consumer of the host.
+- [x] Panels are dockable/resizable/collapsible; layout survives reload via session.
+- [x] Focus trap + Escape match `dialog.ts` conventions; keyboard users never lose focus to the void.
+- [x] Every panel declares and holds a minimum usable width (asserted; below-min layout does not clip controls into unusable states).
+- [x] Every panel ships an axe-core assertion in its spec (zero violations on the panel root).
+- [x] Adding a fourth panel requires no change to B-3/D-3/E-1 — only a new consumer of the host.
+
+Measured: `attachPanelHost` mounts into `#chrome-panel-dock`. Dock left/right, drag or arrow-key resize, collapse/expand. `SessionDoc.panels` is an optional v1 field (older docs still load). Width clamps to the active panel's `minWidthPx` and 80% of the viewport. Escape collapses, then closes, and restores the previous focus; Tab wraps inside the host (capture, same as `dialog.ts`). Axe is clean on the host root for each registered fixture panel. A fourth panel is `register()` only.
 
 ---
 

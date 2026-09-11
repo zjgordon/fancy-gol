@@ -203,6 +203,66 @@
         bottom: 0;
         width: auto;
       }
+      #chrome-panel-dock[data-dock='left'] {
+        left: 0;
+        right: auto;
+      }
+      #chrome-panel-dock[data-dock='right'] {
+        right: 0;
+        left: auto;
+      }
+
+      .panel-host {
+        width: var(--gol-panel-width);
+        min-width: var(--gol-panel-min-width);
+        height: 100%;
+        max-height: 100%;
+        box-sizing: border-box;
+      }
+      .panel-host-collapsed {
+        width: auto;
+        min-width: 0;
+      }
+      .panel-host-rail {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--gol-space-2);
+      }
+      .panel-host-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--gol-space-1);
+      }
+      .panel-host-tabs button[aria-selected='true'] {
+        color: var(--gol-color-on-accent);
+        background: var(--gol-color-accent);
+      }
+      .panel-host-frame {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+        min-width: 0;
+      }
+      .panel-host-resize {
+        flex: 0 0 var(--gol-space-2);
+        cursor: ew-resize;
+        align-self: stretch;
+        background: var(--gol-color-border);
+      }
+      .panel-host-panel {
+        flex: 1;
+        min-width: var(--gol-panel-min-width);
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        gap: var(--gol-space-2);
+      }
+      .panel-host-title {
+        margin: 0;
+        font-size: var(--gol-font-size-sm);
+        font-weight: var(--gol-font-weight-medium);
+      }
 
       .row {
         display: flex;

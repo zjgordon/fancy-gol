@@ -68,6 +68,7 @@ describe('migrateSessionDoc — validation', () => {
     ['camera', { originX: 1, originY: 2 }],
     ['theme', 7],
     ['toolState', { activeToolId: 7 }],
+    ['panels', { dock: 'up', widthPx: 1, collapsed: false, activeId: null }],
   ])('rejects an invalid %s field', (field, badValue) => {
     expect(migrateSessionDoc({ ...validDoc(), [field]: badValue })).toBeNull();
   });
@@ -78,6 +79,12 @@ describe('migrateSessionDoc — validation', () => {
 
   it('rejects an inline ruleset reference whose ruleset is not an object', () => {
     expect(migrateSessionDoc({ ...validDoc(), ruleset: { kind: 'inline', ruleset: 'nope' } })).toBeNull();
+  });
+
+  it('keeps a well-formed panel layout and still accepts a document that omits one', () => {
+    const panels = { activeId: 'stats', dock: 'left' as const, widthPx: 300, collapsed: true };
+    expect(migrateSessionDoc(validDoc({ panels }))).toEqual(validDoc({ panels }));
+    expect(migrateSessionDoc(validDoc())?.panels).toBeUndefined();
   });
 });
 
