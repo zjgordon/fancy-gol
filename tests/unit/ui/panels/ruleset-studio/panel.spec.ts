@@ -174,7 +174,7 @@ describe('createRulesetStudioPanel', () => {
 
   it('declares a usable minimum width and pretty-prints a document', () => {
     const { panel, host } = setup();
-    expect(STUDIO_PANEL_MIN_WIDTH).toBeGreaterThanOrEqual(360);
+    expect(STUDIO_PANEL_MIN_WIDTH).toBeGreaterThanOrEqual(400);
     panel.setDocument(JSON.parse(CONWAY_TEXT));
     expect(panel.getText()).toBe(prettyRuleset(JSON.parse(CONWAY_TEXT)));
     panel.setResetOnApply(true);

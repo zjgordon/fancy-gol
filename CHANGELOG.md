@@ -29,6 +29,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A searchable, filterable pattern library with near-pointer animated thumbnails, stamp-or-drag placement, and a Credits dialog. (P2-B-3)
 - Export statistics as labelled CSV or JSON, charts as 2× PNGs, and the grid or selection as RLE or a view PNG. (P2-D-4)
 - A Ruleset Studio with a live JSON editor: validate as you type, and apply B3/S23 → B36/S23 without resetting the grid. (P2-E-1)
+- Ruleset Studio form: B/S chips, a neighbourhood diagram, a state editor, and a Randomise button that says when a rule looks explosive. (P2-E-2)
 
 ### Changed
 

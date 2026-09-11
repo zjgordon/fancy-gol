@@ -400,7 +400,7 @@ Measured: CSV header names the window, tier, and per-column aggregation (`exact`
 
 Measured: `createRulesetStudioPanel` registers on the G-2 host (`id: 'studio'`, min-width 360). The editor is a transparent `<textarea>` over a tokenised `<pre>`, with a virtualised gutter. `validateRuleSet` is injected from the composition root (ADR-009: `ui/` does not import `engine/`). JSON pointers map to lines via a recursive-descent index; each issue paints on its line with the validator `hint`. Apply hot-swaps via `setRuleset` and does not `clear` unless "Reset grid on apply" is checked; Conway→HighLife (`born: [3]` → `[3, 6]`) needs no migration. Palette changes reuse the picker's `openStateMigrationDialog`. A 2,000-line keystroke stays on a hot path (visible lines + `textContent`; token colour on the 150 ms idle) and measures under 18.2 ms in the spec (skipped under coverage). `Mod+Z` in the textarea is ignored by `attachKeymap` (text-input skip), so native undo wins. Axe is clean on the panel root.
 
-#### - [ ] P2-E-2 · Form-based rule builder
+#### - [x] P2-E-2 · Form-based rule builder — @cursor, started 2026-09-11, finished 2026-09-11
 **Depends on:** P2-E-1
 **Intent:** The child-to-researcher spectrum again: JSON for the expert, a form for everyone else.
 **Implementation notes**
@@ -410,9 +410,11 @@ Measured: `createRulesetStudioPanel` registers on the G-2 host (`id: 'studio'`, 
 - A transition-table grid editor for small state counts.
 - A **"randomise rule"** button with constraint sliders (birth/survival density, symmetry) — genuinely the most fun feature in the app, and about 40 lines. Pair it with the growth classifier so the app can say "this one is explosive" before you run it.
 **Acceptance criteria**
-- [ ] Form, notation, and JSON are always consistent — a property test drives random edits through all three entry points and asserts convergence.
-- [ ] The neighbourhood diagram matches the compiled offset table exactly.
-- [ ] "Randomise" produces a valid, compilable ruleset 100 times out of 100.
+- [x] Form, notation, and JSON are always consistent — a property test drives random edits through all three entry points and asserts convergence.
+- [x] The neighbourhood diagram matches the compiled offset table exactly.
+- [x] "Randomise" produces a valid, compilable ruleset 100 times out of 100.
+
+Measured: Form chips, the notation field, the Birth/Survive table, and the JSON editor share one `StudioDocument`. A 40-step property test toggles chips, types notation, and patches JSON and asserts `viewsAgree` after every edit. The neighbourhood diagram's painted cells equal `compileNeighborhood(...).offsetsByParity` for Moore r=1/r=2, von Neumann, hex (both row parities), and custom. `randomiseDocument` × 100 with a seeded RNG all pass `validateRuleSet`. Temperament is a B/S-density look (`this one looks explosive`) using the catalogue tags — not a pretend `GrowthClassifier` run; E-3 will confirm with a real battery. Studio min-width is 400. Axe stays clean.
 
 #### - [ ] P2-E-3 · Rule test bench
 **Depends on:** P2-E-2, P2-C-4

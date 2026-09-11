@@ -37,7 +37,7 @@ export interface JsonEditor {
   readonly root: HTMLElement;
   readonly textarea: HTMLTextAreaElement;
   getValue(): string;
-  setValue(text: string): void;
+  setValue(text: string, opts?: { emitIdle?: boolean }): void;
   setIssues(issues: readonly LocatedStudioIssue[]): void;
   getIssues(): readonly LocatedStudioIssue[];
   setCaret(offset: number): void;
@@ -209,11 +209,11 @@ export function createJsonEditor(opts: JsonEditorOptions = {}): JsonEditor {
     root,
     textarea,
     getValue: () => text,
-    setValue(next) {
+    setValue(next, opts) {
       text = next;
       textarea.value = next;
       paint();
-      scheduleIdle();
+      if (opts?.emitIdle !== false) scheduleIdle();
     },
     setIssues(next) {
       issues = next;

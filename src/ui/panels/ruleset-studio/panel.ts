@@ -1,9 +1,10 @@
 /**
- * Ruleset Studio (P2-E-1). "Rule-God Status." A G-2 panel that hosts the hand-written
- * JSON editor — this file only mounts content; it does not invent a second dock.
+ * Ruleset Studio (P2-E-1, P2-E-2). "Rule-God Status." A G-2 panel that hosts
+ * the form builder and the hand-written JSON editor — this file only mounts
+ * content; it does not invent a second dock.
  *
- * Validation is injected: `ui/` cannot import `@engine`, so the composition root passes
- * `validateRuleSet` (and the apply path that talks to the worker).
+ * Validation is injected: `ui/` cannot import `@engine`, so the composition root
+ * passes `validateRuleSet` (and the apply path that talks to the worker).
  */
 import type { PanelSpec } from '@ui/shell/panel-host';
 import {
@@ -12,11 +13,19 @@ import {
   type EditorTimers,
   type JsonEditor,
 } from './editor';
+import { createStudioForm, type StudioForm } from './form';
 import { locatePointer, syntaxErrorLocation } from './json-pointer';
+import {
+  documentFromUnknown,
+  emptyLifeDocument,
+  formatNotation,
+  mergeDocument,
+  type StudioDocument,
+} from './model';
 import type { LocatedStudioIssue, StudioIssue, StudioValidate } from './types';
 
 export const STUDIO_PANEL_ID = 'studio';
-export const STUDIO_PANEL_MIN_WIDTH = 360;
+export const STUDIO_PANEL_MIN_WIDTH = 400;
 
 export { STUDIO_VALIDATE_DELAY_MS };
 
@@ -35,11 +44,13 @@ export interface RulesetStudioPanel {
   readonly spec: PanelSpec;
   readonly root: HTMLElement;
   readonly editor: JsonEditor;
+  readonly form: StudioForm;
   getText(): string;
   setText(text: string): void;
   setDocument(value: unknown): void;
   isValid(): boolean;
   getParsed(): unknown;
+  getFormDocument(): StudioDocument;
   getResetOnApply(): boolean;
   setResetOnApply(reset: boolean): void;
   locateIssues(): readonly LocatedStudioIssue[];
@@ -74,6 +85,7 @@ export function createRulesetStudioPanel(opts: RulesetStudioOptions): RulesetStu
   let parsed: unknown = null;
   let valid = false;
   let applying = false;
+  let syncingFromForm = false;
 
   const root = document.createElement('div');
   root.className = 'studio-panel';
@@ -121,7 +133,25 @@ export function createRulesetStudioPanel(opts: RulesetStudioOptions): RulesetStu
   });
   editor.textarea.setAttribute('aria-describedby', 'studio-status studio-issues');
 
-  root.append(toolbar, status, editor.root, issueList);
+  let startingDoc = emptyLifeDocument();
+  try {
+    startingDoc = documentFromUnknown(JSON.parse(opts.initialText ?? '')) ?? startingDoc;
+  } catch {
+    // Empty or invalid JSON — the form still opens on Conway so a child has chips to press.
+  }
+
+  const form = createStudioForm({
+    document: startingDoc,
+    onChange: (doc) => {
+      syncingFromForm = true;
+      const merged = mergeDocument(parsed ?? doc, doc);
+      editor.setValue(prettyRuleset(merged), { emitIdle: false });
+      validateText(editor.getValue());
+      syncingFromForm = false;
+    },
+  });
+
+  root.append(toolbar, status, form.root, editor.root, issueList);
 
   function paintIssues(located: readonly LocatedStudioIssue[]): void {
     editor.setIssues(located);
@@ -172,10 +202,12 @@ export function createRulesetStudioPanel(opts: RulesetStudioOptions): RulesetStu
     if (result.ok) {
       parsed = result.value;
       valid = true;
-      badge.textContent = lifeNotationFrom(result.value) ?? 'Valid rule';
+      const formDoc = documentFromUnknown(result.value);
+      badge.textContent = formDoc ? formatNotation(formDoc) : (lifeNotationFrom(result.value) ?? 'Valid rule');
       status.textContent = 'Ready to apply — the grid will keep running.';
       applyBtn.disabled = applying;
       paintIssues([]);
+      if (formDoc && !syncingFromForm) form.setDocument(formDoc);
       return [];
     }
     const located = locateIssues(text, result.issues);
@@ -222,6 +254,7 @@ export function createRulesetStudioPanel(opts: RulesetStudioOptions): RulesetStu
     spec,
     root,
     editor,
+    form,
     getText: () => editor.getValue(),
     setText(text) {
       editor.setValue(text);
@@ -231,12 +264,14 @@ export function createRulesetStudioPanel(opts: RulesetStudioOptions): RulesetStu
     },
     isValid: () => valid,
     getParsed: () => parsed,
+    getFormDocument: () => form.getDocument(),
     getResetOnApply: () => reset.checked,
     setResetOnApply(next) {
       reset.checked = next;
     },
     locateIssues: () => editor.getIssues(),
     dispose() {
+      form.dispose();
       editor.dispose();
       root.remove();
     },
