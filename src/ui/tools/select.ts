@@ -269,6 +269,12 @@ export class SelectTool implements Tool {
     if (this.buffer) this.buffer = flipVertical(this.buffer);
   }
 
+  /** RLE of the current selection, or `null` when nothing is selected. */
+  selectionRle(): string | null {
+    if (!this.selection) return null;
+    return encode(this.selection.pattern, { trim: false });
+  }
+
   /** Encodes the current selection as RLE and writes it to the system clipboard. */
   async writeSystemClipboard(): Promise<void> {
     if (!this.selection) return;

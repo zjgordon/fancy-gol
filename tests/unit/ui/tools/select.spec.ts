@@ -304,6 +304,7 @@ describe('SelectTool', () => {
 
       select.onDown(ctxAt(0, 0, grid));
       select.onUp(ctxAt(3, 2, grid)); // 4x3 selection covering all three live cells
+      expect(select.selectionRle()).toMatch(/^x = 4, y = 3/);
       await select.writeSystemClipboard();
 
       expect(written).toBeDefined();

@@ -56,6 +56,7 @@ export interface StatisticsPanelOptions {
   readonly onOpen?: () => void;
   readonly onClose?: () => void;
   readonly onModeChange?: (mode: StatsPanelMode) => void;
+  readonly onExport?: () => void;
 }
 
 export interface StatisticsPanel {
@@ -67,6 +68,8 @@ export interface StatisticsPanel {
   getMode(): StatsPanelMode;
   updateLive(live: StatsLive): void;
   setWindow(window: ChartWindow, reports: StatsReports): void;
+  getWindow(): ChartWindow | null;
+  snapshotCharts(scale: number, copy: (source: HTMLCanvasElement) => HTMLCanvasElement): { name: string; canvas: HTMLCanvasElement }[];
   dismissFinding(): void;
   dispose(): void;
 }
@@ -145,6 +148,12 @@ export function createStatisticsPanel(opts: StatisticsPanelOptions): StatisticsP
   advancedBtn.type = 'button';
   advancedBtn.textContent = 'Advanced';
   toggle.append(simpleBtn, advancedBtn);
+  const exportBtn = document.createElement('button');
+  exportBtn.type = 'button';
+  exportBtn.className = 'stats-export';
+  exportBtn.textContent = 'Export';
+  exportBtn.hidden = !opts.onExport;
+  toggle.append(exportBtn);
 
   const simple = document.createElement('div');
   simple.className = 'stats-simple';
@@ -411,6 +420,7 @@ export function createStatisticsPanel(opts: StatisticsPanelOptions): StatisticsP
     dismissedAt = latestCycle?.detectedAt ?? live.tick;
     syncFinding();
   });
+  exportBtn.addEventListener('click', () => opts.onExport?.());
 
   syncMode();
 
@@ -467,6 +477,21 @@ export function createStatisticsPanel(opts: StatisticsPanelOptions): StatisticsP
       popChart?.setData(win);
       entropyChart?.setData(win);
       if (mode === 'advanced') drawExtras();
+    },
+    getWindow: () => windowData,
+    snapshotCharts(scale, copy) {
+      this.setMode('advanced');
+      ensureAdvanced();
+      if (windowData) {
+        popChart?.setData(windowData);
+        entropyChart?.setData(windowData);
+      }
+      drawSpark();
+      drawExtras();
+      const out: { name: string; canvas: HTMLCanvasElement }[] = [];
+      if (popChart) out.push({ name: 'population', canvas: popChart.snapshotAtScale(scale, copy) });
+      if (entropyChart) out.push({ name: 'entropy', canvas: entropyChart.snapshotAtScale(scale, copy) });
+      return out;
     },
     dismissFinding() {
       dismissedAt = latestCycle?.detectedAt ?? live.tick;

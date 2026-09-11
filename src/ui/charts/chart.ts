@@ -326,6 +326,29 @@ export class Chart {
     return this.xZoom;
   }
 
+  /**
+   * Redraw at `scale` device pixels per CSS pixel, copy off, then restore.
+   * Used by P2-D-4 so a chart PNG is pixel-crisp at 2× instead of a stretched 1× bitmap.
+   */
+  snapshotAtScale(
+    scale: number,
+    copy: (source: HTMLCanvasElement) => HTMLCanvasElement,
+  ): HTMLCanvasElement {
+    const prevW = this.cssWidth;
+    const prevH = this.cssHeight;
+    const prevDpr = this.dpr;
+    this.resize(prevW, prevH, scale);
+    this.draw();
+    const dest = copy(this.canvas);
+    this.resize(prevW, prevH, prevDpr);
+    this.draw();
+    return dest;
+  }
+
+  cssSize(): { width: number; height: number } {
+    return { width: this.cssWidth, height: this.cssHeight };
+  }
+
   resize(cssWidth: number, cssHeight: number, dpr = this.dpr): void {
     this.cssWidth = Math.max(1, cssWidth);
     this.cssHeight = Math.max(1, cssHeight);

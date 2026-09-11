@@ -27,6 +27,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Stats charts stack per-state populations, show a min/max envelope on downsampled data, and draw a phase-space trail that fades with the theme. (P2-D-2)
 - A Statistics panel: three big numbers and a sparkline, or every metric the engine collects, including a dismissible cycle finding. (P2-D-3)
 - A searchable, filterable pattern library with near-pointer animated thumbnails, stamp-or-drag placement, and a Credits dialog. (P2-B-3)
+- Export statistics as labelled CSV or JSON, charts as 2× PNGs, and the grid or selection as RLE or a view PNG. (P2-D-4)
 
 ### Changed
 

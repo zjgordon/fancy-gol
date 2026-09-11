@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import axe from 'axe-core';
 import type { StatsWindowPoint } from '@shared/protocol';
 import { DEFAULT_DARK_THEME } from '@themes/default/theme';
@@ -75,17 +75,19 @@ describe('createStatisticsPanel', () => {
       scheduler: { request: () => 1, cancel: () => {} },
       clock: { now: () => 0 },
     });
+    const onExport = vi.fn();
     const panel = createStatisticsPanel({
       tokens: chartTokensFromSet(DEFAULT_DARK_THEME.tokens),
       motion: DEFAULT_DARK_THEME.motion,
       loop,
       ctxFor: () => new FakeCtx() as unknown as CanvasRenderingContext2D,
+      onExport,
     });
     const mount = document.createElement('div');
     document.body.appendChild(mount);
     const host = attachPanelHost({ mount, getViewportWidth: () => 1000 });
     host.register(panel.spec);
-    return { panel, host, loop };
+    return { panel, host, loop, onExport };
   }
 
   it('opens in simple mode a child can read, with no legend', () => {
@@ -163,6 +165,24 @@ describe('createStatisticsPanel', () => {
     });
     const elapsed = performance.now() - t0;
     if (!UNDER_COVERAGE) expect(elapsed).toBeLessThan(50);
+    panel.dispose();
+    host.dispose();
+  });
+
+  it('exposes the current window and an Export control', () => {
+    const { panel, host, onExport } = setup();
+    host.open(STATS_PANEL_ID);
+    const data = windowOf([point(1, 4)]);
+    panel.setWindow(data, {
+      entropyLabel: 'exact',
+      growthLabel: 'Insufficient data',
+      cycle: null,
+      windowLabel: 'Tier 0 (exact)',
+      flux: Int32Array.from([0]),
+    });
+    expect(panel.getWindow()?.label).toBe(data.label);
+    panel.root.querySelector<HTMLButtonElement>('.stats-export')!.click();
+    expect(onExport).toHaveBeenCalled();
     panel.dispose();
     host.dispose();
   });

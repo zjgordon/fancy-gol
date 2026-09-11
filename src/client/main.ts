@@ -36,6 +36,8 @@ import { ThemeRegistry } from '@themes/registry';
 import { DEFAULT_DARK_THEME, DEFAULT_THEME } from '@themes/default/theme';
 import { chartTokensFromSet } from '@ui/charts/chart';
 import { createStatisticsPanel } from '@ui/panels/statistics/panel';
+import { openExportDialog } from '@ui/export/dialog';
+import { CHART_EXPORT_SCALE, canvasToPngBlob } from '@ui/export/png';
 import { LIBRARY_DRAG_TYPE, createLibraryPanel } from '@ui/panels/library/panel';
 import { createAppContext } from './app-context';
 import { createViewEditCommands } from './app-commands';
@@ -64,7 +66,7 @@ import {
 import { builtinRulesetSummaries } from './ruleset-summaries';
 import { RulesetThumbnailLoop } from './ruleset-thumbnails';
 import { resolveBootSession } from './boot-session';
-import { buildSessionDoc, buildShareLink, createAutosave } from './session';
+import { buildSessionDoc, buildShareLink, captureGridRLE, createAutosave } from './session';
 import { SHELL_THEME, shellPalette } from './shell-theme';
 import { gateToolHandlers } from './tool-gate';
 import { toWorkerLike } from './worker-adapter';
@@ -218,6 +220,7 @@ function main(): void {
     onLayoutChange: () => autosave.scheduleSave(),
   });
   let statsOpen = false;
+  let openExport: () => void = () => {};
   const statsPanel = createStatisticsPanel({
     tokens: chartTokensFromSet(DEFAULT_DARK_THEME.tokens),
     motion: DEFAULT_DARK_THEME.motion,
@@ -228,6 +231,7 @@ function main(): void {
     onClose: () => {
       statsOpen = false;
     },
+    onExport: () => openExport(),
   });
   panelHost.register(statsPanel.spec);
 
@@ -537,6 +541,47 @@ function main(): void {
   libraryToggle.textContent = 'Library';
   libraryToggle.addEventListener('click', () => panelHost.open('library'));
   shell.toolbar.appendChild(libraryToggle);
+
+  function copyCanvas(src: HTMLCanvasElement): HTMLCanvasElement {
+    const dest = document.createElement('canvas');
+    dest.width = src.width;
+    dest.height = src.height;
+    dest.getContext('2d')?.drawImage(src, 0, 0);
+    return dest;
+  }
+
+  openExport = () => {
+    openExportDialog({
+      async series() {
+        const reply = await client.statsWindow(0, lastTick, 4096);
+        return {
+          points: reply.points,
+          tier: reply.tier,
+          aggregated: reply.aggregated,
+          downsampled: reply.downsampled,
+          sourceCount: reply.sourceCount,
+          label: reply.label,
+        };
+      },
+      async charts() {
+        const snaps = statsPanel.snapshotCharts(CHART_EXPORT_SCALE, copyCanvas);
+        const out: { name: string; blob: Blob }[] = [];
+        for (const snap of snaps) out.push({ name: snap.name, blob: await canvasToPngBlob(snap.canvas) });
+        return out;
+      },
+      gridRle: () => captureGridRLE(mirror.view()).rle,
+      selectionRle: () => currentSelect().selectionRle(),
+      viewPng: () => canvasToPngBlob(canvas),
+    });
+  };
+
+  const exportToggle = document.createElement('button');
+  exportToggle.type = 'button';
+  exportToggle.className = 'pattern-toggle';
+  exportToggle.setAttribute('aria-label', 'Export data');
+  exportToggle.textContent = 'Export';
+  exportToggle.addEventListener('click', () => openExport());
+  shell.toolbar.appendChild(exportToggle);
 
   canvas.addEventListener('dragover', (e) => {
     if (!e.dataTransfer) return;

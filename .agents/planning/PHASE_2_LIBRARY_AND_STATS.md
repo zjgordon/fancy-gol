@@ -370,13 +370,15 @@ Measured: `stackStateAreas` skips dead (state 0); live-state heights sum to `pop
 
 Measured: `createStatisticsPanel` registers on the G-2 host (`id: 'stats'`, min-width 280). Simple mode is three heroes (Alive now, Born / died, Generation) plus a sparkline — no legend. Advanced lists population, births, deaths, transitions, activity, density, live box, centroid, entropy, hash, active chunks, step time, flux, and per-state counts, plus growth/entropy labels, stacked states, population chart, and a population-vs-births phase trail. Cycle findings render as `Period N oscillator detected at generation T` and dismiss. `statsWindow` now carries `entropyLabel`, `growthLabel`, `cycle`, and `flux`; the worker records history and calls `observeEntropy`/`observeCycle` after each generation so those strings are real. Opening + first simple paint is < 50 ms in the spec (skipped under coverage). Layout is the G-2 session slice.
 
-#### - [ ] P2-D-4 · Data export
+#### - [x] P2-D-4 · Data export — @cursor, started 2026-09-11
 **Depends on:** P2-D-3
 **Implementation notes** CSV and JSON of the full retained series (with a tier warning in the header when data is downsampled — never export an approximation silently); PNG export of any chart at 2× scale; RLE export of the current grid or selection; PNG export of the grid view itself. All via `Blob` + `showSaveFilePicker` with an anchor-download fallback.
 **Acceptance criteria**
-- [ ] Exported CSV opens cleanly in a spreadsheet with correct headers and no locale-dependent decimal issues.
-- [ ] Exported CSV states the resolution tier and the aggregation used for every downsampled column.
-- [ ] Chart PNG export is pixel-crisp at 2×.
+- [x] Exported CSV opens cleanly in a spreadsheet with correct headers and no locale-dependent decimal issues.
+- [x] Exported CSV states the resolution tier and the aggregation used for every downsampled column.
+- [x] Chart PNG export is pixel-crisp at 2×.
+
+Measured: CSV header names the window, tier, and per-column aggregation (`exact` / `min/mean/max` / `LTTB`); decimals are `Number.toString()` (ASCII period). A `# WARNING` line appears only when the window is aggregated or downsampled. Chart `snapshotAtScale(2)` redraws at 2× device pixels, then restores the live canvas. `saveBlob` uses `showSaveFilePicker` with an anchor-download fallback. Export dialog covers series CSV/JSON, 2× chart PNGs, grid RLE, selection RLE, and the view PNG — same `statsWindow` path as the panel, queried at 4,096 points for the retained series.
 
 ---
 

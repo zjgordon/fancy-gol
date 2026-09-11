@@ -299,7 +299,11 @@
       }
       .stats-mode {
         display: flex;
+        flex-wrap: wrap;
         gap: var(--gol-space-1);
+      }
+      .stats-export {
+        margin-left: auto;
       }
       .stats-mode button[aria-pressed='true'] {
         color: var(--gol-color-on-accent);
@@ -884,6 +888,22 @@
       }
       .dialog-panel-wide {
         width: min(90vw, calc(var(--gol-space-7) * 12));
+      }
+      .export-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--gol-space-3);
+      }
+      .export-row {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--gol-space-1);
+      }
+      .export-hint {
+        margin: 0;
+        color: var(--gol-color-muted);
+        font-size: var(--gol-font-size-sm);
       }
 
       /*

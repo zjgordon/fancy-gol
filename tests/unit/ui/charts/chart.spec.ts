@@ -140,6 +140,20 @@ describe('chartTokensFromSet', () => {
 });
 
 describe('Chart', () => {
+  it('snapshots at 2× with a crisp backing store, then restores the live size', () => {
+    const { chart, canvas } = makeChart({ width: 200, height: 100, dpr: 1 });
+    chart.setData(windowOf(4));
+    let copiedW = 0;
+    const dest = chart.snapshotAtScale(2, (src) => {
+      copiedW = src.width;
+      return { width: src.width, height: src.height } as HTMLCanvasElement;
+    });
+    expect(copiedW).toBe(400);
+    expect(dest.width).toBe(400);
+    expect(canvas.width).toBe(200);
+    chart.dispose();
+  });
+
   it('sizes the backing store by dpr and draws in CSS pixels', () => {
     const { chart, ctx, canvas } = makeChart({ width: 200, height: 100, dpr: 2 });
     expect(canvas.width).toBe(400);
