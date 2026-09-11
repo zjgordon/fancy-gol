@@ -142,8 +142,12 @@ must instead delete or fix the untested code.
 
 ### 3.6 Performance budgets (CI-enforced from Phase 0)
 
-`npm run bench` runs a committed suite and fails on regression beyond the stated tolerance (10%).
-Budgets tighten per phase; each phase document restates the numbers it must hit.
+Budgets tighten per phase; each phase document restates the numbers it must hit. The **regression
+policy is not a single 10% band** — three kinds of number share one harness and inherit different
+gates (decided 2026-09-11; implemented by **P2-F-1**). Until P2-F-1 lands, be honest about what
+the build actually does today (below).
+
+#### Absolute floors (unchanged)
 
 | Metric | Phase 0 floor | Phase 5 target |
 |---|---|---|
@@ -154,6 +158,42 @@ Budgets tighten per phase; each phase document restates the numbers it must hit.
 | Main-thread block per tick | ≤ 4 ms | ≤ 1 ms |
 | Cold interactive load (local, gzip) | ≤ 1500 ms | ≤ 800 ms |
 | Client JS bundle (gzip, excl. themes) | ≤ 120 kB | ≤ 180 kB |
+
+#### Target gate policy (three classes — P2-F-1)
+
+Every bench case lands in **exactly one** class and inherits that class's policy. There is no
+per-case `baselineGate: false` escape hatch — that valve was pulled ten times in Phases 0–1 and
+is retired.
+
+| Class | Examples | Policy |
+|---|---|---|
+| **Deterministic** | `client-js-gzip`, `grid-1m-memory` | Tight regression gate **2–3%**. No noise excuse exists. |
+| **Wall-clock CPU** | `conway-512-soup`, `conway-4096-1pct`, `paint-1m`, `snapshot-restore`, `seek-4000`, `stats-overhead` | Noise-aware gate on a **calibration ratio** (below), not raw milliseconds. |
+| **Browser / GPU / paint** | `render-frame-cpu`, `main-thread-block`, `pan-1000pxs-1080p`, `zoom-32-0.5-32-min-fps`, interaction paint latency | **Absolute budget only**, plus accumulating **gate-history** once that mechanism exists (§3.2 / before Phase 3). |
+
+**Every case gets a budget or a class gate, or is deleted.** A measured number nobody checks is
+decoration (`default-theme-palette-lookup` and `snapshot-restore` currently gate nothing — fix or
+cut in P2-F-1).
+
+**Calibration (wall-clock class):** `scripts/bench.mjs` runs a fixed synthetic workload (no
+allocation, no I/O) in the same process as the suite. Wall-clock cases report raw milliseconds
+for humans but **gate on `median / calibration`**. A slower runner slows the calibration too, so
+the ratio holds across machines and the baseline stops being machine-bound — this replaces
+per-runner baseline files and closes the Node-24-sandbox-vs-Node-22-CI provenance skew for CPU
+cases. Band on the ratio may still be noise-aware (use the spread already computed across the
+median-of-7); do not fall back to "turn the gate off".
+
+**Transcribed / non-timed cases:** rename `cold-load-recorded` so its transcribed nature is
+visible in the runner output (it is not re-timed by `npm run bench`). It does not pretend to be a
+live wall-clock measurement.
+
+#### Interim honesty (until P2-F-1)
+
+Today: absolute budgets are enforced where a case declares `budget`; the flat **>10% baseline
+regression** check runs only for cases that leave `baselineGate` at its default (6 of 16 as of
+the Phase 0–1 retro). Ten cases opt out; two have neither budget nor gate. **Do not claim a
+uniform >10% regression gate** in process docs, commit messages, or PR templates until P2-F-1
+closes. Softened claims point here.
 
 ### 3.7 Accessibility & motion baseline
 

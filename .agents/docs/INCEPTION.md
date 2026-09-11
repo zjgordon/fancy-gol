@@ -121,9 +121,10 @@ this repository.
    *(At time of writing, `phase/0-foundation` has not yet been created. The next agent creates it
    before writing any code.)*
  - **Gates are not negotiable.** 95% statement coverage on `src/engine/**`, benchmark budgets
-   gated at a 10% regression tolerance, Playwright E2E with per-theme visual baselines, and a
-   machine-enforced layering check that makes "Pure Logic" a property of the build rather than of
-   anyone's discipline. Never weaken a gate to make a build pass — fix the code, or escalate.
+   under the classed policy in `planning/README.md` §3.6 (not a single blanket 10% band),
+   Playwright E2E with per-theme visual baselines, and a machine-enforced layering check that
+   makes "Pure Logic" a property of the build rather than of anyone's discipline. Never weaken a
+   gate to make a build pass — fix the code, or escalate.
  - **Honesty is a feature.** No claimed limit we do not meet, no approximation presented as exact,
    no metric silently downsampled, no user data or history discarded without an explicit and
    informative confirmation.

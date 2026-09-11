@@ -356,6 +356,40 @@ patterns/<ruleset>/*.rle  +  patterns/index.json
 
 ---
 
+### Workstream F — Benchmark harness honesty
+
+> Appended from the Phase 0–1 retro (§3.1), decided 2026-09-11. Phase 5's optimisation phase
+> rests on this gate; landing it on the Phase 2 branch (early) is deliberate. Does not renumber
+> any prior ID.
+
+#### - [ ] P2-F-1 · Three-class bench gate + calibration
+**Depends on:** P0-I-4 (harness exists) · **Files:** `scripts/bench.mjs`, `tests/bench/types.ts`, `tests/bench/*.bench.ts`, `tests/unit/bench-runner.spec.ts`, `bench-baseline.json`
+**Intent:** Replace the binary `baselineGate: false` pressure valve with a classed policy so every
+case is gated honestly, and dissolve the sandbox-vs-CI machine provenance problem for CPU timings.
+**Implementation notes** Binding policy: `planning/README.md` §3.6. Summary:
+- Every case declares `class: 'deterministic' | 'wall-clock' | 'browser'` (exact field name free;
+  no `baselineGate: false` remains).
+- **Deterministic** (e.g. gzip size, allocated grid memory): tight **2–3%** regression gate.
+- **Wall-clock CPU**: run a fixed no-alloc/no-I/O **calibration** workload in-process; print raw ms
+  for humans; **gate on median/calibration**. Noise-aware band on the ratio is fine; opting out
+  is not. Re-record baseline ratios once on CI-like hardware after the change.
+- **Browser / GPU / paint**: absolute budget only in this task; wire **gate-history** when that
+  mechanism lands (retro §3.2 / before Phase 3) — do not block this task on it.
+- Give every case a budget or a class gate, or delete it. Rename `cold-load-recorded` so the
+  runner output makes the transcribed (not re-timed) nature obvious.
+- Softened process-doc claims already point at §3.6 interim language; once this task is `- [x]`,
+  flip AGENTS/CLAUDE/`npm run bench` blurbs to the three-class wording (no more "until P2-F-1").
+**Acceptance criteria**
+- [ ] No bench case uses `baselineGate: false` (or any equivalent per-case opt-out).
+- [ ] Every remaining case is classified and has either an absolute budget, a class regression gate, or both; zero "measure-only" orphans.
+- [ ] Wall-clock cases gate on calibration ratio; raw ms still appear in the ASCII table.
+- [ ] Deterministic cases gate at ≤ 3% regression against baseline.
+- [ ] `cold-load-recorded` is renamed so its transcribed nature is visible in runner output.
+- [ ] `tests/unit/bench-runner.spec.ts` proves: deterministic tight fail, wall-clock ratio fail, browser budget fail; deliberate slowdown still exits non-zero.
+- [ ] `planning/README.md` §3.6 interim paragraph is removed or marked superseded; AGENTS.md / CLAUDE.md / ADR-004 cite the three-class policy as in force.
+
+---
+
 ## 4. Quality gates for Phase 2
 
 | Gate | Threshold |
@@ -372,6 +406,7 @@ patterns/<ruleset>/*.rle  +  patterns/index.json
 | Series memory | 1M ticks < 32 MB |
 | Studio responsiveness | > 55 fps while typing in a 2,000-line ruleset |
 | Bundle (gzip) | ≤ 160 kB (catalogue and thumbnails lazy-loaded, not bundled) |
+| Bench harness (P2-F-1) | three-class policy in force; no `baselineGate: false`; calibration ratio gates wall-clock cases |
 
 ---
 

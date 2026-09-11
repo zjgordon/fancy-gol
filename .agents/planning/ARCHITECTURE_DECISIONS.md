@@ -151,7 +151,9 @@ it was scoped wrong.
 CI enforces, on every push and PR:
 1. **Vitest with coverage thresholds** (95% statements on `src/engine/**`), including
    *oracle tests* against known cellular-automata results.
-2. **Performance benchmarks with committed budgets** — a >10% regression fails the build.
+2. **Performance benchmarks with committed budgets** — every case is gated under the three-class
+   policy in `planning/README.md` §3.6 (deterministic / wall-clock-calibrated / browser absolute).
+   A uniform ">10% regression" claim is **not** the policy; see Amendment below.
 3. **Playwright E2E and screenshot visual regression** from Phase 1, with per-theme baselines
    from Phase 3.
 
@@ -171,9 +173,19 @@ The engine is verified against externally-known truths, not just against itself:
 - Toroidal wrap: a glider crossing a 32×32 torus returns to its start after 128 generations.
 
 ### Consequences
-Benchmarks must be deterministic and machine-tolerant: budgets are stated with headroom, the runner
-takes the median of N runs, and CI compares against a committed baseline file rather than an absolute
-wall-clock number where possible.
+Benchmarks must be classed and machine-tolerant: deterministic metrics use a tight band;
+wall-clock CPU gates on a same-process calibration ratio; browser/GPU cases use absolute budgets
+(plus gate-history when available). The runner takes the median of N runs against a committed
+baseline. Updating the baseline is a reviewed commit, never a reflex.
+
+### Amendment — 2026-09-11 · Three-class bench gate (retro §3.1)
+**Forced by:** Phase 0–1 retrospective §3.1; operator decision to fix the gate and soften claims
+until the fix lands.
+**Invalidates the prior wording** "a >10% regression fails the build" as a universal rule.
+**Owning task:** `P2-F-1`. Until that task is `- [x]`, process docs describe the interim reality
+(absolute budgets where declared; baseline regression only where not opted out) per §3.6.
+**Does not invalidate** P0-I-4's existence, budgets table, or CI `bench` job — only the regression
+policy shape.
 
 ---
 

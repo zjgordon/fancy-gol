@@ -7,7 +7,7 @@
 |---|---|
 | **Status** | ☐ Not started |
 | **Ships version** | `0.6.0` |
-| **Prerequisites** | Phase 4 complete and tagged `v0.5.0`. |
+| **Prerequisites** | Phase 4 complete and tagged `v0.5.0`. **P2-F-1** (three-class bench gate) must be green — Phase 5's optimisation claims rest on it. |
 | **Theme of the phase** | **Make it enormous.** |
 | **The demo that proves it** | Load a 10-million-live-cell breeder into a 1,000,000 × 1,000,000 world. Zoom out until the whole civilisation is a shimmering density field, zoom back into a single glider, and run the whole thing at 60 fps in Void-Walker with bloom on. Then run the same thing on a five-year-old laptop and watch it degrade gracefully instead of dying. |
 

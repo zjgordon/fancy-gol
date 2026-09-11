@@ -17,7 +17,7 @@ substitute for the real documents.
 .agents/docs/INCEPTION.md                the founding vision and the standard
 .agents/planning/README.md               index + cross-phase engineering rules (§3 mandatory)
 .agents/planning/ARCHITECTURE_DECISIONS.md   ADR-001…010, binding
-.agents/planning/PHASE_<0-6>_*.md        the task checklists — 155 tasks, 470 criteria
+.agents/planning/PHASE_<0-6>_*.md        the task checklists — counts on the dashboard
 ```
 
 ## What this is
@@ -71,7 +71,8 @@ easing solvers, audio synthesis and boundary checker are all hand-written by des
 **Stay Fancy** — if a feature is boring, find the version of it that is visually interesting.
 
 **Automated Proof** — nothing is done until its tests pass, `npm run verify` is green, coverage
-holds (**95% statements on `src/engine/**`**), and benchmarks show no >10% regression.
+holds (**95% statements on `src/engine/**`**), and benchmarks meet `planning/README.md` §3.6
+(classed gates; until P2-F-1 do not claim a uniform >10% regression).
 
 **Changelog** — Keep-a-Changelog format, updated in the *same commit* as the change. Semver from
 commit one; each phase bumps the minor version.
@@ -95,7 +96,7 @@ Conventional Commits, small and atomic, each independently green.
 npm run verify        # typecheck + lint + boundaries + test + build   ← the gate
 npm run test          # vitest
 npm run coverage      # vitest with thresholds
-npm run bench         # performance budgets, fails on >10% regression
+npm run bench         # performance budgets — classed gates, see planning/README.md §3.6
 npm run e2e           # Playwright (from Phase 1)
 npm run boundaries    # layering + engine purity enforcement
 

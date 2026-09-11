@@ -331,7 +331,8 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 **Acceptance criteria**
 - [ ] Every theme at quality 3 holds ≥ 55 fps at 1080p with 100k visible cells on the reference machine.
 - [ ] Every theme at quality 0 holds ≥ 60 fps under 4× CPU throttling.
-- [ ] Theme frame-time costs are recorded in `bench-baseline.json` and gated at 10%.
+- [ ] Theme frame-time costs are recorded in `bench-baseline.json` and gated under the classed
+      policy in `planning/README.md` §3.6 (browser class: absolute budget; after P2-F-1).
 - [ ] Enabling audio adds < 0.5 ms/frame to the main thread.
 
 ---

@@ -45,7 +45,7 @@ chat transcript. **Here.**
     ├── ARCHITECTURE_DECISIONS.md  ← ADR-001…010. Binding. Read once, in full, before Phase 0.
     ├── PHASE_0_FOUNDATION.md      ← 36 tasks   → v0.1.0
     ├── PHASE_1_INTERACTION.md     ← 28 tasks   → v0.2.0
-    ├── PHASE_2_LIBRARY_AND_STATS.md ← 21 tasks → v0.3.0
+    ├── PHASE_2_LIBRARY_AND_STATS.md ← 22 tasks → v0.3.0
     ├── PHASE_3_THEME_ENGINE.md    ← 19 tasks   → v0.4.0
     ├── PHASE_4_POWER_UX.md        ← 17 tasks   → v0.5.0
     ├── PHASE_5_SCALE_AND_PERF.md  ← 15 tasks   → v0.6.0
@@ -53,7 +53,8 @@ chat transcript. **Here.**
 ```
 
 **The phase documents are the tracker.** They are living checklists, not a plan you read once.
-You edit them in place as you work. 155 tasks, 470 acceptance criteria, all specified.
+You edit them in place as you work. Task and acceptance-criterion counts live on the dashboard
+(generated from the phase docs) — do not restate stale totals here.
 
 If you believe a plan is wrong, say so and amend the document with a reason. Do not silently
 diverge from it, and do not silently follow it off a cliff.
@@ -281,7 +282,8 @@ A task is `- [x]` only when **all** of these hold:
 - [ ] `npm run verify` is green — typecheck, lint, **boundaries**, unit tests, build.
 - [ ] Coverage gates hold: **95% statements on `src/engine/**`**, per `planning/README.md` §3.5.
       Thresholds may be raised, never lowered.
-- [ ] Performance budgets hold, with no benchmark regression beyond 10% (`planning/README.md` §3.6).
+- [ ] Performance budgets hold under the classed policy in `planning/README.md` §3.6
+      (until P2-F-1: absolute budgets where declared; do not claim a uniform >10% regression gate).
 - [ ] From Phase 1: the Playwright spec for the feature exists and passes.
 - [ ] From Phase 3: it looks deliberate in **all six themes** and passes contrast in each.
 - [ ] `CHANGELOG.md` updated in the same commit.
@@ -342,7 +344,7 @@ Record the answer in the relevant document. A decision that lives only in a chat
 npm run verify        # typecheck + lint + boundaries + test + build   ← the gate
 npm run test          # vitest
 npm run coverage      # vitest with thresholds
-npm run bench         # performance budgets, fails on >10% regression
+npm run bench         # performance budgets — classed gates, see planning/README.md §3.6
 npm run e2e           # Playwright (from Phase 1)
 npm run boundaries    # layering + engine purity enforcement
 

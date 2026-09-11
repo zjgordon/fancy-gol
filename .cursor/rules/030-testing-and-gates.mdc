@@ -15,7 +15,7 @@ implementation detail is worse than no coverage.
 ```bash
 npm run verify      # typecheck + lint + boundaries + test + build   ← the gate
 npm run coverage    # thresholds enforced
-npm run bench       # budgets, fails on >10% regression
+npm run bench       # budgets — classed gates (planning/README.md §3.6); not a uniform 10%
 npm run e2e         # Playwright (from Phase 1)
 ```
 
@@ -29,7 +29,9 @@ npm run e2e         # Playwright (from Phase 1)
 
 A phase that would lower a threshold must instead delete or fix the untested code.
 
-## Performance budgets (CI-gated, 10% tolerance)
+## Performance budgets (CI-gated — classed policy)
+
+See `planning/README.md` §3.6. Absolute floors:
 
 | Metric | Phase 0 floor | Phase 5 target |
 |---|---|---|
@@ -40,8 +42,9 @@ A phase that would lower a threshold must instead delete or fix the untested cod
 | Cold interactive load | ≤ 1500 ms | ≤ 800 ms |
 | Client JS bundle (gzip) | ≤ 120 kB | ≤ 180 kB |
 
-Benchmarks take the median of N runs against a committed `bench-baseline.json`. Updating the
-baseline is a reviewed commit, never a reflex.
+Regression policy is **per class** (deterministic 2–3%, wall-clock via calibration ratio,
+browser absolute + gate-history) — owned by **P2-F-1**. Until then, do not claim a uniform
+>10% regression gate. Updating `bench-baseline.json` is a reviewed commit, never a reflex.
 
 ## Other standing gates
 

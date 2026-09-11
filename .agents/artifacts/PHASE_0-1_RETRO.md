@@ -12,6 +12,10 @@ and not in a chat log.
 - **2026-09-11 — Licensing (§5.3 / §9 Q1):** MIT for code; per-item pattern provenance + SPDX
   verify gate. Binding text: `planning/README.md` §3.9. Phase 2 AC updated; files on disk deferred
   to P2-B-1.
+- **2026-09-11 — Benchmark gate (§3.1 / §9 Q2):** Fix it (three-class policy + calibration) **and**
+  soften claims in the meantime. Binding text: `planning/README.md` §3.6; ADR-004 amended;
+  owning task **P2-F-1**. Softened AGENTS/CLAUDE/INCEPTION/cursor-rule claims landed with this
+  decision; harness code deferred to P2-F-1.
 
 > This is **not** `.agents/docs/RETROSPECTIVE.md`. That one is written at `1.0.0` and closes the
 > whole experiment (Phase 6). This is a mid-flight check that the momentum is pointed at the right
@@ -128,11 +132,11 @@ app. The temptation to self-certify a human-verification criterion is enormous. 
 Ordered by how much they will cost if left alone. None of these are crises; §3.1 and §3.4 are the
 two worth acting on before Phase 2 code starts.
 
-### 3.1 The benchmark regression gate is materially weaker than the documentation claims — **high**
+### 3.1 The benchmark regression gate is materially weaker than the documentation claims — **high** · **decided 2026-09-11**
 
-`AGENTS.md` §8, `CLAUDE.md` and `planning/README.md` §3.6 all state that benchmarks fail the build
-on a **>10% regression**. In the committed suite, **10 of 16 cases carry `baselineGate: false`**,
-which switches that check off:
+`AGENTS.md` §8, `CLAUDE.md` and `planning/README.md` §3.6 previously stated that benchmarks fail
+the build on a **>10% regression**. In the committed suite, **10 of 16 cases carry
+`baselineGate: false`**, which switches that check off:
 
 | Regression-gated (6) | Gate off (10) |
 |---|---|
@@ -155,17 +159,23 @@ Node **v24.20.0** on an 8-CPU/63 GiB sandbox, while the CI `bench` job runs Node
 GitHub-hosted runner. The baseline being compared against was never produced by the machine doing
 the comparing. `SANDBOX-FEEDBACK-01` §6.1 flagged this skew on 2026-09-03; it was never closed.
 
-**Proposal (not implemented):**
-1. Replace the binary `baselineGate` with a noise-aware gate: have the runner record the spread it
-   already computes (it takes a median of 7) and gate at `max(10%, k·σ)` per case, so a noisy timer
-   gets a wider band instead of no band.
-2. Give every case either a budget or a gate. A case with neither should be deleted or fixed —
-   a number nobody checks is decoration.
-3. Record the baseline on CI hardware, or store per-environment baselines keyed by runner, so the
-   comparison is like-for-like. Close `SANDBOX-FEEDBACK-01` §6.1 (align the agent image to Node 22)
-   at the same time.
-4. Until (1)–(3) land, **soften the claim in `AGENTS.md`/`CLAUDE.md`/`README §3.6`** to match what
-   the build actually does. "Honesty is a feature" applies to our own process documents first.
+**Decision (operator + team, 2026-09-11): fix it, and soften the claim in the meantime.**
+
+The root mistake was holding three kinds of number to one policy. Split them:
+
+| Class | Examples | Policy |
+|---|---|---|
+| **Deterministic** | `client-js-gzip`, `grid-1m-memory` | Tight gate, **2–3%**. No noise excuse. |
+| **Wall-clock CPU** | `conway-512-soup`, `paint-1m`, `snapshot-restore`, `seek-4000`, … | Noise-aware gate on a **calibration ratio** (same-process fixed synthetic workload; raw ms still printed). Dissolves the Node-24-vs-22 provenance problem without per-runner baselines. |
+| **Browser / GPU / paint** | `render-frame-cpu`, `pan-1000pxs-1080p`, `zoom-32-0.5-32-min-fps`, … | Absolute budget only, plus **gate-history** from §3.2 when that mechanism exists. |
+
+Every case lands in exactly one class. **No** `baselineGate: false`. Every case gets a budget or a
+gate, or is deleted. Rename `cold-load-recorded` so its transcribed nature is visible in output.
+
+**Lands in:** `planning/README.md` §3.6 (binding + interim honesty), ADR-004 amendment,
+softened AGENTS/CLAUDE/INCEPTION/`.cursor/rules/030-testing-and-gates.mdc`, Phase 2 task
+**P2-F-1** (implementation — not this pass). Phase 5 prerequisites now name P2-F-1.
+Gate-history for the browser class remains the §3.2 / action #13 item (before Phase 3).
 
 ### 3.2 Criteria that cannot be proven inside the task that owns them — **medium**
 
@@ -322,8 +332,8 @@ so it reads as a choice rather than as drift.
 
 ## 5. Trajectory review — Phase 2, before the branch is cut
 
-Phase 2 is 21 tasks / 68 criteria and it is well specified. Four things are genuinely missing or
-undecided, and all four are cheapest to fix now.
+Phase 2 is 22 tasks (was 21; **P2-F-1** appended) and it is well specified. Three things from the
+original four gaps are still open or partial, and all are cheapest to fix before code starts.
 
 ### 5.1 There is no way for the UI to read the stat series — an ADR-006 gap
 
@@ -442,15 +452,13 @@ Phase 2 task should be told it is writing the Phase 4 component (its home, its c
 bar), rather than Phase 4 discovering a library-shaped matcher it has to generalise. One sentence
 in P2-B-3's notes.
 
-### 6.3 Phase 5 (Scale) — depends on the §3.1 fix more than any other phase
+### 6.3 Phase 5 (Scale) — depends on P2-F-1 more than any other phase
 
 Phase 5's non-negotiable constraint is *"nothing may change behaviour; every optimisation is
 validated against the existing engine as an oracle"*, and its budgets tighten across the board. Both
-of those cash out as benchmark and equivalence gates. Starting Phase 5 with a regression gate that
-covers 6 of 16 cases would undercut the entire phase. §3.1 is not a tidiness item; it is Phase 5's
-prerequisite.
-
-Keeping `P5-D` (HashLife) explicitly cuttable was a good call. Keep it that way.
+of those cash out as benchmark and equivalence gates. **P2-F-1** (three-class gate + calibration)
+is now an explicit Phase 5 prerequisite; §3.1 is decided. Keep `P5-D` (HashLife) explicitly
+cuttable.
 
 ### 6.4 Phase 6 (Launch) — the biggest remaining unknown is mobile
 
@@ -480,7 +488,7 @@ still be outstanding until the owning Phase 2 task runs.
 | 2 | Amend ADR-006 with the stats window query (§5.1) and give the worker→main plumbing an owning task | `ARCHITECTURE_DECISIONS.md`, `PHASE_2_*.md` | P2-C-5 and P2-D-1 both assume it exists | open |
 | 3 | Licence: MIT for code; per-item pattern provenance + SPDX gate (§5.3) | `planning/README.md` §3.9, `PHASE_2` P2-B-1/B-3, `AGENTS.md` §9 | Third-party content arrives in P2-B-1 | **done (planning) 2026-09-11** — implement under P2-B-1 |
 | 4 | Append a panel-host/dock task and make the three panel tasks depend on it (§5.2) | `PHASE_2_*.md` | Three panels otherwise define three contracts | open |
-| 5 | Fix the benchmark gate, or soften the claim to match the build (§3.1) | `tests/bench/`, `scripts/bench.mjs`, `AGENTS.md`, `CLAUDE.md` | Phase 5 rests on it; the honesty rule applies to us | open |
+| 5 | Three-class bench gate + calibration; soften claims meantime (§3.1) | `planning/README.md` §3.6, ADR-004, AGENTS/CLAUDE, **P2-F-1** | Phase 5 rests on it; the honesty rule applies to us | **done (planning) 2026-09-11** — soft claims landed; harness fix is P2-F-1 |
 | 6 | Fix the dashboard's branch-name derivation; tick Phase 0's DoD CI line; reconcile 470→471 (§3.8) | `build-dashboard.mjs`, `PHASE_0_*.md`, `AGENTS.md`, `CLAUDE.md` | Minutes of work; they misdirect the next agent | open |
 
 ### During Phase 2
@@ -529,8 +537,12 @@ Course-correction has its own failure mode. These are working and should be left
    `patterns/`** (facts + original descriptions; Classes A/B/C; D omitted; SPDX gate in verify).
    LifeWiki footer recorded verbatim in §5.3 / `planning/README.md` §3.9. Implementation is P2-B-1,
    not this retro pass.
-2. **The benchmark gate.** Fix the gate, or amend the documents to describe what the build actually
-   enforces? (§3.1 — either is honest; the current state is not.)
+2. ~~**The benchmark gate.** Fix the gate, or amend the documents to describe what the build actually
+   enforces? (§3.1 — either is honest; the current state is not.)~~
+   **Decided 2026-09-11.** **Both:** fix (three classes + calibration ratio; no `baselineGate:
+   false`; every case budget-or-gated-or-deleted; rename transcribed cold-load) **and** soften
+   claims until then. Policy in `planning/README.md` §3.6; ADR-004 amended; task **P2-F-1**.
+   Softened process docs landed with this decision; `bench.mjs` changes wait for P2-F-1.
 3. **The pure-logic lane.** `shared/lib/**` open to every layer, or accept permanent documented
    duplication in `ui/`? (§3.4 — blocks P2-A-1.)
 4. **The changelog's shape.** Deliberate narrative record, or user-facing summary with the reasoning
