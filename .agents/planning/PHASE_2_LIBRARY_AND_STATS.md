@@ -300,12 +300,14 @@ Measured on a 128×128 field (64 blocks of 16×16; H_max = log₂(257) ≈ 8.01 
 
 Measured: blinker p2, pulsar p3, pentadecathlon p15 (absolute Zobrist, journal-confirmed). Glider is a spaceship of period 4 with displacement (1,1) via the bbox-normalised shape hash. Gosper gun is **windowed** period 30: the core is the live bounding box at `reset`, expanded by `WINDOW_PAD` (8) cells and frozen in world space; after the first outbound glider leaves the pad (~32 gens at c/4) the window is the gun mechanism plus the in-production glider at the same phase. 20 chaotic 64×64 toroidal 5,000-gen runs (Conway / HighLife / Day & Night / Brian's Brain / Star Wars × 4 seeds) produced no unconfirmed claims. `zobrist-update` median ratio **1.007** (320² / 32², same ChangeSet, budget 1.5). `stats-overhead` **3.20%** (budget 5%) with abs-hash in `apply`; shape/window XOR arms only when `observeCycle` is called.
 
-#### - [ ] P2-C-4 · Growth classification
+#### - [x] P2-C-4 · Growth classification — @cursor, started 2026-09-11
 **Depends on:** P2-C-1 · **Files:** `src/engine/stats/growth.ts`
 **Implementation notes** Least-squares fit of population over the trailing window to constant, linear, quadratic and exponential models; report the best by adjusted R² with a confidence band, and refuse to classify below a minimum sample count. **Say "insufficient data" rather than guessing** — a research tool that confidently mislabels is worse than one that abstains.
 **Acceptance criteria**
-- [ ] Gosper gun → linear (R² > 0.99). Breeder → quadratic. Still life → constant. Random soup pre-stabilisation → unclassified or chaotic.
-- [ ] Below 64 samples the classifier returns `insufficient-data`, and the UI shows that plainly.
+- [x] Gosper gun → linear (R² > 0.99). Breeder → quadratic. Still life → constant. Random soup pre-stabilisation → unclassified or chaotic.
+- [x] Below 64 samples the classifier returns `insufficient-data`, and the UI shows that plainly.
+
+Measured: OLS on a 2048-sample trailing ring, best by adjusted R² with a fewer-parameters tie-break; winner below adj-R² **0.90** is `chaotic`. Gosper gun (1,500 gens) **linear, R² > 0.99**. Riley's breeder (900 gens) **quadratic**. A 2×2 block **constant, R² = 1**. 64×64 Conway soup at 80 gens **chaotic**. `n < 64` → `Insufficient data (n/64 samples)` via `growthLabel()` / `describeGrowth` (the statistics panel, P2-D-3, renders that string). Fitting is O(samples) on demand; `apply` only pushes `(tick, population)`.
 
 #### - [ ] P2-C-5 · Tiered series storage
 **Depends on:** P2-C-1 · **Files:** `src/engine/stats/series.ts`

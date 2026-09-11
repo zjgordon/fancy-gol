@@ -31,6 +31,10 @@
  * Cycle confirmation is opt-in via {@link observeCycle} (journal
  * materialize is not O(changes); hash-map lookup is, exact compare is
  * only on candidates).
+ *
+ * Growth classification (P2-C-4) is an O(1) ring push of population on
+ * every `reset`/`apply`. Fitting is O(samples) and happens only when
+ * {@link classifyGrowth} / {@link growthLabel} is called.
  */
 import { CHUNK_AREA, CHUNK_SIZE, unpackCellX, unpackCellY } from '../grid/coords.js';
 import { DEAD, type ChangeSet, type GridView, type Snapshot, type StatSample } from '../types.js';
@@ -41,6 +45,11 @@ import {
   EntropyScanner,
   type EntropySample,
 } from './entropy.js';
+import {
+  describeGrowth,
+  GrowthClassifier,
+  type GrowthReport,
+} from './growth.js';
 import { ZobristHasher } from './zobrist.js';
 
 /** A `StateId` is a grid byte; 256 slots always fits the palette. */
@@ -80,12 +89,15 @@ export interface StatsCollectorOptions {
   readonly entropyPeriod?: number;
   /** Spatial 16×16-block stride. Default 1 (every block when a scan runs). */
   readonly entropyBlockStride?: number;
+  /** Trailing growth-sample ring length. Default 2048. */
+  readonly growthCapacity?: number;
 }
 
 export class StatsCollector {
   readonly entropyScanner: EntropyScanner;
   readonly hasher: ZobristHasher;
   readonly cycleDetector: CycleDetector;
+  readonly growth: GrowthClassifier;
 
   private readonly stats: CollectorStats = {
     tick: 0,
@@ -121,6 +133,9 @@ export class StatsCollector {
     });
     this.hasher = new ZobristHasher();
     this.cycleDetector = new CycleDetector();
+    this.growth = new GrowthClassifier({
+      ...(opts.growthCapacity !== undefined ? { capacity: opts.growthCapacity } : {}),
+    });
   }
 
   get snapshot(): Readonly<CollectorStats> {
@@ -166,6 +181,23 @@ export class StatsCollector {
    */
   entropyLabel(): string {
     return describeEntropy({ ...this.entropyScanner.last, exact: this.stats.entropyExact });
+  }
+
+  /**
+   * Fit the trailing population ring. O(samples), not O(cells) — safe to
+   * call from the statistics panel, not from the 512² soup apply path.
+   */
+  classifyGrowth(): GrowthReport {
+    return this.growth.classify();
+  }
+
+  /**
+   * Labelled growth class for display. Abstentions say "Insufficient data"
+   * — this is the user-visible string the acceptance criterion asks for
+   * (the statistics panel, P2-D-3, renders it).
+   */
+  growthLabel(): string {
+    return describeGrowth(this.growth.classify());
   }
 
   /**
@@ -270,6 +302,8 @@ export class StatsCollector {
     this.refreshDerived();
     this.hasher.reset(view, s.bbox);
     this.cycleDetector.reset();
+    this.growth.reset();
+    this.growth.observe(s.tick, s.population);
     // Reset already walked the grid; take an exact occupancy scan so the
     // baseline entropy matches the cells we just counted.
     this.syncEntropy(
@@ -357,6 +391,7 @@ export class StatsCollector {
     }
     this.refreshDerived();
     this.hasher.endApply(s.bbox.x, s.bbox.y, view);
+    this.growth.observe(s.tick, s.population);
     // The occupancy histogram is O(cells) and is not folded from the
     // ChangeSet. Mark the held value stale until {@link observeEntropy}.
     s.entropyExact = false;
