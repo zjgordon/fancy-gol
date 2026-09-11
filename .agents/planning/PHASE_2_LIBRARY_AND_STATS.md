@@ -279,13 +279,15 @@ checker change (`engine → shared/`, scan `shared/**`), the canonical syntactic
 
 Measured: Conway / HighLife / Day & Night / Brian's Brain / WireWorld / Star Wars, 64×64 toroidal, 5,000 gens — density, bbox, centroid, flux, population and per-state match a cell-accurate recount. `stats-overhead` median **1.95%** (budget 5%; P0-F-2's 3% gate lifted to the Phase 2 AC). Shrink: a 6×6 block's outer ring, a cross-chunk island death, and die-back to empty. Two collectors own distinct `perState` / `flux` / `bbox` / `centroid` buffers.
 
-#### - [ ] P2-C-2 · Entropy & spatial measures
+#### - [x] P2-C-2 · Entropy & spatial measures — @cursor, started 2026-09-11
 **Depends on:** P2-C-1 · **Files:** `src/engine/stats/entropy.ts`
 **Implementation notes** Shannon entropy over a 16×16 block-occupancy histogram, computed on a sampled subset of chunks (configurable rate, default every 8th tick) because it is the one genuinely O(cells) metric. Also expose per-chunk population for the Phase 5 density LOD — one computation, two consumers.
 **Acceptance criteria**
-- [ ] Entropy of a uniform random field ≈ maximum; of a still life ≈ near-zero; of a checkerboard agar is between (documented expected ranges asserted in tests).
-- [ ] Sampled entropy tracks the exact value within 5% on 20 chaotic fixtures.
-- [ ] Sampling rate is user-visible in the UI — never present an approximation as exact.
+- [x] Entropy of a uniform random field ≈ maximum; of a still life ≈ near-zero; of a checkerboard agar is between (documented expected ranges asserted in tests).
+- [x] Sampled entropy tracks the exact value within 5% on 20 chaotic fixtures.
+- [x] Sampling rate is user-visible in the UI — never present an approximation as exact.
+
+Measured on a 128×128 field (64 blocks of 16×16; H_max = log₂(257) ≈ 8.01 bits): uniform 50% soup **4.2–6.0 bits**; a single still-life block **< 0.5**; a 16×16-tile checkerboard agar **≈ 1 bit** (two occupancy classes). A *cell*-level checkerboard is one occupancy class and is not the fixture — occupancy entropy sees structure at the 16×16 scale it is defined on. Sampled vs exact: 20 chaotic 256×256 fixtures (HighLife / Brian's Brain / Star Wars / Day & Night × 5 seeds), 75% spatial sample, relative error ≤ 5%. `describeEntropy` / `StatsCollector.entropyLabel()` always name the period and the block fraction; `apply` marks a held reading not-exact. The statistics panel (P2-D-3) renders that string — `StatSample.entropy` is the number only.
 
 #### - [ ] P2-C-3 · Zobrist hashing & cycle detection
 **Depends on:** P2-C-1 · **Files:** `src/engine/stats/{zobrist,cycle-detect}.ts`

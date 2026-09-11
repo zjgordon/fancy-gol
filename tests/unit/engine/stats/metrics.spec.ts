@@ -127,7 +127,7 @@ describe('P2-C-1 incremental metrics', () => {
     expect(sample.density).toBe(collector.snapshot.density);
     expect(sample.bbox).toEqual(collector.snapshot.bbox);
     expect(sample.centroid).toEqual(collector.snapshot.centroid);
-    expect(sample.entropy).toBe(0);
+    expect(sample.entropy).toBe(collector.snapshot.entropy);
     expect(sample.hash).toBe(0);
     expect(sample.perState).not.toBe(collector.snapshot.perState);
   });

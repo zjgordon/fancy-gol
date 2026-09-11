@@ -20,9 +20,21 @@
  * Instance-scoped, not a singleton: each collector owns its typed arrays
  * and geometry. A second `StatsCollector` on a second `Simulation` shares
  * nothing mutable (P2-C-1; Phase 4's Laboratory runs two side by side).
+ *
+ * Entropy (P2-C-2) is the exception to O(changes): a 16×16 occupancy
+ * histogram is O(cells). `reset` takes an exact reading; `observeEntropy`
+ * refreshes on the scanner's period. `apply` never scans — it only marks
+ * the held value stale. Always display {@link StatsCollector.entropyLabel},
+ * never the raw number, when `entropyExact` is false.
  */
 import { CHUNK_AREA, CHUNK_SIZE, unpackCellX, unpackCellY } from '../grid/coords.js';
 import { DEAD, type ChangeSet, type GridView, type StatSample } from '../types.js';
+import {
+  DEFAULT_PERIOD,
+  describeEntropy,
+  EntropyScanner,
+  type EntropySample,
+} from './entropy.js';
 
 /** A `StateId` is a grid byte; 256 slots always fits the palette. */
 const STATE_SLOTS = 256;
@@ -46,9 +58,26 @@ export interface CollectorStats {
   readonly centroid: { x: number; y: number };
   /** Net per-state change this tick (`+to − from`). Reset every `apply`, like births. */
   readonly flux: Int32Array;
+  /** Shannon entropy of the 16×16 occupancy histogram, in bits (P2-C-2). */
+  entropy: number;
+  /**
+   * True only when {@link entropy} came from a just-run, spatially complete
+   * scan. After `apply`, or when the scanner is sampling, this is false —
+   * use {@link StatsCollector.entropyLabel}, never present the number as exact.
+   */
+  entropyExact: boolean;
+}
+
+export interface StatsCollectorOptions {
+  /** Temporal entropy rate. Default 8. */
+  readonly entropyPeriod?: number;
+  /** Spatial 16×16-block stride. Default 1 (every block when a scan runs). */
+  readonly entropyBlockStride?: number;
 }
 
 export class StatsCollector {
+  readonly entropyScanner: EntropyScanner;
+
   private readonly stats: CollectorStats = {
     tick: 0,
     population: 0,
@@ -61,6 +90,8 @@ export class StatsCollector {
     bbox: { x: 0, y: 0, width: 0, height: 0 },
     centroid: { x: 0, y: 0 },
     flux: new Int32Array(STATE_SLOTS),
+    entropy: 0,
+    entropyExact: false,
   };
 
   private boundary: GridView['boundary'] = 'infinite';
@@ -71,14 +102,24 @@ export class StatsCollector {
   private hasExtent = false;
   private bboxDirty = false;
 
+  constructor(opts: StatsCollectorOptions = {}) {
+    this.entropyScanner = new EntropyScanner({
+      period: opts.entropyPeriod ?? DEFAULT_PERIOD,
+      blockStride: opts.entropyBlockStride ?? 1,
+    });
+  }
+
   get snapshot(): Readonly<CollectorStats> {
     return this.stats;
   }
 
   /**
-   * A `StatSample` for the series / wire shape (P2-C-1 populates density,
-   * bbox and centroid; entropy and hash stay 0 until P2-C-2 / P2-C-3).
-   * Copies buffers so a caller can keep the sample past the next `apply`.
+   * A `StatSample` for the series / wire shape. Entropy is the last
+   * occupancy-histogram reading; hash stays 0 until P2-C-3. Copies buffers
+   * so a caller can keep the sample past the next `apply`.
+   *
+   * `entropy` is an approximation whenever {@link CollectorStats.entropyExact}
+   * is false — pair it with {@link entropyLabel}.
    */
   sample(): StatSample {
     const s = this.stats;
@@ -93,9 +134,28 @@ export class StatsCollector {
       density: s.density,
       bbox: { x: s.bbox.x, y: s.bbox.y, width: s.bbox.width, height: s.bbox.height },
       centroid: { x: s.centroid.x, y: s.centroid.y },
-      entropy: 0,
+      entropy: s.entropy,
       hash: 0,
     };
+  }
+
+  /**
+   * Labelled entropy for display. Sampled, strided and stale readings all
+   * say so — this is the user-visible sampling rate the acceptance criterion
+   * asks for (the statistics panel, P2-D-3, renders this string).
+   */
+  entropyLabel(): string {
+    return describeEntropy({ ...this.entropyScanner.last, exact: this.stats.entropyExact });
+  }
+
+  /**
+   * Refresh entropy (and per-chunk populations) according to the scanner's
+   * period. Not called from {@link apply} — that path must stay O(changes).
+   */
+  observeEntropy(view: GridView): EntropySample {
+    const sample = this.entropyScanner.observe(view, this.stats.tick);
+    this.syncEntropy(sample);
+    return sample;
   }
 
   /**
@@ -155,6 +215,15 @@ export class StatsCollector {
     this.bboxDirty = false;
     this.writeExtent(any, minX, minY, maxX, maxY);
     this.refreshDerived();
+    // Reset already walked the grid; take an exact occupancy scan so the
+    // baseline entropy matches the cells we just counted.
+    this.syncEntropy(
+      this.entropyScanner.measure(view, {
+        tick,
+        period: this.entropyScanner.period,
+        blockStride: 1,
+      }),
+    );
   }
 
   /**
@@ -225,6 +294,9 @@ export class StatsCollector {
       this.tightenBBox(view);
     }
     this.refreshDerived();
+    // The occupancy histogram is O(cells) and is not folded from the
+    // ChangeSet. Mark the held value stale until {@link observeEntropy}.
+    s.entropyExact = false;
   }
 
   private captureWorld(view: GridView): void {
@@ -382,5 +454,10 @@ export class StatsCollector {
     }
     s.centroid.x = this.sumX / pop;
     s.centroid.y = this.sumY / pop;
+  }
+
+  private syncEntropy(sample: EntropySample): void {
+    this.stats.entropy = sample.entropy;
+    this.stats.entropyExact = sample.exact;
   }
 }

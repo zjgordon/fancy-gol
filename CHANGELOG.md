@@ -18,6 +18,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Pattern library API: filterable index, per-pattern RLE, and user-saved patterns that sit beside the catalogue. (P2-B-4)
 - A 200-pattern library spanning every shipped ruleset, including Conway rakes, a Herschel, and a tagged breeder. (P2-B-5)
 - Incremental density, live bounding box, centroid, and per-state flux — updated from each tick's changes, not a full-grid scan. (P2-C-1)
+- Shannon entropy of 16×16 block occupancy, sampled and labelled so a reading is never shown as exact. (P2-C-2)
 
 ## [0.2.0] — 2026-09-08
 
