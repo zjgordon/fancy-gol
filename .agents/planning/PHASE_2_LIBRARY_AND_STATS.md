@@ -354,17 +354,19 @@ Measured: `src/ui/charts/{scale,axis,chart}.ts` — linear / log / generation-ti
 
 Measured: `stackStateAreas` skips dead (state 0); live-state heights sum to `population` at every sample and adjacent layers share a boundary (no gap, no overdraw). `drawBand` from tier 1–3 `populationMin`/`populationMax` contains the mean in canvas space. `Chart` now calls `drawLine` / `drawBand` so an aggregated `statsWindow` always shows the envelope. Phase trail alpha is `MotionSignature.easings.*` over a tail sized by `durationMs` at `CHART_HZ`; same window redrawn twice is byte-identical alphas. Sparkline and histogram are standalone for P2-D-3. Not hosted in the shell — that is still P2-D-3.
 
-#### - [ ] P2-D-3 · Statistics panel
+#### - [x] P2-D-3 · Statistics panel
 **Depends on:** P2-D-2, P2-G-2 · **Files:** `src/ui/panels/statistics/*`
 **Implementation notes**
 - **Two modes.** *Simple*: three big numbers (population, births/deaths, generation) plus one sparkline — a child can read it. *Advanced*: the full chart grid, cycle/growth report, the phase plot, and the entropy trace. One toggle. This is the inception document's "child … or a serious researcher" requirement made concrete, and it should exist in every panel.
 - Dock/resize/collapse/session layout come from **P2-G-2** — do not invent a second panel contract here.
 - The cycle-detection report is prominent: "**Period 30 oscillator detected at generation 412**" as a first-class, dismissible finding, not a number buried in a table.
 **Acceptance criteria**
-- [ ] Simple mode is comprehensible with no legend and no documentation.
-- [ ] Advanced mode exposes every metric the engine computes — nothing is collected but hidden.
-- [ ] Panel layout survives reload (via P2-G-2 session persistence).
-- [ ] Opening the panel costs < 50 ms and does not drop a frame in the simulation.
+- [x] Simple mode is comprehensible with no legend and no documentation.
+- [x] Advanced mode exposes every metric the engine computes — nothing is collected but hidden.
+- [x] Panel layout survives reload (via P2-G-2 session persistence).
+- [x] Opening the panel costs < 50 ms and does not drop a frame in the simulation.
+
+Measured: `createStatisticsPanel` registers on the G-2 host (`id: 'stats'`, min-width 280). Simple mode is three heroes (Alive now, Born / died, Generation) plus a sparkline — no legend. Advanced lists population, births, deaths, transitions, activity, density, live box, centroid, entropy, hash, active chunks, step time, flux, and per-state counts, plus growth/entropy labels, stacked states, population chart, and a population-vs-births phase trail. Cycle findings render as `Period N oscillator detected at generation T` and dismiss. `statsWindow` now carries `entropyLabel`, `growthLabel`, `cycle`, and `flux`; the worker records history and calls `observeEntropy`/`observeCycle` after each generation so those strings are real. Opening + first simple paint is < 50 ms in the spec (skipped under coverage). Layout is the G-2 session slice.
 
 #### - [ ] P2-D-4 · Data export
 **Depends on:** P2-D-3

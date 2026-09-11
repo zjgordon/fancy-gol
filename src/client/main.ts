@@ -33,7 +33,9 @@ import type { Brush } from '@ui/tools/brush';
 import type { SelectTool } from '@ui/tools/select';
 import type { StampTool } from '@ui/tools/stamp';
 import { ThemeRegistry } from '@themes/registry';
-import { DEFAULT_THEME } from '@themes/default/theme';
+import { DEFAULT_DARK_THEME, DEFAULT_THEME } from '@themes/default/theme';
+import { chartTokensFromSet } from '@ui/charts/chart';
+import { createStatisticsPanel } from '@ui/panels/statistics/panel';
 import { createAppContext } from './app-context';
 import { createViewEditCommands } from './app-commands';
 import { playColdStart } from './cold-start';
@@ -110,6 +112,11 @@ function main(): void {
   let hasFrame = false;
   let lastTick = 0;
   let lastPopulation = 0;
+  let lastBirths = 0;
+  let lastDeaths = 0;
+  let lastTransitions = 0;
+  let lastActivity = 0;
+  let lastActiveChunks = 0;
   let lastStepMicros = 0;
   let lastPerState: Uint32Array = new Uint32Array(CONWAY.states.length);
   let fps = 0;
@@ -160,8 +167,23 @@ function main(): void {
     hasFrame = true;
     lastTick = frame.tick;
     lastPopulation = frame.stats.population;
+    lastBirths = frame.stats.births;
+    lastDeaths = frame.stats.deaths;
+    lastTransitions = frame.stats.transitions;
+    lastActivity = frame.stats.births + frame.stats.deaths + frame.stats.transitions;
+    lastActiveChunks = frame.stats.activeChunks;
     lastStepMicros = frame.stats.stepMicros;
     lastPerState = frame.stats.perState;
+    statsPanel.updateLive({
+      tick: lastTick,
+      population: lastPopulation,
+      births: lastBirths,
+      deaths: lastDeaths,
+      transitions: lastTransitions,
+      activity: lastActivity,
+      activeChunks: lastActiveChunks,
+      stepMicros: lastStepMicros,
+    });
 
     const now = performance.now();
     if (lastFrameAt !== null) {
@@ -194,6 +216,45 @@ function main(): void {
     mount: shell.panelDock,
     onLayoutChange: () => autosave.scheduleSave(),
   });
+  let statsOpen = false;
+  const statsPanel = createStatisticsPanel({
+    tokens: chartTokensFromSet(DEFAULT_DARK_THEME.tokens),
+    motion: DEFAULT_DARK_THEME.motion,
+    onOpen: () => {
+      statsOpen = true;
+      void refreshStatsWindow();
+    },
+    onClose: () => {
+      statsOpen = false;
+    },
+  });
+  panelHost.register(statsPanel.spec);
+
+  async function refreshStatsWindow(): Promise<void> {
+    if (!statsOpen) return;
+    try {
+      const reply = await client.statsWindow(Math.max(0, lastTick - 2048), lastTick, 200);
+      statsPanel.setWindow(
+        {
+          points: reply.points,
+          tier: reply.tier,
+          aggregated: reply.aggregated,
+          downsampled: reply.downsampled,
+          sourceCount: reply.sourceCount,
+          label: reply.label,
+        },
+        {
+          entropyLabel: reply.entropyLabel,
+          growthLabel: reply.growthLabel,
+          cycle: reply.cycle,
+          windowLabel: reply.label,
+          flux: reply.flux,
+        },
+      );
+    } catch {
+      // Worker not ready yet — the next poll retries.
+    }
+  }
 
   function commitPaint(ops: readonly PaintOp[], record = true): void {
     if (ops.length === 0) return;
@@ -555,8 +616,10 @@ function main(): void {
     }
     const compiled = themeRegistry.getCompiledTheme();
     if (compiled) renderer.setTheme(compiled);
-    themeRegistry.subscribe(({ compiled: next }) => {
+    themeRegistry.subscribe(({ theme, compiled: next }) => {
       renderer.setTheme(next);
+      statsPanel.setTokens(chartTokensFromSet(theme.tokens));
+      statsPanel.setMotion(theme.motion);
       if (hasFrame) {
         renderer.setViewport(toRenderViewport());
         renderer.draw({ cells: mirror.view(), dirty: null, tick: lastTick });
@@ -567,6 +630,9 @@ function main(): void {
     applyViewport();
     requestAnimationFrame(cameraRedrawLoop);
     setInterval(syncStatusBar, STATUS_THROTTLE_MS);
+    setInterval(() => {
+      if (statsOpen) void refreshStatsWindow();
+    }, 50);
 
     client.onFrame((frame) => {
       renderFrame(frame);

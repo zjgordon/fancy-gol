@@ -273,13 +273,11 @@ describe('worker-protocol: the full Phase 0 command set, through an in-memory po
     expect(port.events[1]?.type).toBe('error');
   });
 
-  it('seek without history enabled rejects structurally rather than crashing', () => {
+  it('seek works because the worker records history for cycle detection (P2-D-3)', () => {
     const port = createPort();
     port.send({ id: 1, cmd: 'init', ruleset: CONWAY, width: 16, height: 16, seed: 1 });
     port.send({ id: 2, cmd: 'seek', tick: 0 });
-    const event = port.events[1];
-    expect(event?.type).toBe('error');
-    if (event?.type === 'error') expect(event.message).toMatch(/history/i);
+    expect(port.events[1]?.type).toBe('ok');
   });
 
   it('snapshot replies ok with the Snapshot payload, transferred', () => {
@@ -371,6 +369,9 @@ describe('worker-protocol: the full Phase 0 command set, through an in-memory po
     expect(reply!.label).toMatch(/Tier/);
     expect(reply!.tier).toBe(0);
     expect(reply!.aggregated).toBe(false);
+    expect(reply!.entropyLabel).toMatch(/bits/);
+    expect(reply!.growthLabel.length).toBeGreaterThan(0);
+    expect(reply!.flux).toBeInstanceOf(Int32Array);
   });
 
   it(

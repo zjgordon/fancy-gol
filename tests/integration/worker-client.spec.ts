@@ -176,7 +176,7 @@ describe('WorkerClient: promise-based RPC', () => {
     const fake = createFakeWorker();
     const client = new WorkerClient({ spawn: () => fake.workerLike, frameScheduler: IMMEDIATE_FRAME_SCHEDULER });
     await client.send({ cmd: 'init', ruleset: CONWAY, width: 16, height: 16, seed: 1 });
-    await expect(client.send({ cmd: 'seek', tick: 0 })).rejects.toThrow(/history/i);
+    await expect(client.send({ cmd: 'loadPattern', rle: 'bo$', x: 0, y: 0 })).rejects.toThrow(/RLE/i);
   });
 
   it('concurrent sends resolve independently, matched by correlation id', async () => {

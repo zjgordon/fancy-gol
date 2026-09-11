@@ -114,6 +114,14 @@ export interface StatsWindowPoint {
   readonly tier: 0 | 1 | 2 | 3;
 }
 
+/** Confirmed cycle finding (P2-C-3), on the wire so `ui/` never imports the engine. */
+export interface StatsCycleFinding {
+  readonly kind: 'oscillator' | 'spaceship' | 'windowed';
+  readonly period: number;
+  readonly detectedAt: number;
+  readonly displacement: { readonly x: number; readonly y: number };
+}
+
 // worker → main
 export type Event =
   | { readonly id: number; readonly type: 'ready'; readonly capabilities: WorkerCaps }
@@ -135,6 +143,14 @@ export type Event =
       /** `describeSeriesQuery` — never present a downsampled window as exact. */
       readonly label: string;
       readonly points: readonly StatsWindowPoint[];
+      /** `StatsCollector.entropyLabel` — never present entropy as exact when sampled. */
+      readonly entropyLabel: string;
+      /** `StatsCollector.growthLabel` — abstentions say insufficient data. */
+      readonly growthLabel: string;
+      /** Last confirmed cycle, or `null`. */
+      readonly cycle: StatsCycleFinding | null;
+      /** This-tick per-state flux (`+to − from`), length 256. */
+      readonly flux: Int32Array;
     }
   | { readonly id: number; readonly type: 'ok'; readonly result?: unknown }
   | {
@@ -167,6 +183,20 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 function isFiniteNumber(v: unknown): v is number {
   return typeof v === 'number' && Number.isFinite(v);
+}
+
+function isStatsCycleFinding(v: unknown): v is StatsCycleFinding {
+  if (!isRecord(v)) return false;
+  const kind = v['kind'];
+  const d = v['displacement'];
+  return (
+    (kind === 'oscillator' || kind === 'spaceship' || kind === 'windowed') &&
+    isFiniteNumber(v['period']) &&
+    isFiniteNumber(v['detectedAt']) &&
+    isRecord(d) &&
+    isFiniteNumber(d['x']) &&
+    isFiniteNumber(d['y'])
+  );
 }
 
 /** Like {@link isFiniteNumber}, but also admits `+Infinity` — `run.tps`'s "unbounded" mode
@@ -444,6 +474,18 @@ export function parseEvent(raw: unknown): ParseResult<Event> {
         return fail('label', 'statsWindow.label must be a string');
       if (!Array.isArray(raw['points']))
         return fail('points', 'statsWindow.points must be an array');
+      if (typeof raw['entropyLabel'] !== 'string') {
+        return fail('entropyLabel', 'statsWindow.entropyLabel must be a string');
+      }
+      if (typeof raw['growthLabel'] !== 'string') {
+        return fail('growthLabel', 'statsWindow.growthLabel must be a string');
+      }
+      if (!('cycle' in raw) || (raw['cycle'] != null && !isStatsCycleFinding(raw['cycle']))) {
+        return fail('cycle', 'statsWindow.cycle must be a StatsCycleFinding or null');
+      }
+      if (!(raw['flux'] instanceof Int32Array)) {
+        return fail('flux', 'statsWindow.flux must be an Int32Array');
+      }
       return ok({
         id: raw['id'],
         type,
@@ -453,6 +495,10 @@ export function parseEvent(raw: unknown): ParseResult<Event> {
         sourceCount: raw['sourceCount'],
         label: raw['label'],
         points: raw['points'] as readonly StatsWindowPoint[],
+        entropyLabel: raw['entropyLabel'],
+        growthLabel: raw['growthLabel'],
+        cycle: isStatsCycleFinding(raw['cycle']) ? raw['cycle'] : null,
+        flux: raw['flux'],
       });
     }
     case 'ok': {

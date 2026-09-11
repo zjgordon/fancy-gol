@@ -264,6 +264,86 @@
         font-weight: var(--gol-font-weight-medium);
       }
 
+      .stats-panel {
+        display: flex;
+        flex-direction: column;
+        gap: var(--gol-space-3);
+        min-width: 0;
+      }
+      .stats-finding {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--gol-space-2);
+        padding: var(--gol-space-2);
+        background: var(--gol-color-elevated);
+        border: 1px solid var(--gol-color-accent);
+        border-radius: var(--gol-radius-sm);
+      }
+      .stats-finding-text {
+        margin: 0;
+        font-weight: var(--gol-font-weight-medium);
+        color: var(--gol-color-accent-strong);
+      }
+      .stats-mode {
+        display: flex;
+        gap: var(--gol-space-1);
+      }
+      .stats-mode button[aria-pressed='true'] {
+        color: var(--gol-color-on-accent);
+        background: var(--gol-color-accent);
+      }
+      .stats-heroes {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--gol-space-2);
+      }
+      .stats-hero {
+        margin: 0;
+      }
+      .stats-hero-label {
+        margin: 0;
+        color: var(--gol-color-muted);
+        font-size: var(--gol-font-size-xs);
+      }
+      .stats-hero-value {
+        margin: 0;
+        font-size: var(--gol-font-size-xl);
+        font-weight: var(--gol-font-weight-medium);
+        font-variant-numeric: tabular-nums;
+      }
+      .stats-spark,
+      .stats-chart {
+        width: 100%;
+        height: calc(var(--gol-space-4) * 3);
+        display: block;
+      }
+      .stats-chart {
+        height: calc(var(--gol-space-4) * 8);
+      }
+      .stats-report {
+        margin: 0;
+      }
+      .stats-window-label {
+        margin: 0;
+        color: var(--gol-color-muted);
+        font-size: var(--gol-font-size-xs);
+      }
+      .stats-metrics {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: var(--gol-space-1) var(--gol-space-3);
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+      }
+      .stats-metrics dt {
+        margin: 0;
+        color: var(--gol-color-muted);
+      }
+      .stats-metrics dd {
+        margin: 0;
+      }
+
       .row {
         display: flex;
         justify-content: space-between;

@@ -15,9 +15,17 @@ import { CHUNK_AREA, CHUNK_SIZE, chunkToWorld, unpackChunkX, unpackChunkY } from
 import { validateRuleSet } from '@engine/rules/validate';
 import { Simulation } from '@engine/simulation';
 import { StatsCollector } from '@engine/stats/collector';
+import type { CycleReport } from '@engine/stats/cycle-detect';
 import { describeSeriesQuery } from '@engine/stats/series';
 import { DEAD, type ChangeSet, type Rect, type StateId } from '@engine/types';
-import { parseCommand, type Command, type Event, type TransferredChunks, type WorkerCaps } from '@shared/protocol';
+import {
+  parseCommand,
+  type Command,
+  type Event,
+  type StatsCycleFinding,
+  type TransferredChunks,
+  type WorkerCaps,
+} from '@shared/protocol';
 import type { TickStats } from '@shared/types';
 
 export type PostMessageFn = (event: Event, transfer?: readonly Transferable[]) => void;
@@ -70,6 +78,22 @@ function extractId(raw: unknown): number {
     if (typeof id === 'number' && Number.isFinite(id)) return id;
   }
   return -1;
+}
+
+function toCycleFinding(report: CycleReport): StatsCycleFinding {
+  return {
+    kind: report.kind,
+    period: report.period,
+    detectedAt: report.detectedAt,
+    displacement: { x: report.displacement.x, y: report.displacement.y },
+  };
+}
+
+function observeReports(active: Simulation, col: StatsCollector): void {
+  col.observeEntropy(active.view());
+  if (active.history) {
+    col.observeCycle((t) => active.materialize(t));
+  }
 }
 
 function copyStats(s: Readonly<TickStats>): TickStats {
@@ -172,12 +196,14 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
     if (n === 1) {
       const cs = active.step();
       col.apply(cs, view);
+      observeReports(active, col);
       return cs.dirtyChunks;
     }
     const seen = new Set<number>();
     for (let i = 0; i < n; i++) {
       const cs = active.step();
       col.apply(cs, view);
+      observeReports(active, col);
       const dirty = cs.dirtyChunks;
       for (let d = 0; d < dirty.length; d++) seen.add(dirty[d]!);
     }
@@ -206,6 +232,7 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
           height: cmd.height,
           seed: cmd.seed,
           ...(opts.clock ? { clock: opts.clock } : {}),
+          ...(recordStats ? { history: true } : {}),
         });
         collector = recordStats ? new StatsCollector() : null;
         if (collector) collector.reset(sim.view(), sim.tick);
@@ -241,6 +268,7 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
           if (!sim || disposed || !collector) return;
           const cs = sim.step();
           collector.apply(cs, sim.view());
+          observeReports(sim, collector);
           postFrameFromChangeSet(sim, cs);
         }, 1000 / cmd.tps);
         opts.post({ id: cmd.id, type: 'ok' });
@@ -322,6 +350,7 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
       case 'statsWindow': {
         const col = requireCollector();
         const q = col.series.query(cmd.fromTick, cmd.toTick, cmd.maxPoints);
+        const cycle = col.cycle;
         opts.post({
           id: cmd.id,
           type: 'statsWindow',
@@ -331,6 +360,10 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
           sourceCount: q.sourceCount,
           label: describeSeriesQuery(q),
           points: q.points,
+          entropyLabel: col.entropyLabel(),
+          growthLabel: col.growthLabel(),
+          cycle: cycle ? toCycleFinding(cycle) : null,
+          flux: col.snapshot.flux.slice(),
         });
         return;
       }
