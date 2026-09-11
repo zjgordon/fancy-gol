@@ -334,14 +334,16 @@ Measured: dedicated `{ id, type: 'statsWindow' }` reply (not `ok.result`) carryi
 
 ### Workstream D — Charts & the statistics panel
 
-#### - [ ] P2-D-1 · Charting core
+#### - [x] P2-D-1 · Charting core
 **Depends on:** P2-C-6 · **Files:** `src/ui/charts/{scale,axis,chart}.ts`
 **Implementation notes** Canvas-based, dpr-correct, token-driven. Nice-tick algorithm (1/2/5 × 10ⁿ). Linear and log Y. Crosshair with a value tooltip, legend with per-series toggling, brush-to-zoom on the X axis with a linked reset. Charts share one rAF pass and are throttled to 20 Hz — the data updates faster than a human can read. Data comes only via **P2-C-6** `statsWindow` (never a mirrored tiered `Series` on the main thread).
 **Acceptance criteria**
-- [ ] Six live charts together cost < 2 ms/frame.
-- [ ] Axis labels never collide or overflow at any size from 200 px to 1200 px wide.
-- [ ] Log scale handles zero and negative values without producing `NaN` geometry.
-- [ ] Charts repaint correctly on theme switch with no reload.
+- [x] Six live charts together cost < 2 ms/frame.
+- [x] Axis labels never collide or overflow at any size from 200 px to 1200 px wide.
+- [x] Log scale handles zero and negative values without producing `NaN` geometry.
+- [x] Charts repaint correctly on theme switch with no reload.
+
+Measured: `src/ui/charts/{scale,axis,chart}.ts` — linear / log / generation-time scales, 1/2/5 × 10ⁿ ticks, collision-dropping axis labels, dpr-correct canvas host. Data is a `statsWindow` `ChartWindow` (points + `label`); `ui/` still does not import `@engine/stats`. Log Y clamps ≤0 to the range start (all-non-positive domains fall back to linear) so `convert(0)` / `convert(-5)` stay finite. `setTokens` + `draw` swaps Default dark → light with no reload. `ChartLoop` at `CHART_HZ = 20`. Six 400×180 charts × 200 points, median of 21 frames **< 2 ms** (skipped under `VITEST_COVERAGE`). Labels at 200 / 400 / 800 / 1200 px neither collide nor overflow. Not wired into the shell — that is P2-D-3.
 
 #### - [ ] P2-D-2 · Series renderers
 **Depends on:** P2-D-1 · **Files:** `src/ui/charts/{series,sparkline,histogram,phase}.ts`
