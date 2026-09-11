@@ -16,6 +16,12 @@ and not in a chat log.
   soften claims in the meantime. Binding text: `planning/README.md` §3.6; ADR-004 amended;
   owning task **P2-F-1**. Softened AGENTS/CLAUDE/INCEPTION/cursor-rule claims landed with this
   decision; harness code deferred to P2-F-1.
+- **2026-09-11 — Pure-logic lane (§3.4 / §9 Q3):** `shared/` is pure, full stop (empirically
+  clean — no `shared/lib/` needed). Reject `ui/ → engine/`. ADR-009 amended; owning task
+  **P2-A-1** (checker + syntactic RLE + delete duplicates).
+- **2026-09-11 — Changelog shape (§3.7 / §9 Q4):** Trim to user-visible + task ID from the
+  `v0.3.0` boundary; reasoning stays in phase docs and module comments. Declared in
+  `AGENTS.md` §2.6. Existing entries untouched.
 
 > This is **not** `.agents/docs/RETROSPECTIVE.md`. That one is written at `1.0.0` and closes the
 > whole experiment (Phase 6). This is a mid-flight check that the momentum is pointed at the right
@@ -209,7 +215,7 @@ generations 0/1/4/100), and keep a *short* readable snapshot of the first N call
 then tell *what* changed. Cheap to do while there is one such snapshot; expensive after Phase 3 and
 Phase 5 add renderers.
 
-### 3.4 Boundary-forced duplication has no policy, and Phase 2 walks straight into it — **medium**
+### 3.4 Boundary-forced duplication has no policy, and Phase 2 walks straight into it — **medium** · **decided 2026-09-11**
 
 ADR-009 forbids `ui/ → engine/`. Two pure modules have therefore been hand-duplicated into `ui/`,
 each with a comment explaining why:
@@ -218,19 +224,25 @@ each with a comment explaining why:
 - `src/ui/tools/select.ts` — a minimal RLE codec (states 0–24, no headers), duplicating what
   `engine/patterns/rle.ts` will be.
 
-P2-A-1 already names this and demands a decision ("pick one and record which"). It should be
-decided **before** P2-A-1 starts, not inside it, because P2-A-4 (normalisation), P2-B-3 (library
-panel), P2-D-4 (RLE export) and P4-A-1 (the fuzzy scorer shared with P2-B-3) all sit on the same
-seam. Deciding it inside one codec task guarantees the decision gets made from the narrowest
-possible viewpoint.
+P2-A-1 already named this and demanded a decision ("pick one and record which"). It needed to be
+decided **before** P2-A-1 starts, because P2-A-4 (normalisation), P2-B-3 (library panel), P2-D-4
+(RLE export) and P4-A-1 (the fuzzy scorer shared with P2-B-3) all sit on the same seam.
 
-**Proposal (recommended option):** amend ADR-009 to introduce an explicit pure-logic lane —
-`shared/lib/**` — that `ui/`, `engine/`, `worker/` and `server/` may all import, constrained by the
-boundary checker to the *same* forbidden-globals scan `engine/` gets. `src/shared/color.ts` is
-already this in practice; the amendment makes it a rule rather than a precedent. The alternative
-(allow `ui/ → engine/` for "pure" modules) is worse: "pure" is not machine-checkable at an import
-site, and it dissolves the one boundary the whole layering rests on. Whichever is chosen, the two
-existing duplicates get resolved or documented as permanent in the same amendment.
+**Decision (operator + team, 2026-09-11):** adopt the pure-logic lane. Reject `ui/ → engine/` for
+"pure" modules (not machine-checkable; decays). Empirically, every file under `src/shared/**` is
+already clean under the engine forbidden-globals scan (ran 2026-09-11 via
+`scanForbiddenGlobals` — 5 files, 0 hits), so the simpler rule wins: **`shared/` is pure, full
+stop** — no `shared/lib/` subdirectory unless a future module needs an impurity (then keep the
+exception *outside* `shared/`, or carve a pure sub-lane then). The matrix already lets every
+consumer layer import `shared/`; the change is (1) widen `engine → shared/types` to
+`engine → shared/` (matching `docs/ARCHITECTURE.md`), and (2) extend the forbidden-globals scan
+to `shared/**`. When RLE lands in `shared/rle.ts`, keep it **purely syntactic** (coordinates +
+raw state numbers; no ruleset/alphabet knowledge). Delete the brush/select duplicates rather than
+documenting them as permanent.
+
+**Lands in:** ADR-009 amendment, `planning/README.md` §3.1, AGENTS.md §2.2, `docs/ARCHITECTURE.md`,
+`.cursor/rules/020-engine-purity.mdc`, **P2-A-1** acceptance criteria. Checker/code moves deferred
+to P2-A-1.
 
 ### 3.5 Coverage thresholds have drifted far below reality — **medium**
 
@@ -277,7 +289,7 @@ phases of greenfield work, and it is not sustainable through four more.
 testable wiring modules, landing *before* the panels do. `AGENTS.md` §7 already forbids mixing a
 refactor with a feature; give the refactor its own task so it is not forced to.
 
-### 3.7 Bookkeeping is a large and growing fraction of the work — **low, but decide it now**
+### 3.7 Bookkeeping is a large and growing fraction of the work — **low** · **decided 2026-09-11**
 
 54 of 136 commits (**40%**) are `docs`, 46 of them `docs(planning)`. `CHANGELOG.md` is **62 KB / 727
 lines** after two phases; individual entries run to eight-line paragraphs of design rationale.
@@ -288,11 +300,20 @@ retroactive editing, so the only moment to change the shape is at a phase bounda
 worth noticing that the rationale is currently written **three times**: in the module doc comment,
 in the phase-doc acceptance note, and in the changelog entry.
 
-**Proposal (operator's call, and a legitimate "change nothing"):** keep `CHANGELOG.md` entries to
-the user-visible statement plus the task ID, and let the phase doc and the module comment carry the
-reasoning — they are the durable homes for it and are already carrying it. If the narrative
-changelog is wanted as part of the experiment, keep it deliberately and say so in `AGENTS.md` §2.6
-so it reads as a choice rather than as drift.
+**Decision (operator + team, 2026-09-11):** trim it, and declare the trim. Size is not the
+problem; triple-written rationale is. From the **`v0.3.0` / Phase 2 boundary** onward:
+
+- `CHANGELOG.md` entry = user-visible statement + task ID.
+- Phase doc keeps acceptance-level reasoning (checkbox-gated).
+- Module comment / commit body keeps the code-level *why*.
+- One line per phase release section points at the phase doc (reasoning in one hop).
+
+Keep-a-Changelog stays user-facing; design rationale was never its job. The open-agentic value
+survives because phase docs and commit bodies were always the durable record. **Do not touch
+existing `[0.1.0]` / `[0.2.0]` entries.**
+
+**Lands in:** `AGENTS.md` §2.6 (explicit choice), `planning/README.md` §3.4, CLAUDE/CONTRIBUTING,
+Phase 2 DoD, P6-G-1 notes. No rewrite of `CHANGELOG.md` in this pass.
 
 ### 3.8 Small, concrete inaccuracies — **low**
 
@@ -484,7 +505,7 @@ still be outstanding until the owning Phase 2 task runs.
 
 | # | Action | Lands in | Why now | Status |
 |---|---|---|---|---|
-| 1 | Decide the pure-logic-lane question (§3.4) and amend ADR-009 | `ARCHITECTURE_DECISIONS.md` | P2-A-1 is blocked on it and will otherwise decide it narrowly | open |
+| 1 | Pure-logic lane: `shared/` is pure; reject `ui/ → engine/` (§3.4) | ADR-009 amendment, `README` §3.1, **P2-A-1** | P2-A-1 is blocked on it and will otherwise decide it narrowly | **done (planning) 2026-09-11** — checker/moves are P2-A-1 |
 | 2 | Amend ADR-006 with the stats window query (§5.1) and give the worker→main plumbing an owning task | `ARCHITECTURE_DECISIONS.md`, `PHASE_2_*.md` | P2-C-5 and P2-D-1 both assume it exists | open |
 | 3 | Licence: MIT for code; per-item pattern provenance + SPDX gate (§5.3) | `planning/README.md` §3.9, `PHASE_2` P2-B-1/B-3, `AGENTS.md` §9 | Third-party content arrives in P2-B-1 | **done (planning) 2026-09-11** — implement under P2-B-1 |
 | 4 | Append a panel-host/dock task and make the three panel tasks depend on it (§5.2) | `PHASE_2_*.md` | Three panels otherwise define three contracts | open |
@@ -508,7 +529,7 @@ still be outstanding until the owning Phase 2 task runs.
 |---|---|---|
 | 13 | Nightly flake-history workflow + a documented "gate-history" criterion class (§3.2) | `.github/workflows/`, `planning/README.md` §3 |
 | 14 | Add a `src/audio/**` coverage threshold with the directory (§6.1) | `vitest.config.ts` |
-| 15 | Decide the changelog's shape deliberately at a phase boundary (§3.7) | `AGENTS.md` §2.6, `CHANGELOG.md` |
+| 15 | Changelog shape: user-visible + task ID from `v0.3.0`; declare in AGENTS §2.6 (§3.7) | `AGENTS.md` §2.6, Phase 2 DoD, P6-G-1 | **done (planning) 2026-09-11** — existing CHANGELOG entries untouched |
 
 ---
 
@@ -543,10 +564,17 @@ Course-correction has its own failure mode. These are working and should be left
    false`; every case budget-or-gated-or-deleted; rename transcribed cold-load) **and** soften
    claims until then. Policy in `planning/README.md` §3.6; ADR-004 amended; task **P2-F-1**.
    Softened process docs landed with this decision; `bench.mjs` changes wait for P2-F-1.
-3. **The pure-logic lane.** `shared/lib/**` open to every layer, or accept permanent documented
-   duplication in `ui/`? (§3.4 — blocks P2-A-1.)
-4. **The changelog's shape.** Deliberate narrative record, or user-facing summary with the reasoning
-   in the phase docs? Decidable only at a phase boundary. (§3.7)
+3. ~~**The pure-logic lane.** `shared/lib/**` open to every layer, or accept permanent documented
+   duplication in `ui/`? (§3.4 — blocks P2-A-1.)~~
+   **Decided 2026-09-11.** Pure-logic lane adopted. Empirically `shared/**` is already clean →
+   **`shared/` is pure, full stop** (no `shared/lib/` unless impurity appears later). Reject
+   `ui/ → engine/`. RLE in `shared/` stays syntactic. Duplicates deleted. ADR-009 amended;
+   implementation is **P2-A-1**.
+4. ~~**The changelog's shape.** Deliberate narrative record, or user-facing summary with the reasoning
+   in the phase docs? Decidable only at a phase boundary. (§3.7)~~
+   **Decided 2026-09-11 at the `v0.3.0` boundary.** Trim: user-visible statement + task ID;
+   phase doc + module comment keep the *why*; one pointer line per release section. Declared in
+   `AGENTS.md` §2.6. Pre-`0.3.0` entries not rewritten.
 5. **Phase 2 sequencing.** Should the catalogue split (§5.3 remaining) and the panel host (§5.2) be
    added as new task IDs before the branch is cut, or handled as the first two tasks on the branch?
 

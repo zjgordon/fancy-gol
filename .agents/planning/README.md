@@ -87,10 +87,15 @@ These apply to **every** task in **every** phase. They are not repeated in each 
 
 > *"Pure Logic: the simulation logic must never know the UI exists."* — INCEPTION.md
 
-`src/engine/**` may import only from `src/engine/**` and `src/shared/types/**`. It may not
-reference `window`, `document`, `navigator`, `performance` (use an injected clock), `console`,
-or any DOM/Node API. This is machine-enforced by `scripts/check-boundaries.mjs` in CI from
-Phase 0 onward. A violation fails the build.
+`src/engine/**` may import only from `src/engine/**` and `src/shared/**`. `src/shared/**` may
+import only from `src/shared/**`. Neither may reference `window`, `document`, `navigator`,
+`performance` (use an injected clock), `console`, `localStorage`, `fetch`, `process`, `require`,
+`Date`, or any DOM/Node API. **`shared/` is the pure-logic lane** every other layer already may
+import (ADR-009 amendment 2026-09-11). Empirically clean as of that date — no `shared/lib/`
+subdirectory unless impurity appears later. Machine-enforced by `scripts/check-boundaries.mjs`
+from Phase 0 onward (P2-A-1 extends the forbidden-globals scan to `shared/**` and widens
+`engine → shared/types` to `engine → shared/`). A violation fails the build. Do not allow
+`ui/ → engine/` as a "pure module" escape hatch.
 
 ### 3.2 The no-bloat rule
 
@@ -122,7 +127,11 @@ No task is `- [x]` until:
 - **Semantic versioning from commit one.** Pre-1.0, each completed phase bumps the minor
   version per the table in §1. `1.0.0` is cut in Phase 6.
 - **`CHANGELOG.md`** is Keep-a-Changelog format, updated *in the same commit* as the change,
-  never generated retroactively. Every phase closes by moving `[Unreleased]` into a dated release heading.
+  never generated retroactively. Every phase closes by moving `[Unreleased]` into a dated release
+  heading. **From Phase 2 / `v0.3.0` (decided 2026-09-11):** entries are user-visible statement +
+  task ID only; one line per release section points at the phase doc for reasoning. Module
+  comments and phase-doc notes keep the *why*. Do not rewrite pre-`0.3.0` entries. See
+  `AGENTS.md` §2.6.
 - Commits are small, logical, and independently green. One task ≈ one to three commits.
 
 ### 3.5 Coverage gates (ratcheted, never lowered)
@@ -332,7 +341,7 @@ fancy-gol/
 │   │   ├── patterns/            RLE / plaintext / Life1.06 codecs
 │   │   ├── simulation.ts        the Simulation class
 │   │   └── index.ts             the only public entry point
-│   ├── shared/          types crossing thread & network boundaries
+│   ├── shared/          pure-logic lane: types, protocol, codecs (rle, rng, color, …)
 │   ├── worker/          sim.worker.ts + protocol implementation
 │   ├── render/          Renderer interface, Canvas2D, WebGL2, LOD, dirty-rect
 │   ├── themes/          one directory per theme: tokens, module, effects, sound

@@ -391,7 +391,7 @@ A single npm package with a single `node_modules`, not a monorepo. Layering is e
 
 | Layer | May import from |
 |---|---|
-| `engine/` | `engine/`, `shared/types/` |
+| `engine/` | `engine/`, `shared/` |
 | `shared/` | `shared/` |
 | `worker/` | `engine/`, `shared/` |
 | `render/` | `shared/`, `themes/types` |
@@ -401,13 +401,36 @@ A single npm package with a single `node_modules`, not a monorepo. Layering is e
 | `client/` | everything except `server/` |
 | `server/` | `engine/` (validation only), `shared/` |
 
-Additionally, `engine/` is checked for forbidden global identifiers
-(`window` `document` `navigator` `localStorage` `fetch` `console` `process` `require` `performance`).
+Additionally, **`engine/` and `shared/`** are checked for forbidden global identifiers
+(`window` `document` `navigator` `localStorage` `fetch` `console` `process` `require`
+`performance` `Date`). `shared/` is the pure-logic lane every other layer may import; it must
+stay free of DOM, Node, and I/O the same way the engine does.
 
 ### Rationale
 Workspaces add build orchestration, version juggling and publish ceremony to a project that ships one
 artifact. The value we actually want from a monorepo is *enforced layering*, and that is 80 lines of
 TypeScript — exactly what the no-bloat rule tells us to write ourselves.
+
+### Amendment — 2026-09-11 · Pure-logic lane is all of `shared/` (retro §3.4)
+**Forced by:** Phase 0–1 retrospective §3.4; operator decision. Blocks a narrow decision inside
+P2-A-1.
+**Decision:** Adopt the pure-logic lane. **Do not** allow `ui/ → engine/` for "pure" modules —
+purity is not checkable at an import site and decays. Empirically (2026-09-11), every file under
+`src/shared/**` is already clean under the engine forbidden-globals scan, so the simpler rule
+wins: **`shared/` is pure, full stop** — no `shared/lib/` subdirectory unless a future module
+legitimately needs an impurity (then that module stays *outside* `shared/`, or a pure sub-lane
+is carved out then). The matrix change is naming + enforcement: `engine/` may import all of
+`shared/` (aligning ADR-009 with `docs/ARCHITECTURE.md`, which already stated this), and the
+forbidden-globals scan extends from `engine/**` to `shared/**`. No new edge is added for
+`ui/`/`worker/`/`server/` — they already may import `shared/`.
+**Codec constraint:** when the RLE codec moves into `shared/` (P2-A-1), it stays a **purely
+syntactic** codec (coordinates + raw state numbers). No ruleset or state-alphabet interpretation
+in `shared/` — that stays in `engine/`.
+**Duplicates deleted, not documented permanent:** `ui/tools/brush.ts`'s Mulberry32 and
+`ui/tools/select.ts`'s minimal RLE codec are removed once `shared/` holds the canonical RNG and
+RLE modules (owned by P2-A-1).
+**Owning task:** `P2-A-1` (checker extension + moves + duplicate deletion). Planning only until
+that task runs — do not weaken the checker in the meantime.
 
 ---
 

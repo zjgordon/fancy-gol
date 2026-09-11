@@ -64,8 +64,9 @@ Documentation-only changes under `.agents/**` may land on `main`. **Implementati
 written in 50 lines of TypeScript, write it. The validator, RLE codec, charts, fuzzy matcher,
 easing solvers, audio synthesis and boundary checker are all hand-written by design.
 
-**Pure Logic** — `src/engine/**` must never touch the DOM, Node, or I/O (`window`, `document`,
-`navigator`, `localStorage`, `fetch`, `console`, `process`, `performance`). Machine-enforced by
+**Pure Logic** — `src/engine/**` and `src/shared/**` must never touch the DOM, Node, or I/O
+(`window`, `document`, `navigator`, `localStorage`, `fetch`, `console`, `process`,
+`performance`). `shared/` is the pure-logic lane (ADR-009). Machine-enforced by
 `scripts/check-boundaries.mjs`. Never weaken the checker to pass — fix the code.
 
 **Stay Fancy** — if a feature is boring, find the version of it that is visually interesting.
@@ -74,8 +75,10 @@ easing solvers, audio synthesis and boundary checker are all hand-written by des
 holds (**95% statements on `src/engine/**`**), and benchmarks meet `planning/README.md` §3.6
 (classed gates; until P2-F-1 do not claim a uniform >10% regression).
 
-**Changelog** — Keep-a-Changelog format, updated in the *same commit* as the change. Semver from
-commit one; each phase bumps the minor version.
+**Changelog** — Keep-a-Changelog format, updated in the *same commit* as the change. From
+Phase 2 / `v0.3.0`: user-visible statement + task ID only; reasoning lives in the phase doc and
+module comments (`AGENTS.md` §2.6). Do not rewrite older entries. Semver from commit one; each
+phase bumps the minor version.
 
 **Dashboard** — `node .agents/scripts/build-dashboard.mjs` after any checkbox change, committed
 alongside. `--check` exits 1 when stale. Never hand-edit the generated `PROJECT_STATE` block.
@@ -107,7 +110,7 @@ node .agents/scripts/build-dashboard.mjs --check   # CI: fail if stale
 ## Do not
 
 - Add a runtime dependency beyond `express` and `ws`.
-- Reference the DOM, Node, or I/O from `src/engine/**`.
+- Reference the DOM, Node, or I/O from `src/engine/**` or `src/shared/**`.
 - Weaken a coverage threshold, boundary rule, performance budget or visual baseline to go green.
 - Re-baseline a failing benchmark or screenshot without investigating and recording why.
 - Change simulation behaviour in a performance task — Phase 5 fast paths must prove byte-identical

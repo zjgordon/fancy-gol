@@ -103,8 +103,11 @@ Requirements that make this non-negotiable to write ourselves: it must read colo
 
 ```
 src/
+├── shared/
+│   ├── rle.ts             purely syntactic codec (P2-A-1; no ruleset knowledge)
+│   └── rng.ts             Mulberry32 (moved from engine/; ui + engine import it)
 ├── engine/
-│   ├── patterns/{rle,plaintext,life106,apgcode-lite}.ts, normalize.ts, catalog-types.ts
+│   ├── patterns/{plaintext,life106,apgcode-lite}.ts, normalize.ts, catalog-types.ts
 │   └── stats/{zobrist,cycle-detect,growth,entropy,series}.ts
 ├── ui/
 │   ├── charts/                (above)
@@ -123,18 +126,39 @@ patterns/<ruleset>/*.rle  +  patterns/index.json
 ### Workstream A — Pattern codecs
 
 #### - [ ] P2-A-1 · RLE decoder (full spec, multi-state)
-**Depends on:** Phase 1 · **Files:** `src/engine/patterns/rle.ts`
-**Supersedes, with a boundary snag to resolve:** P1-B-5 shipped a minimal, hand-written encode/decode pair in `src/ui/tools/select.ts` (states 0–24 only: `b`, `o`, `A`–`X`; no headers, no `pA`/`qA`-style extended states) just to round-trip a selection through the system clipboard in Phase 1. This task's codec is the real one, but note `ui/` cannot import `engine/` at all (ADR-009) — so `select.ts` cannot simply switch to importing `src/engine/patterns/rle.ts` once it exists. Either give this codec a home reachable from both layers (e.g. `shared/`, alongside `shared/types.ts`'s own precedent for pure logic multiple layers need) or accept `select.ts`'s copy as a permanent, documented boundary-forced duplicate (the same treatment `brush.ts`'s hand-written PRNG already gets for the identical reason). Don't leave it unexamined — pick one and record which.
+**Depends on:** Phase 1 · **Files:** `src/shared/rle.ts` (syntactic codec), `scripts/check-boundaries.mjs`, `src/engine/rng.ts` → `src/shared/rng.ts` (or re-export), `src/ui/tools/select.ts`, `src/ui/tools/brush.ts`; optional thin `src/engine/patterns/*` wrappers for ruleset-aware helpers only
+**Boundary decision (ADR-009 amendment 2026-09-11, retro §3.4):** pure-logic lane is **all of
+`shared/`** — empirically clean under the forbidden-globals scan on 2026-09-11, so no
+`shared/lib/` subdirectory. Reject `ui/ → engine/` for "pure" modules. This task lands the
+checker change (`engine → shared/`, scan `shared/**`), the canonical syntactic RLE module in
+`shared/`, moves/re-exports Mulberry32 into `shared/`, and **deletes** the Phase 1 duplicates in
+`brush.ts` and `select.ts` (not "document as permanent").
+**Supersedes:** P1-B-5's minimal encode/decode in `src/ui/tools/select.ts` (states 0–24 only).
 **Implementation notes**
-- Header: `x = 3, y = 3, rule = B3/S23`. Body tokens: run counts, `b` (dead), `o` (alive), `$` (end of row, with run counts), `!` (end).
-- **Multi-state (Generations/Golly) extension**: states 2–24 encode as `pA`…`pX`, `qA`…, `rA`… — implement it, because ADR-001 makes multi-state a first-class case and half our builtin rulesets need it.
-- Comment lines: `#C`/`#c` comment, `#N` name, `#O` author, `#P`/`#R` offset, `#r` rule (old format).
-- Robustness: unknown rule → decode cells anyway and return the rule string for the caller to resolve; malformed input → a `PatternParseError` naming line and column.
+- **Land the lane first** (small edit to `check-boundaries.mjs`): MATRIX `engine` allows `shared`
+  (not only `shared/types`); run `FORBIDDEN_ENGINE_GLOBALS` over `src/shared/**` as well as
+  `engine/**`. Aligns the checker with `docs/ARCHITECTURE.md` and the ADR amendment.
+- **Syntactic codec only in `shared/rle.ts`:** parse to coordinates and raw state numbers. No
+  knowledge of rulesets or state alphabets — interpretation stays in `engine/`. Otherwise the
+  lane starts growing things it shouldn't.
+- Header: `x = 3, y = 3, rule = B3/S23`. Body tokens: run counts, `b` (dead), `o` (alive), `$`
+  (end of row, with run counts), `!` (end).
+- **Multi-state (Generations/Golly) extension**: states 2–24 encode as `pA`…`pX`, `qA`…, `rA`… —
+  implement it, because ADR-001 makes multi-state a first-class case and half our builtin
+  rulesets need it.
+- Comment lines: `#C`/`#c` comment, `#N` name, `#O` author, `#P`/`#R` offset, `#r` rule (old
+  format). Provenance/`SPDX-*` `#C` lines (README §3.9) are opaque comments to the codec.
+- Robustness: unknown rule → decode cells anyway and return the rule string for the caller to
+  resolve; malformed input → a `PatternParseError` naming line and column.
+- Delete `select.ts`'s local RLE helpers; import `@shared/rle`. Delete `brush.ts`'s local
+  Mulberry32; import `@shared/rng` (move the engine module or leave a one-line re-export).
 **Acceptance criteria**
-- [ ] Round-trip `decode(encode(p)) === p` for 500 random multi-state patterns (property test).
+- [ ] `check-boundaries.mjs`: `engine` may import `shared/`; forbidden-globals scan covers `shared/**`; a fixture proves both.
+- [ ] `src/shared/rle.ts` is purely syntactic (no ruleset/state-alphabet imports); round-trip `decode(encode(p)) === p` for 500 random multi-state patterns (property test).
 - [ ] A corpus of ≥ 40 real-world `.rle` files from the wild (committed as fixtures, with provenance noted) all decode to expected dimensions and populations.
 - [ ] Decoding a 100k-cell RLE takes < 30 ms.
 - [ ] Every malformed fixture produces a line/column and a hint.
+- [ ] `ui/tools/select.ts` and `ui/tools/brush.ts` contain no duplicated RLE codec / Mulberry32 — both import `shared/`.
 
 #### - [ ] P2-A-2 · RLE encoder
 **Depends on:** P2-A-1
@@ -432,4 +456,5 @@ case is gated honestly, and dissolve the sandbox-vs-CI machine provenance proble
 - [ ] A user can invent a ruleset in the studio, test it, name it, save it, and send a friend a link that works.
 - [ ] Simple mode of the statistics panel is comprehensible to a child; advanced mode satisfies an expert. **Verify with real people.**
 - [ ] `CHANGELOG.md` has a dated `[0.3.0]` entry; the commit is tagged `v0.3.0`.
+- [ ] Phase 2 changelog entries follow `AGENTS.md` §2.6 (user-visible statement + task ID only); the `[0.3.0]` section includes one line pointing at this phase doc for reasoning. Pre-`0.3.0` entries are left untouched.
 - [ ] `docs/demo/phase-2.*` shows a library drag-and-drop, live charts, and a custom rule being authored and applied.

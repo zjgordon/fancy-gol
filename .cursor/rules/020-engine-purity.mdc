@@ -8,12 +8,18 @@ alwaysApply: false
 
 ## Purity (ADR-009) — machine-enforced, non-negotiable
 
-`src/engine/**` may import **only** from `src/engine/**` and `src/shared/types/**`.
+`src/engine/**` may import **only** from `src/engine/**` and `src/shared/**`.
+`src/shared/**` may import **only** from `src/shared/**`.
 
-It must never reference: `window`, `document`, `navigator`, `localStorage`, `fetch`, `console`,
-`process`, `require`, or `performance` (inject a `Clock` instead).
+Neither may reference: `window`, `document`, `navigator`, `localStorage`, `fetch`, `console`,
+`process`, `require`, `performance` (inject a `Clock` instead), or `Date`.
 
-`scripts/check-boundaries.mjs` enforces this in CI. **Never weaken the checker to pass — fix the code.**
+`shared/` is the **pure-logic lane** (decided 2026-09-11). Do not allow `ui/ → engine/` for
+modules claimed "pure" — that is not machine-checkable. Syntactic codecs (RLE, RNG) live in
+`shared/`; ruleset interpretation stays in `engine/`.
+
+`scripts/check-boundaries.mjs` enforces this in CI (P2-A-1 extends the globals scan to
+`shared/**`). **Never weaken the checker to pass — fix the code.**
 
 Layering matrix: `worker/` → `engine/` + `shared/` · `render/` → `shared/` + theme types ·
 `ui/` → `shared/` + `render/types` + `themes/` + `audio/` · `server/` → `shared/` and

@@ -79,10 +79,12 @@ commit-message hook, and the changelog automation.
 ### 2. Pure Logic
 > *"The simulation logic must never know the UI exists."*
 
-`src/engine/**` may import only from `src/engine/**` and `src/shared/types/**`. It may not touch
-`window`, `document`, `navigator`, `localStorage`, `fetch`, `console`, `process`, or `performance`
-(inject a clock). This is machine-enforced by `scripts/check-boundaries.mjs` in CI from Phase 0.
-A violation fails the build. Do not weaken the checker to pass; fix the code.
+`src/engine/**` may import only from `src/engine/**` and `src/shared/**`. `src/shared/**` is the
+pure-logic lane (import only `shared/`; same forbidden globals as the engine — ADR-009
+amendment 2026-09-11). Neither may touch `window`, `document`, `navigator`, `localStorage`,
+`fetch`, `console`, `process`, or `performance` (inject a clock). Enforced by
+`scripts/check-boundaries.mjs` in CI. A violation fails the build. Do not weaken the checker to
+pass; fix the code. Do not smuggle "pure" imports from `ui/ → engine/`.
 
 ### 3. Stay Fancy
 > *"If a feature is 'boring,' find a way to make it visually interesting."*
@@ -107,6 +109,27 @@ Applies to your own output. Before you check a box, read your diff as a hostile 
 
 `CHANGELOG.md` is Keep-a-Changelog format, updated **in the same commit as the change**, never
 retroactively. Semver from commit one; each phase bumps the minor version per the table in §6.
+
+**Shape (decided 2026-09-11 at the `v0.3.0` boundary — retro §3.7):** trim it, and declare the
+trim. From Phase 2 onward, each changelog entry is the **user-visible statement plus the task
+ID**. Design rationale does **not** belong here — Keep-a-Changelog is a user-facing format.
+
+| Home | Carries |
+|---|---|
+| `CHANGELOG.md` | What changed for a user, + task ID (`P2-A-1`) |
+| Phase doc acceptance notes | Acceptance-level reasoning (gated by checkboxes) |
+| Module / commit body | Code-level *why* |
+
+Three copies of a claim eventually disagree, and the changelog copy had no gate on it — that is
+why it was cut, not because 200 KB at `1.0.0` would be "too big". The open agentic experiment's
+durable record is the phase docs and the commit bodies; those were always the home for reasoning.
+
+**Per phase release section:** one line under the version heading pointing at the phase document
+(e.g. `Reasoning: [.agents/planning/PHASE_2_LIBRARY_AND_STATS.md](…)`), so a reader still reaches
+rationale in one hop.
+
+**Do not** rewrite `[0.1.0]` / `[0.2.0]` or any earlier entry — rule 6 forbids retroactive editing,
+and this decision is forward-looking from the Phase 2 / `v0.3.0` boundary.
 
 ### 7. Conventional commits, logically parsed
 > *"Agents are allowed to commit code, using conventional commit messages, and in a logical and

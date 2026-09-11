@@ -70,15 +70,17 @@ Types: `feat` `fix` `perf` `refactor` `test` `docs` `build` `ci` `chore` `style`
 Scopes: `engine` `rules` `grid` `history` `worker` `render` `ui` `themes` `audio` `server`
 `docker` `bench` `planning` `agents`.
 
-Small, independently green. Changelog in the **same** commit as the change. Reference the task
-ID (`Closes P0-I-6.`).
+Small, independently green. Changelog in the **same** commit as the change: from Phase 2 /
+`v0.3.0`, user-visible statement + task ID only (`AGENTS.md` §2.6) — no design-rationale
+paragraphs. Reference the task ID (`Closes P0-I-6.`). Do not rewrite pre-`0.3.0` changelog
+entries.
 
 ## Before you open a PR
 
 - [ ] `npm run verify` is green.
 - [ ] Coverage holds (`npm run coverage`). Thresholds only go up.
-- [ ] `npm run bench` shows no >10% regression if you touched a hot path.
-- [ ] `CHANGELOG.md` updated in the same commit.
+- [ ] `npm run bench` meets `planning/README.md` §3.6 if you touched a hot path.
+- [ ] `CHANGELOG.md` updated in the same commit (user-visible + task ID from Phase 2 on).
 - [ ] Dashboard regenerated if a checkbox moved.
 
 ## Non-negotiables

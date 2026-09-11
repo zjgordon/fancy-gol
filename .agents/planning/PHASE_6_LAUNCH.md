@@ -199,10 +199,11 @@ It is a *toy*, and it holds itself to a professional standard. Concretely, at 1.
 
 #### - [ ] P6-G-1 · Version & changelog automation
 **Depends on:** P0-A-6 · **Files:** `scripts/release.mjs`, `.github/workflows/release.yml`
-**Implementation notes** Derive the next semver from conventional commits since the last tag, generate the changelog section (merging any hand-written `[Unreleased]` prose rather than discarding it — hand-written entries are usually better), tag, and publish. ~150 lines, hand-written. A dry-run mode is mandatory.
+**Implementation notes** Derive the next semver from conventional commits since the last tag, generate the changelog section (merging any hand-written `[Unreleased]` prose rather than discarding it — hand-written entries are usually better), tag, and publish. ~150 lines, hand-written. A dry-run mode is mandatory. Generated and merged entries must follow `AGENTS.md` §2.6: user-visible statement + task ID; do not invent design-rationale paragraphs. Each release section keeps/adds the one-line pointer to the phase doc.
 **Acceptance criteria**
 - [ ] A dry run against real history produces a correct version bump and an accurate changelog.
 - [ ] Hand-written `[Unreleased]` entries survive generation.
+- [ ] Generated entries match the §2.6 shape (user-visible + task ID; no rationale dump).
 - [ ] The release workflow is idempotent and safe to re-run.
 
 #### - [ ] P6-G-2 · Container publishing

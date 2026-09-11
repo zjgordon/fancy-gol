@@ -45,8 +45,10 @@ One package, hard internal boundaries, machine-enforced by `npm run boundaries`
 | `src/client/` | not `server/` | Composition root (`main.ts`), harness, session, live client. |
 | `src/server/` | `shared/` (and engine for validation) | Express + `/live` hub. |
 
-`src/engine/**` is additionally banned from `window`, `document`, `navigator`, `localStorage`,
-`fetch`, `console`, `process`, `performance`, and `Date`.
+`src/engine/**` is banned from `window`, `document`, `navigator`, `localStorage`,
+`fetch`, `console`, `process`, `performance`, and `Date`. **`src/shared/**` carries the same
+ban** (ADR-009 amendment 2026-09-11): it is the pure-logic lane every layer may import. No
+`ui/ → engine/` escape hatch for "pure" modules.
 
 ## ADRs
 
