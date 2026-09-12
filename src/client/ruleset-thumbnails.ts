@@ -70,6 +70,11 @@ export class RulesetThumbnailLoop {
     this.canvases.set(id, canvas);
   }
 
+  clear(): void {
+    this.stop();
+    this.canvases.clear();
+  }
+
   start(): void {
     this.stop();
     const bundles = new Map<string, Thumbnail>();

@@ -111,11 +111,22 @@ describe('defaultMigration', () => {
   });
 });
 
-function setup(entries: readonly RulesetSummary[] = ENTRIES, activeId = 'conway') {
+function setup(
+  entries: readonly RulesetSummary[] = ENTRIES,
+  activeId = 'conway',
+  extras: { onEdit?: (id: string) => void } = {},
+) {
   const onThumbnailCreated = vi.fn();
   const onOpenChange = vi.fn();
   const onConfirm = vi.fn<(id: string, migration?: ReadonlyMap<StateId, StateId>) => void>();
-  const picker = attachRulesetPicker({ entries, activeId, onThumbnailCreated, onOpenChange, onConfirm });
+  const picker = attachRulesetPicker({
+    entries,
+    activeId,
+    onThumbnailCreated,
+    onOpenChange,
+    onConfirm,
+    ...(extras.onEdit ? { onEdit: extras.onEdit } : {}),
+  });
   document.body.appendChild(picker.root);
   return { picker, onThumbnailCreated, onOpenChange, onConfirm };
 }
@@ -384,6 +395,27 @@ describe('attachRulesetPicker', () => {
     // proves dispose() doesn't leave a dangling window listener that would throw or misfire
     // after the component's own lifecycle has ended.
     expect(() => document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }))).not.toThrow();
+  });
+
+  it('badges a user ruleset, offers Edit, and rebuilds on setEntries', () => {
+    const onEdit = vi.fn();
+    const mine: RulesetSummary = {
+      id: 'user:spark',
+      name: 'Spark',
+      states: CONWAY_STATES,
+      tags: ['yours'],
+      origin: 'user',
+    };
+    const { picker, onConfirm } = setup([CONWAY, mine], 'conway', { onEdit });
+    cleanup = () => picker.dispose();
+    expect(picker.root.querySelector('.ruleset-entry-badge')?.textContent).toBe('Yours');
+    picker.root.querySelector<HTMLButtonElement>('.ruleset-entry-edit')!.click();
+    expect(onEdit).toHaveBeenCalledWith('user:spark');
+    expect(onConfirm).not.toHaveBeenCalled();
+
+    picker.setEntries([CONWAY]);
+    expect(picker.root.querySelector('.ruleset-entry-badge')).toBeNull();
+    expect(picker.root.querySelectorAll('.ruleset-entry')).toHaveLength(1);
   });
 });
 

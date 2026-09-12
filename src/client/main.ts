@@ -30,6 +30,7 @@ import { createSpeedControl, TpsMeter } from '@ui/components/speed';
 import { createStatusBar, STATUS_THROTTLE_MS, zoomPercent } from '@ui/components/statusbar';
 import {
   attachRulesetPicker,
+  defaultMigration,
   openStateMigrationDialog,
   palettesMatch,
 } from '@ui/components/ruleset-picker';
@@ -46,7 +47,7 @@ import { createStatisticsPanel } from '@ui/panels/statistics/panel';
 import { openExportDialog } from '@ui/export/dialog';
 import { CHART_EXPORT_SCALE, canvasToPngBlob } from '@ui/export/png';
 import { LIBRARY_DRAG_TYPE, createLibraryPanel } from '@ui/panels/library/panel';
-import { createRulesetStudioPanel } from '@ui/panels/ruleset-studio/panel';
+import { createRulesetStudioPanel, prettyRuleset } from '@ui/panels/ruleset-studio/panel';
 import { createAppContext } from './app-context';
 import { createViewEditCommands } from './app-commands';
 import { playColdStart } from './cold-start';
@@ -71,10 +72,29 @@ import {
   stampsFromCatalog,
   type CatalogPattern,
 } from './pattern-catalog';
-import { builtinRulesetSummaries } from './ruleset-summaries';
+import { builtinRulesetSummaries, userRulesetSummary } from './ruleset-summaries';
 import { RulesetThumbnailLoop } from './ruleset-thumbnails';
 import { resolveBootSession } from './boot-session';
-import { buildSessionDoc, buildShareLink, captureGridRLE, createAutosave } from './session';
+import {
+  buildRulesetShareLink,
+  buildSessionDoc,
+  buildShareLink,
+  captureGridRLE,
+  createAutosave,
+  resolveSharedRuleset,
+} from './session';
+import { blobFromText, saveBlob } from '@ui/export/save';
+import {
+  fetchRemoteUserRulesets,
+  loadUserRulesets,
+  mergeUserRulesets,
+  postUserRuleset,
+  realUserRulesetStorage,
+  upsertUserRuleset,
+  withUserId,
+  writeUserRulesets,
+} from './user-rulesets';
+import { suggestUserRulesetId } from '@shared/user-rulesets';
 import { SHELL_THEME, shellPalette } from './shell-theme';
 import { gateToolHandlers } from './tool-gate';
 import { toWorkerLike } from './worker-adapter';
@@ -466,17 +486,56 @@ function main(): void {
     });
   }
 
+  const userStorage = realUserRulesetStorage();
+  let userRulesets: RuleSet[] = [];
+
+  function rememberUserRulesets(raw: readonly unknown[]): void {
+    const next: RuleSet[] = [];
+    for (const item of raw) {
+      try {
+        next.push(validateRuleSet(item));
+      } catch {
+        // skip a corrupt local entry rather than emptying the catalogue
+      }
+    }
+    userRulesets = next;
+  }
+
+  function persistUserRulesets(): void {
+    if (userStorage) writeUserRulesets(userStorage, userRulesets);
+  }
+
+  function rulesetById(id: string): RuleSet | undefined {
+    return getBuiltin(id) ?? userRulesets.find((rs) => rs.id === id);
+  }
+
+  function pickerEntries() {
+    return [...builtinRulesetSummaries(), ...userRulesets.map((rs) => userRulesetSummary(rs))];
+  }
+
+  function refreshPicker(): void {
+    const open = rulesetPicker.open;
+    thumbnails.clear();
+    rulesetPicker.setEntries(pickerEntries());
+    rulesetPicker.setActive(activeRuleset.id);
+    if (open) thumbnails.start();
+  }
+
+  rememberUserRulesets(loadUserRulesets(userStorage));
+  let editUserRuleset: (id: string) => void = () => {};
+
   const thumbnails = new RulesetThumbnailLoop({
-    getRuleset: getBuiltin,
+    getRuleset: rulesetById,
     themeFor: (id) => ({ id: `thumb-${id}`, background: SHELL_THEME.background, palette: (state) => shellPalette(state) }),
   });
   const rulesetPicker = attachRulesetPicker({
-    entries: builtinRulesetSummaries(),
+    entries: pickerEntries(),
     activeId: activeRuleset.id,
     onThumbnailCreated: (id, el) => thumbnails.register(id, el),
     onOpenChange: (isOpen) => (isOpen ? thumbnails.start() : thumbnails.stop()),
+    onEdit: (id) => editUserRuleset(id),
     onConfirm: (id, migration) => {
-      const target = getBuiltin(id);
+      const target = rulesetById(id);
       if (!target) return;
       void (async () => {
         await client.send({
@@ -566,6 +625,51 @@ function main(): void {
       }
     },
     runBattery: (value, opts) => benchClient.run(value, opts),
+    onSave: (value) => {
+      const named = withUserId(validateRuleSet(value));
+      userRulesets = upsertUserRuleset(userRulesets, named);
+      persistUserRulesets();
+      studioPanel.setDocument(named);
+      refreshPicker();
+      toasts.show('Saved to this browser.');
+      void postUserRuleset(named, fetch).then((id) => {
+        if (id) toasts.show('Also saved on this server.');
+      });
+    },
+    onExport: (value) => {
+      const named = withUserId(validateRuleSet(value));
+      const slug = suggestUserRulesetId(named.id).slice('user:'.length);
+      void saveBlob(blobFromText(prettyRuleset(named), 'application/json'), `${slug}.golrule.json`);
+    },
+    onShare: (value) => {
+      const named = withUserId(validateRuleSet(value));
+      void buildRulesetShareLink(named, `${window.location.origin}${window.location.pathname}`).then((url) => {
+        const clip = navigator.clipboard;
+        if (!clip) {
+          toasts.show(url);
+          return;
+        }
+        void clip.writeText(url).then(
+          () => toasts.show('Share link copied — no account needed.'),
+          () => toasts.show(url),
+        );
+      });
+    },
+    readImportFile: () =>
+      new Promise<string | null>((resolve) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,.golrule.json,application/json';
+        input.addEventListener('change', () => {
+          const file = input.files?.[0];
+          if (!file) {
+            resolve(null);
+            return;
+          }
+          void file.text().then(resolve, () => resolve(null));
+        });
+        input.click();
+      }),
     onApply: async (value, { reset }) => {
       const target = validateRuleSet(value);
       let migration: number[] | undefined;
@@ -597,6 +701,12 @@ function main(): void {
     },
   });
   panelHost.register(studioPanel.spec);
+  editUserRuleset = (id) => {
+    const target = rulesetById(id);
+    if (!target) return;
+    studioPanel.setDocument(target);
+    panelHost.open('studio');
+  };
 
   const studioToggle = document.createElement('button');
   studioToggle.type = 'button';
@@ -841,6 +951,37 @@ function main(): void {
       await client.send({ cmd: 'init', ruleset: CONWAY, width: WORLD_WIDTH, height: WORLD_HEIGHT, seed: sessionSeed });
       await client.send({ cmd: 'paint', ops: gunOps(20, 20, primaryLiveState(activeRuleset)) });
     }
+
+    const sharedRule = await resolveSharedRuleset(window.location.hash);
+    if (sharedRule) {
+      try {
+        const incoming = validateRuleSet(sharedRule);
+        let migration: number[] | undefined;
+        if (!palettesMatch(activeRuleset.states, incoming.states)) {
+          const map = defaultMigration(activeRuleset.states, incoming.states);
+          migration = activeRuleset.states.map((s) => map.get(s.id) ?? 0);
+        }
+        await client.send({
+          cmd: 'setRuleset',
+          ruleset: incoming,
+          ...(migration ? { migration } : {}),
+        });
+        activeRuleset = incoming;
+        lastPerState = new Uint32Array(incoming.states.length);
+        rulesetPicker.setActive(incoming.id);
+        libraryPanel.setActiveRuleset(incoming.id);
+        studioPanel.setDocument(incoming);
+      } catch {
+        // a corrupt #r: fragment is "no share", not a crash
+      }
+    }
+
+    void fetchRemoteUserRulesets(fetch).then((remote) => {
+      if (remote.length === 0) return;
+      rememberUserRulesets(mergeUserRulesets(userRulesets, remote));
+      persistUserRulesets();
+      refreshPicker();
+    });
 
     if (!testMode) {
       await client.send({ cmd: 'run', tps: RUN_TPS });

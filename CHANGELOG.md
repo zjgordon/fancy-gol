@@ -31,6 +31,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A Ruleset Studio with a live JSON editor: validate as you type, and apply B3/S23 → B36/S23 without resetting the grid. (P2-E-1)
 - Ruleset Studio form: B/S chips, a neighbourhood diagram, a state editor, and a Randomise button that says when a rule looks explosive. (P2-E-2)
 - The Ruleset Studio runs a short test battery on a candidate rule and shows growth, period, and a thumbnail for each seed. (P2-E-3)
+- Save a studio rule to this browser or a share link, and import a .golrule.json with the same issue list the editor already uses. (P2-E-4)
 
 ### Changed
 

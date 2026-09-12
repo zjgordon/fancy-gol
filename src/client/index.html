@@ -581,8 +581,34 @@
         flex-direction: column;
         min-width: 0;
       }
+      .ruleset-entry-heading {
+        display: flex;
+        align-items: center;
+        gap: var(--gol-space-2);
+        min-width: 0;
+      }
       .ruleset-entry-name {
         font-weight: var(--gol-font-weight-medium);
+      }
+      .ruleset-entry-badge {
+        font-size: var(--gol-font-size-xs);
+        color: var(--gol-color-on-accent);
+        background: var(--gol-color-accent);
+        border-radius: var(--gol-radius-sm);
+        padding: 0 var(--gol-space-1);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .ruleset-entry-edit {
+        font: inherit;
+        font-size: var(--gol-font-size-xs);
+        color: var(--gol-color-accent);
+        background: transparent;
+        border: 1px solid var(--gol-color-border);
+        border-radius: var(--gol-radius-sm);
+        padding: 0 var(--gol-space-1);
+        cursor: pointer;
+        margin-left: auto;
       }
       .ruleset-entry-meta {
         font-size: var(--gol-font-size-sm);
@@ -1123,9 +1149,38 @@
       .studio-reset:focus-within,
       .studio-input:focus-visible,
       .studio-bench-run:focus-visible,
-      .studio-bench-cancel:focus-visible {
+      .studio-bench-cancel:focus-visible,
+      .studio-save:focus-visible,
+      .studio-export:focus-visible,
+      .studio-import:focus-visible,
+      .studio-share:focus-visible,
+      .ruleset-entry-edit:focus-visible {
         outline: 2px solid var(--gol-color-accent);
         outline-offset: 2px;
+      }
+      .studio-library {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--gol-space-2);
+      }
+      .studio-save,
+      .studio-export,
+      .studio-import,
+      .studio-share {
+        font: inherit;
+        color: var(--gol-color-text);
+        background: var(--gol-color-elevated);
+        border: 1px solid var(--gol-color-border);
+        border-radius: var(--gol-radius-sm);
+        padding: var(--gol-space-1) var(--gol-space-3);
+        cursor: pointer;
+      }
+      .studio-save:disabled,
+      .studio-export:disabled,
+      .studio-import:disabled,
+      .studio-share:disabled {
+        color: var(--gol-color-muted);
+        cursor: not-allowed;
       }
       .studio-bench {
         display: flex;

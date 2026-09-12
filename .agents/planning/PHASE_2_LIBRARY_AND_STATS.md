@@ -427,13 +427,15 @@ Measured: Form chips, the notation field, the Birth/Survive table, and the JSON 
 
 Measured: `runBattery` steps eight fixed seeds on a 32×32 toroidal arena (five soups, a cell, a 2×2, an 8×8) with history on so cycle confirmation is real. A dedicated `bench.worker` isolate runs it — Cancel is `terminate()`, the live sim worker is untouched. Growth is classified on the attractor tail once a seed has 64 post-stabilisation samples; fewer than 64 still says insufficient data. Conway's block is p1 / 4 / constant, a lone cell dies at gen 1, and the full report is pinned at `tests/fixtures/rules/bench/conway-report.json`. The Conway battery measures ~365 ms here (budget 3 s; skipped under coverage). Studio cards paint a 32×32 occupancy thumb from CSS tokens. `ui/` never imports `@engine`.
 
-#### - [ ] P2-E-4 · Save, share, import
+#### - [x] P2-E-4 · Save, share, import — @cursor, started 2026-09-11, finished 2026-09-11
 **Depends on:** P2-E-1, P1-G-1
 **Implementation notes** Save to `localStorage` and, when the server is up, `POST /api/rulesets`. Export/import as a `.golrule.json` file. Shareable URL carrying an inline ruleset. User rulesets appear in the Phase 1 ruleset picker with a distinguishing badge and an edit affordance.
 **Acceptance criteria**
-- [ ] A ruleset saved on one browser loads from its share URL on another with no account.
-- [ ] Importing a malformed file surfaces the structured issues rather than failing silently.
-- [ ] User rulesets survive a Phase 3/4 session-format migration (migration test committed now).
+- [x] A ruleset saved on one browser loads from its share URL on another with no account.
+- [x] Importing a malformed file surfaces the structured issues rather than failing silently.
+- [x] User rulesets survive a Phase 3/4 session-format migration (migration test committed now).
+
+Measured: Studio Save writes `fancy-gol:user-rulesets` (versioned `{ version, rulesets }`) and best-effort `POST /api/rulesets`. Export is a `.golrule.json`; Import loads the file into the existing editor/gutter so a malformed document shows the same `path`/`message`/`hint` list as typing. Copy share link builds `#r:` plus the same deflate/base64url as a session `#d:` — a second "browser" with empty localStorage decodes that fragment to the same document, no account. The picker badges user entries **Yours** and offers Edit. A frozen v1 user-store fixture and a fictional v1→v2 session hop both keep the inline `user:spark` ruleset (`tests/fixtures/rules/user-store/v1.json`, `upgradeToVersion`).
 
 ---
 

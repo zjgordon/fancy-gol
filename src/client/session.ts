@@ -338,6 +338,7 @@ export const DEFAULT_MAX_FRAGMENT_BYTES = 8192;
 
 const INLINE_PREFIX = 'd:';
 const SERVER_PREFIX = 's:';
+const RULESET_PREFIX = 'r:';
 
 function concatChunks(chunks: readonly Uint8Array[]): Uint8Array {
   const total = chunks.reduce((sum, c) => sum + c.length, 0);
@@ -418,7 +419,10 @@ export async function decodeInlineShare(payload: string): Promise<SessionDoc | n
   }
 }
 
-export type ParsedShareFragment = { readonly kind: 'inline'; readonly payload: string } | { readonly kind: 'server'; readonly id: string };
+export type ParsedShareFragment =
+  | { readonly kind: 'inline'; readonly payload: string }
+  | { readonly kind: 'server'; readonly id: string }
+  | { readonly kind: 'ruleset'; readonly payload: string };
 
 /** Reads a URL fragment (with or without its leading `#`) that {@link buildShareLink} produced.
  * `null` for a fragment that isn't one of this app's share links at all (an anchor a user typed,
@@ -428,7 +432,36 @@ export function parseShareFragment(fragment: string): ParsedShareFragment | null
   const text = fragment.startsWith('#') ? fragment.slice(1) : fragment;
   if (text.startsWith(INLINE_PREFIX)) return { kind: 'inline', payload: text.slice(INLINE_PREFIX.length) };
   if (text.startsWith(SERVER_PREFIX)) return { kind: 'server', id: text.slice(SERVER_PREFIX.length) };
+  if (text.startsWith(RULESET_PREFIX)) return { kind: 'ruleset', payload: text.slice(RULESET_PREFIX.length) };
   return null;
+}
+
+/** Rule-only share (P2-E-4): `#r:` plus the same deflate/base64url as a session `#d:`. */
+export async function encodeInlineRuleset(ruleset: unknown): Promise<string> {
+  const json = new TextEncoder().encode(JSON.stringify(ruleset));
+  const compressed = await deflateRaw(json);
+  return toBase64Url(compressed);
+}
+
+export async function decodeInlineRuleset(payload: string): Promise<unknown> {
+  try {
+    const compressed = fromBase64Url(payload);
+    const json = await inflateRaw(compressed);
+    return JSON.parse(new TextDecoder().decode(json)) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+export async function buildRulesetShareLink(ruleset: unknown, baseUrl: string): Promise<string> {
+  const payload = await encodeInlineRuleset(ruleset);
+  return `${baseUrl}#${RULESET_PREFIX}${payload}`;
+}
+
+export async function resolveSharedRuleset(fragment: string): Promise<unknown> {
+  const parsed = parseShareFragment(fragment);
+  if (!parsed || parsed.kind !== 'ruleset') return null;
+  return decodeInlineRuleset(parsed.payload);
 }
 
 export interface PostedSession {
@@ -495,7 +528,7 @@ export interface ResolveShareOptions {
  */
 export async function resolveShareFragment(fragment: string, options: ResolveShareOptions): Promise<SessionDoc | null> {
   const parsed = parseShareFragment(fragment);
-  if (!parsed) return null;
+  if (!parsed || parsed.kind === 'ruleset') return null;
 
   if (options.hasExistingAutosave) {
     const proceed = await options.confirmOverwrite();

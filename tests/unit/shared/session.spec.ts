@@ -115,6 +115,32 @@ describe('migrateSessionDoc — forward compatibility (this task’s own accepta
     expect(migrated?.version).toBe(CURRENT_SESSION_VERSION);
     expect(migrated?.grid).toBe('x = 2, y = 1\n2o!');
   });
+
+  it('keeps an inline user ruleset across a fictional Phase 3/4 session hop', () => {
+    const frozen = {
+      ...FROZEN_V1_DOCUMENT,
+      ruleset: {
+        kind: 'inline' as const,
+        ruleset: {
+          id: 'user:spark',
+          name: 'Spark',
+          states: [
+            { id: 0, name: 'dead', kind: 'dead', countsAsAlive: false },
+            { id: 1, name: 'alive', kind: 'live', countsAsAlive: true },
+          ],
+          neighborhood: { kind: 'moore', radius: 1 },
+          transition: { kind: 'totalistic', born: [3], survive: [2, 3] },
+          boundary: 'toroidal',
+        },
+      },
+    };
+    const hopped = upgradeToVersion(frozen, 1, 2, {
+      1: (doc) => ({ ...doc, version: 2, sessionExtra: 'phase-3' }),
+    });
+    expect(hopped).not.toBeNull();
+    expect(hopped?.['ruleset']).toEqual(frozen.ruleset);
+    expect(migrateSessionDoc(frozen)?.ruleset).toEqual(frozen.ruleset);
+  });
 });
 
 describe('upgradeToVersion — the chaining mechanism itself (synthetic, since real MIGRATIONS is still empty)', () => {

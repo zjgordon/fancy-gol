@@ -12,6 +12,7 @@ import {
   SYSTEM_HIDDEN,
   applySessionDoc,
   buildSessionDoc,
+  buildRulesetShareLink,
   buildShareLink,
   captureGridRLE,
   createAutosave,
@@ -21,6 +22,7 @@ import {
   loadSession,
   parseShareFragment,
   realSessionStorage,
+  resolveSharedRuleset,
   resolveShareFragment,
   writeSessionDoc,
   type PostedSession,
@@ -601,5 +603,25 @@ describe('resolveShareFragment', () => {
       confirmOverwrite: () => true,
     });
     expect(resolved).toBeNull();
+  });
+});
+
+describe('ruleset share URL (P2-E-4)', () => {
+  it('recognises a #r: fragment and does not treat it as a session share', async () => {
+    expect(parseShareFragment('#r:abc')).toEqual({ kind: 'ruleset', payload: 'abc' });
+    const confirm = vi.fn(() => true);
+    await expect(
+      resolveShareFragment('#r:abc', { hasExistingAutosave: true, confirmOverwrite: confirm }),
+    ).resolves.toBeNull();
+    expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it('loads a ruleset saved on one browser from its share URL on another with no account', async () => {
+    const ruleset = { id: 'user:spark', name: 'Spark', extra: true };
+    const url = await buildRulesetShareLink(ruleset, 'https://a.example/');
+    expect(url.startsWith('https://a.example/#r:')).toBe(true);
+    const loaded = await resolveSharedRuleset(url.slice(url.indexOf('#')));
+    expect(loaded).toEqual(ruleset);
+    await expect(resolveSharedRuleset('#r:%%%not-base64%%%')).resolves.toBeNull();
   });
 });

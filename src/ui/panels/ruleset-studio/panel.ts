@@ -1,7 +1,7 @@
 /**
- * Ruleset Studio (P2-E-1, P2-E-2, P2-E-3). "Rule-God Status." A G-2 panel that
- * hosts the form builder, the JSON editor, and the test bench — this file only
- * mounts content; it does not invent a second dock.
+ * Ruleset Studio (P2-E-1 through P2-E-4). "Rule-God Status." A G-2 panel that
+ * hosts the form builder, the JSON editor, the test bench, and save/share —
+ * this file only mounts content; it does not invent a second dock.
  *
  * Validation is injected: `ui/` cannot import `@engine`, so the composition root
  * passes `validateRuleSet` (and the apply path that talks to the worker).
@@ -34,6 +34,10 @@ export interface RulesetStudioOptions {
   readonly initialText?: string;
   readonly validate: StudioValidate;
   readonly onApply?: (value: unknown, opts: { reset: boolean }) => void | Promise<void>;
+  readonly onSave?: (value: unknown) => void | Promise<void>;
+  readonly onExport?: (value: unknown) => void | Promise<void>;
+  readonly onShare?: (value: unknown) => void | Promise<void>;
+  readonly readImportFile?: () => Promise<string | null>;
   readonly runBattery?: StudioRunBattery;
   readonly validateDelayMs?: number;
   readonly timers?: EditorTimers;
@@ -122,6 +126,26 @@ export function createRulesetStudioPanel(opts: RulesetStudioOptions): RulesetStu
 
   toolbar.append(badge, resetLabel, applyBtn);
 
+  const library = document.createElement('div');
+  library.className = 'studio-library';
+  const saveBtn = document.createElement('button');
+  saveBtn.type = 'button';
+  saveBtn.className = 'studio-save';
+  saveBtn.textContent = 'Save';
+  const exportBtn = document.createElement('button');
+  exportBtn.type = 'button';
+  exportBtn.className = 'studio-export';
+  exportBtn.textContent = 'Export';
+  const importBtn = document.createElement('button');
+  importBtn.type = 'button';
+  importBtn.className = 'studio-import';
+  importBtn.textContent = 'Import';
+  const shareBtn = document.createElement('button');
+  shareBtn.type = 'button';
+  shareBtn.className = 'studio-share';
+  shareBtn.textContent = 'Copy share link';
+  library.append(saveBtn, exportBtn, importBtn, shareBtn);
+
   const issueList = document.createElement('ul');
   issueList.className = 'studio-issue-list';
   issueList.id = 'studio-issues';
@@ -160,7 +184,15 @@ export function createRulesetStudioPanel(opts: RulesetStudioOptions): RulesetStu
     isValid: () => valid,
   });
 
-  root.append(toolbar, status, form.root, bench.root, editor.root, issueList);
+  root.append(toolbar, library, status, form.root, bench.root, editor.root, issueList);
+
+  function syncLibrary(): void {
+    const disabled = !valid;
+    saveBtn.disabled = disabled || !opts.onSave;
+    exportBtn.disabled = disabled || !opts.onExport;
+    shareBtn.disabled = disabled || !opts.onShare;
+    importBtn.disabled = !opts.readImportFile;
+  }
 
   function paintIssues(located: readonly LocatedStudioIssue[]): void {
     editor.setIssues(located);
@@ -189,6 +221,7 @@ export function createRulesetStudioPanel(opts: RulesetStudioOptions): RulesetStu
       applyBtn.disabled = true;
       paintIssues([]);
       bench.sync();
+      syncLibrary();
       return [];
     }
     let value: unknown;
@@ -207,6 +240,7 @@ export function createRulesetStudioPanel(opts: RulesetStudioOptions): RulesetStu
       applyBtn.disabled = true;
       paintIssues(located);
       bench.sync();
+      syncLibrary();
       return located;
     }
     const result = opts.validate(value);
@@ -220,6 +254,7 @@ export function createRulesetStudioPanel(opts: RulesetStudioOptions): RulesetStu
       paintIssues([]);
       if (formDoc && !syncingFromForm) form.setDocument(formDoc);
       bench.sync();
+      syncLibrary();
       return [];
     }
     const located = locateIssues(text, result.issues);
@@ -231,8 +266,26 @@ export function createRulesetStudioPanel(opts: RulesetStudioOptions): RulesetStu
     applyBtn.disabled = true;
     paintIssues(located);
     bench.sync();
+    syncLibrary();
     return located;
   }
+
+  function withCandidate(fn: (value: unknown) => void | Promise<void>): void {
+    const located = validateText(editor.getValue());
+    if (located.length > 0 || parsed === null || !valid) return;
+    void fn(parsed);
+  }
+
+  saveBtn.addEventListener('click', () => withCandidate((value) => opts.onSave?.(value)));
+  exportBtn.addEventListener('click', () => withCandidate((value) => opts.onExport?.(value)));
+  shareBtn.addEventListener('click', () => withCandidate((value) => opts.onShare?.(value)));
+  importBtn.addEventListener('click', () => {
+    void opts.readImportFile?.().then((text) => {
+      if (text === null || text === undefined) return;
+      editor.setValue(text, { emitIdle: false });
+      validateText(text);
+    });
+  });
 
   applyBtn.addEventListener('click', () => {
     const located = validateText(editor.getValue());

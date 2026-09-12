@@ -90,6 +90,22 @@ describe('RulesetThumbnailLoop', () => {
     expect(calls).toBe(1);
     loop.stop();
   });
+
+  it('forgets registered canvases on clear', () => {
+    rendererSpies.disposed = 0;
+    const { scheduler } = fakeScheduler();
+    const loop = new RulesetThumbnailLoop({
+      getRuleset: () => CONWAY,
+      themeFor: () => SHELL_THEME,
+      scheduler,
+    });
+    loop.register('conway', {} as HTMLCanvasElement);
+    loop.start();
+    loop.clear();
+    expect(rendererSpies.disposed).toBeGreaterThan(0);
+    loop.start();
+    loop.stop();
+  });
 });
 
 describe('RAF_THUMBNAIL_SCHEDULER', () => {

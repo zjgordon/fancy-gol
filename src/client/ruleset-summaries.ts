@@ -14,3 +14,22 @@ export function builtinRulesetSummaries(): readonly RulesetSummary[] {
     tags: rs.tags,
   }));
 }
+
+export function userRulesetSummary(doc: {
+  readonly id: string;
+  readonly name: string;
+  readonly description?: string;
+  readonly states: RulesetSummary['states'];
+  readonly notation?: string;
+  readonly tags?: readonly string[];
+}): RulesetSummary {
+  return {
+    id: doc.id,
+    name: doc.name,
+    ...(doc.description !== undefined ? { description: doc.description } : {}),
+    ...(doc.notation !== undefined ? { notation: doc.notation } : {}),
+    states: doc.states,
+    tags: doc.tags && doc.tags.length > 0 ? doc.tags : ['yours'],
+    origin: 'user',
+  };
+}

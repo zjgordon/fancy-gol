@@ -27,6 +27,8 @@ export interface RulesetSummary {
   readonly states: readonly StateDef[];
   /** Grouped by the first tag — a ruleset with more than one only ever heads its first group. */
   readonly tags: readonly string[];
+  /** User-authored (P2-E-4). Distinct badge + Edit; builtins omit this. */
+  readonly origin?: 'user';
 }
 
 /** Two palettes are compatible (no migration needed) iff they agree, in order, on every state's
@@ -163,12 +165,15 @@ export interface RulesetPickerOptions {
    * the migration dialog is confirmed for an incompatible one (in which case `migration` is the
    * user's final, possibly-edited mapping — never omitted for an incompatible switch). */
   readonly onConfirm: (id: string, migration?: ReadonlyMap<StateId, StateId>) => void;
+  /** Opens the studio on a user ruleset without applying it. */
+  readonly onEdit?: (id: string) => void;
 }
 
 export interface RulesetPicker {
   readonly root: HTMLElement;
   readonly open: boolean;
   setActive(id: string): void;
+  setEntries(entries: readonly RulesetSummary[]): void;
   dispose(): void;
 }
 
@@ -197,10 +202,13 @@ function optionElementId(id: string): string {
   return `ruleset-option-${id}`;
 }
 
+export function isUserRulesetEntry(entry: RulesetSummary): boolean {
+  return entry.origin === 'user' || entry.id.startsWith('user:');
+}
+
 export function attachRulesetPicker(options: RulesetPickerOptions): RulesetPicker {
-  const groups = groupByFirstTag(options.entries);
-  const flattened = options.entries;
-  const byId = new Map(options.entries.map((e) => [e.id, e]));
+  let flattened = options.entries;
+  let byId = new Map(options.entries.map((e) => [e.id, e]));
 
   let activeId = options.activeId;
   let highlightedId = activeId;
@@ -236,52 +244,82 @@ export function attachRulesetPicker(options: RulesetPickerOptions): RulesetPicke
   listbox.tabIndex = 0;
 
   const optionEls = new Map<string, HTMLElement>();
-  for (const [tag, groupEntries] of groups) {
-    const groupEl = document.createElement('div');
-    groupEl.className = 'ruleset-group';
-    const title = document.createElement('h3');
-    title.className = 'ruleset-group-title';
-    title.textContent = tag;
-    groupEl.appendChild(title);
 
-    for (const entry of groupEntries) {
-      const optionEl = document.createElement('div');
-      optionEl.className = 'ruleset-entry';
-      optionEl.id = optionElementId(entry.id);
-      optionEl.setAttribute('role', 'option');
-      optionEl.setAttribute('aria-selected', String(entry.id === activeId));
-      optionEl.dataset['id'] = entry.id;
+  function paintEntries(entries: readonly RulesetSummary[]): void {
+    flattened = entries;
+    byId = new Map(entries.map((e) => [e.id, e]));
+    optionEls.clear();
+    listbox.replaceChildren();
+    for (const [tag, groupEntries] of groupByFirstTag(entries)) {
+      const groupEl = document.createElement('div');
+      groupEl.className = 'ruleset-group';
+      const title = document.createElement('h3');
+      title.className = 'ruleset-group-title';
+      title.textContent = tag;
+      groupEl.appendChild(title);
 
-      const canvas = document.createElement('canvas');
-      canvas.className = 'ruleset-thumb';
-      canvas.width = 48;
-      canvas.height = 48;
-      canvas.setAttribute('aria-hidden', 'true');
+      for (const entry of groupEntries) {
+        const optionEl = document.createElement('div');
+        optionEl.className = 'ruleset-entry';
+        optionEl.id = optionElementId(entry.id);
+        optionEl.setAttribute('role', 'option');
+        optionEl.setAttribute('aria-selected', String(entry.id === activeId));
+        optionEl.dataset['id'] = entry.id;
 
-      const info = document.createElement('div');
-      info.className = 'ruleset-entry-info';
-      const name = document.createElement('span');
-      name.className = 'ruleset-entry-name';
-      name.textContent = entry.name;
-      const meta = document.createElement('span');
-      meta.className = 'ruleset-entry-meta';
-      meta.textContent = stateMeta(entry);
-      info.append(name, meta);
-      if (entry.description) {
-        const desc = document.createElement('span');
-        desc.className = 'ruleset-entry-desc';
-        desc.textContent = entry.description;
-        info.appendChild(desc);
+        const canvas = document.createElement('canvas');
+        canvas.className = 'ruleset-thumb';
+        canvas.width = 48;
+        canvas.height = 48;
+        canvas.setAttribute('aria-hidden', 'true');
+
+        const info = document.createElement('div');
+        info.className = 'ruleset-entry-info';
+        const heading = document.createElement('div');
+        heading.className = 'ruleset-entry-heading';
+        const name = document.createElement('span');
+        name.className = 'ruleset-entry-name';
+        name.textContent = entry.name;
+        heading.appendChild(name);
+        if (isUserRulesetEntry(entry)) {
+          const badge = document.createElement('span');
+          badge.className = 'ruleset-entry-badge';
+          badge.textContent = 'Yours';
+          heading.appendChild(badge);
+          if (options.onEdit) {
+            const edit = document.createElement('button');
+            edit.type = 'button';
+            edit.className = 'ruleset-entry-edit';
+            edit.textContent = 'Edit';
+            edit.setAttribute('aria-label', `Edit ${entry.name}`);
+            edit.addEventListener('click', (event) => {
+              event.stopPropagation();
+              options.onEdit?.(entry.id);
+            });
+            heading.appendChild(edit);
+          }
+        }
+        const meta = document.createElement('span');
+        meta.className = 'ruleset-entry-meta';
+        meta.textContent = stateMeta(entry);
+        info.append(heading, meta);
+        if (entry.description) {
+          const desc = document.createElement('span');
+          desc.className = 'ruleset-entry-desc';
+          desc.textContent = entry.description;
+          info.appendChild(desc);
+        }
+
+        optionEl.append(canvas, info);
+        optionEl.addEventListener('click', () => attemptSelect(entry.id));
+        groupEl.appendChild(optionEl);
+        optionEls.set(entry.id, optionEl);
+        options.onThumbnailCreated(entry.id, canvas);
       }
-
-      optionEl.append(canvas, info);
-      optionEl.addEventListener('click', () => attemptSelect(entry.id));
-      groupEl.appendChild(optionEl);
-      optionEls.set(entry.id, optionEl);
-      options.onThumbnailCreated(entry.id, canvas);
+      listbox.appendChild(groupEl);
     }
-    listbox.appendChild(groupEl);
   }
+
+  paintEntries(options.entries);
 
   popover.appendChild(listbox);
   root.append(toggle, popover);
@@ -451,12 +489,19 @@ export function attachRulesetPicker(options: RulesetPickerOptions): RulesetPicke
   }
   setActive(activeId);
 
+  function setEntries(entries: readonly RulesetSummary[]): void {
+    paintEntries(entries);
+    setActive(activeId);
+    if (isOpen && byId.has(highlightedId)) setHighlighted(highlightedId);
+  }
+
   return {
     root,
     get open() {
       return isOpen;
     },
     setActive,
+    setEntries,
     dispose(): void {
       window.removeEventListener('pointerdown', onOutsidePointerDown);
       resetTypeahead();
