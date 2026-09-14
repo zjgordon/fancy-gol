@@ -12,7 +12,10 @@
  *                    synthetic workload is timed in-process alongside the suite, and the case's
  *                    ratio to that calibration is what regresses, not the absolute number. A
  *                    slower or noisier runner slows the calibration too, so the ratio survives
- *                    machine changes that raw milliseconds never could.
+ *                    machine changes that raw milliseconds never could. Cases that already
+ *                    return a same-process ratio (`selfCalibrated: true`) skip the calibrator
+ *                    divisor — dividing an overhead % by a synthetic ms figure made the gate
+ *                    track the calibrator, not the case.
  *   - browser        absolute budget only in this task (gate-history lands in P2-F-3).
  * There is no per-case `baselineGate: false` opt-out — that valve is retired.
  *
@@ -102,10 +105,16 @@ export function measureCalibrationMs(n = DEFAULT_N, iterations = CALIBRATION_ITE
  * either direction of `higherIsBetter`, a machine that runs everything N× slower — the case
  * *and* the calibration workload — leaves the ratio unchanged, while the case's own code
  * getting slower (independent of the machine) moves it. Lower ratio is always worse.
+ *
+ * `selfCalibrated` cases already return a same-process ratio (overhead %, 320²/32² cost).
+ * Their machine cancelled in the measurement; dividing by the synthetic calibrator makes a
+ * faster calibrator look like a regression. For those, the committed ratio is `1/value`
+ * (lower-is-better) or `value` (higher-is-better) — still lower-ratio-is-worse.
  */
-export function wallClockRatio(value, calibrationMs, higherIsBetter) {
-  if (!(calibrationMs > 0)) throw new RangeError(`calibrationMs must be > 0, got ${calibrationMs}`);
+export function wallClockRatio(value, calibrationMs, higherIsBetter, selfCalibrated = false) {
   if (!(value > 0)) throw new RangeError(`wall-clock value must be > 0, got ${value}`);
+  if (selfCalibrated) return higherIsBetter ? value : 1 / value;
+  if (!(calibrationMs > 0)) throw new RangeError(`calibrationMs must be > 0, got ${calibrationMs}`);
   return higherIsBetter ? value * calibrationMs : calibrationMs / value;
 }
 
@@ -332,6 +341,7 @@ function writeBaseline(path, cases, medians, ratios, calibrationMs, { keepStale 
       ...(c.budget != null ? { budget: c.budget } : {}),
       higherIsBetter: !!c.higherIsBetter,
       ...(c.class === 'wall-clock' ? { ratio: ratios.get(c.id) } : {}),
+      ...(c.selfCalibrated ? { selfCalibrated: true } : {}),
       ...(c.transcribed ? { transcribed: true } : {}),
     };
   }
@@ -368,7 +378,7 @@ export async function runSuite(opts) {
     );
   }
 
-  const needCalibration = cases.some((c) => c.class === 'wall-clock');
+  const needCalibration = cases.some((c) => c.class === 'wall-clock' && !c.selfCalibrated);
   const calibrationMs = needCalibration ? measureCalibrationMs(n) : null;
 
   const medians = new Map();
@@ -385,7 +395,7 @@ export async function runSuite(opts) {
 
     let ratio;
     if (c.class === 'wall-clock') {
-      ratio = wallClockRatio(valueForRecord, calibrationMs, !!c.higherIsBetter);
+      ratio = wallClockRatio(valueForRecord, calibrationMs, !!c.higherIsBetter, !!c.selfCalibrated);
       ratios.set(c.id, ratio);
     }
 

@@ -224,6 +224,10 @@ export const cases: BenchCase[] = [
     budget: 5,
     higherIsBetter: false,
     class: 'wall-clock',
+    // Already (combined − step) / step — a same-process ratio. Dividing by the synthetic
+    // calibrator made a faster GHA box look like a stats regression (P0 gated this on the
+    // 5% budget for the same reason).
+    selfCalibrated: true,
     warmup: 3,
     setup() {
       statsBaseline = soup(512, 512, 0.5, 4);
@@ -267,6 +271,9 @@ export const cases: BenchCase[] = [
     budget: 1.5,
     higherIsBetter: false,
     class: 'wall-clock',
+    // Already large-grid / small-grid apply cost for the same ChangeSet. Calibration
+    // divided that ~1.0 figure and turned an 18% faster calibrator into a "REGRESS".
+    selfCalibrated: true,
     warmup: 3,
     setup() {
       zobristSmall = soup(32, 32, 0.02, 7);

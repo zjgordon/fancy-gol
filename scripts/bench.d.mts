@@ -21,8 +21,9 @@ export declare function runCalibrationWorkload(iterations?: number): number;
 export declare function measureCalibrationMs(n?: number, iterations?: number): number;
 export declare function wallClockRatio(
   value: number,
-  calibrationMs: number,
+  calibrationMs: number | null | undefined,
   higherIsBetter: boolean,
+  selfCalibrated?: boolean,
 ): number;
 export declare function wallClockTolerance(spread: number): number;
 export declare function evaluateCase(opts: {

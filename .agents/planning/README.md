@@ -189,7 +189,7 @@ is retired.
 | Class | Examples | Policy |
 |---|---|---|
 | **Deterministic** | `client-js-gzip`, `grid-1m-memory` | Tight regression gate **2–3%**. No noise excuse exists. |
-| **Wall-clock CPU** | `conway-512-soup`, `conway-4096-1pct`, `paint-1m`, `snapshot-restore`, `seek-4000`, `stats-overhead` | Noise-aware gate on a **calibration ratio** (below), not raw milliseconds. |
+| **Wall-clock CPU** | `conway-512-soup`, `conway-4096-1pct`, `paint-1m`, `snapshot-restore`, `seek-4000`, `stats-overhead`, `zobrist-update` | Noise-aware gate on a **calibration ratio** (below), not raw milliseconds. Same-process ratios (`selfCalibrated`) skip the calibrator divisor. |
 | **Browser / GPU / paint** | `render-frame-cpu`, `main-thread-block`, `pan-1000pxs-1080p`, `zoom-32-0.5-32-min-fps`, interaction paint latency | **Absolute budget only**, plus accumulating **gate-history** (`docs/gate-history/`, P2-F-3). |
 
 **Every case gets a budget or a class gate, or is deleted.** `scripts/bench.mjs` enforces this at
@@ -204,6 +204,14 @@ the ratio holds across machines and the baseline stops being machine-bound — t
 per-runner baseline files and closes the Node-24-sandbox-vs-Node-22-CI provenance skew for CPU
 cases. Band on the ratio may still be noise-aware (use the spread already computed across the
 median-of-7); do not fall back to "turn the gate off".
+
+**Self-calibrated wall-clock cases:** `stats-overhead` (already `(combined − step) / step`) and
+`zobrist-update` (already 320² / 32² apply cost for the same ChangeSet) set `selfCalibrated:
+true`. Their machine cancelled in the measurement. Dividing that figure by the synthetic
+calibrator makes a faster runner look like a regression — observed 2026-09-14 on GHA
+(`zobrist-update` cost ratio 0.998 vs 1.004 flagged +17.3% because calibration went 8.78 ms →
+7.22 ms). Those cases still use the noise-aware wall-clock band, on `1/median`; they still have
+to meet their absolute budgets (5% and 1.5). This is not a `baselineGate: false` opt-out.
 
 **Transcribed / non-timed cases:** `cold-load-recorded` is renamed `cold-load-transcribed` and
 carries `transcribed: true`, which the runner's table marks with a `*` and a footnote — visible in

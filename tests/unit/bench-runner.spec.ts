@@ -90,6 +90,17 @@ describe('wallClockRatio', () => {
   it('rejects a non-positive calibration', () => {
     expect(() => wallClockRatio(10, 0, false)).toThrow(/calibrationMs/);
   });
+
+  it('ignores the calibrator for a self-calibrated same-process ratio', () => {
+    // CI run 34892209486: zobrist cost ratio 0.998 vs 1.004, calibration 8.78ms → 7.22ms.
+    // The old formula (calibration/value) dropped 17% and flagged REGRESS. The cost ratio
+    // itself did not move.
+    const sandbox = wallClockRatio(1.004, 8.784, false, true);
+    const ci = wallClockRatio(0.998, 7.216, false, true);
+    expect((sandbox - ci) / sandbox).toBeLessThan(0.12);
+    expect(sandbox).toBeCloseTo(1 / 1.004);
+    expect(ci).toBeCloseTo(1 / 0.998);
+  });
 });
 
 describe('wallClockTolerance', () => {
