@@ -643,6 +643,7 @@ exists; first `workflow_dispatch` seeds `docs/gate-history/records.jsonl`). Noth
 | Bench CI red: `seek-4000` +46% ratio, 500× under its 250 ms budget | Sub-millisecond timer noise (named in P2-F-1's own Measured note). Case now reports the mean of 32 one-way seeks. Budget unchanged. Original P2-F-1 median kept — a lucky 0.0387 ms CI sample was not a new baseline (next run 0.0776 ms, still ~3000× under 250 ms). |
 | Bench CI red: `zobrist-update` +17.3% with cost ratio 0.998 vs 1.004 | Category error: P2-F-1 divided an already-normalised same-process ratio by the synthetic calibrator, so a faster GHA box looked like a Zobrist regression. `selfCalibrated: true` now skips that divisor; 1.5 budget unchanged. `stats-overhead` got the same treatment (P0 already gated it on the 5% budget for this reason). |
 | No place to cite "N consecutive CI runs" | **P2-F-3**: `docs/gate-history/` + nightly workflow. |
+| `catalogue-seed.spec.ts` period walk timed out at 5 s under node-22 coverage | Coverage turns on `fileParallelism`, so this test shares the runner with `simulation.spec.ts`'s 110 s acorn. Timeout raised to 60 s (same form as other sim-heavy specs). Assertion unchanged. |
 | `ci.yml` comment still claimed a uniform >10% regression | Comment updated to the three-class policy (P2-F-1). |
 
 ### Gaps deferred to human review / the v0.3.0 merge
