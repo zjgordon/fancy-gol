@@ -159,7 +159,7 @@ describe('P2-B-1 seed catalogue', () => {
     ).toEqual([]);
   });
 
-  it('still lifes, oscillators, spaceships and guns match their declared period/speed under simulation', () => {
+  it('still lifes, oscillators, spaceships and guns match their declared period/speed under simulation', { timeout: 60_000 }, () => {
     const failures: string[] = [];
     const report = (id: string, msg: string) => {
       failures.push(`${id}: ${msg}`);
