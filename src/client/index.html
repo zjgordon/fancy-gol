@@ -209,29 +209,33 @@
 
       #chrome-panel-dock {
         right: 0;
-        top: 0;
-        bottom: 0;
+        top: var(--gol-space-3);
+        bottom: auto;
         width: auto;
+        pointer-events: none;
       }
       #chrome-panel-dock[data-dock='left'] {
-        left: 0;
+        left: var(--gol-space-3);
         right: auto;
       }
       #chrome-panel-dock[data-dock='right'] {
-        right: 0;
+        right: var(--gol-space-3);
         left: auto;
       }
 
       .panel-host {
         width: var(--gol-panel-width);
         min-width: var(--gol-panel-min-width);
-        height: 100%;
-        max-height: 100%;
+        height: calc(100vh - 2 * var(--gol-space-3));
+        max-height: calc(100vh - 2 * var(--gol-space-3));
         box-sizing: border-box;
+        pointer-events: auto;
       }
-      .panel-host-collapsed {
+      .panel-host.panel-host-collapsed {
         width: auto;
         min-width: 0;
+        height: auto;
+        max-height: none;
       }
       .panel-host-rail {
         display: flex;
