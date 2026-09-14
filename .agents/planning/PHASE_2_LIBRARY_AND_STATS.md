@@ -613,7 +613,7 @@ Measured: `attachPanelHost` mounts into `#chrome-panel-dock`. Dock left/right, d
 ## 6. Definition of Done — Phase 2
 
 - [x] Every task above is `- [x]` or `- [-]` with a recorded reason.
-- [ ] All Phase 2 quality gates (§4) green in CI on `main`. — ticked after the merge CI run URL lands (Phase 1 pattern: `902eef8`).
+- [x] All Phase 2 quality gates (§4) green in CI on `main`. — merge SHA `e129e41` / tag `v0.3.0`; [run 34906862040](https://github.com/zjgordon/fancy-gol/actions/runs/34906862040) all eight jobs green (verify node 20/22, build node 20/22, e2e, visual, bench, docker).
 - [x] The catalogue ships ≥ 200 attributed patterns across ≥ 10 rulesets, every one verified by simulation (**P2-B-5**).
 - [x] A researcher can export a million-generation population series to CSV with honest resolution labelling. — **P2-D-4**.
 - [x] A user can invent a ruleset in the studio, test it, name it, save it, and send a friend a link that works. — **P2-E-4**.
@@ -660,7 +660,6 @@ acceptance criterion, so the tag waited for it.
 
 ### Remaining at tag time
 
-- **DoD: green in CI on `main`.** Ticked after the merge run URL, same as Phase 1 (`902eef8`).
 - **Official gate-history streak on `main`.** Starts when the nightly cron first fires after merge. Phase-branch samples are seed records, not an official cite.
 - **An open dock still occludes the status bar.** Fixed the bleed-through, not the overlap: a right-docked panel covers the gen/pop/zoom readout entirely, so an expert loses it while the library is open. Reflowing chrome around an open dock wants the motion system (**P3-A-6**) and Phase 4's power-UX layout, not a CSS patch at tag time. Recorded here so it is picked up, not rediscovered.
 - **The ruleset picker labels the active rule by id.** Applying a studio edit over a built-in rule (`B3/S23` → `B36/S23` on Conway) leaves the picker reading "Conway's Game of Life", because the edit changes the transition, not the name or the id. Visible in the demo GIF. Wants a decision — auto-fork to a user rule on apply, or show the notation beside the name — in Phase 3's theme/chrome pass.
