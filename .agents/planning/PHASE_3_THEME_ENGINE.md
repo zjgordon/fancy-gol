@@ -154,7 +154,7 @@ src/audio/
 - [x] Dirty-rect draw-call counts from P0-H-3's recorder are unchanged for the cell layer.
 - [x] Offscreen canvases are reallocated only on resize, never per frame (allocation assertion).
 
-#### - [ ] P3-A-2 · Age buffer
+#### - [~] P3-A-2 · Age buffer — @cursor, started 2026-09-14
 **Depends on:** P3-A-1 · **Files:** `src/engine/grid/chunk.ts`, `src/worker/handler.ts`, `src/render/types.ts`
 **Implementation notes** Per-chunk `Uint16Array(1024)`, incremented for unchanged cells and reset on change — do this inside the existing step loop, not as a second pass. Saturate rather than wrap. Allocate lazily: only chunks that have ever been non-empty carry one, and it is optional (themes that do not use it can request frames without it).
 **Acceptance criteria**
