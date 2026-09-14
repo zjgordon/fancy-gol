@@ -1,10 +1,11 @@
+import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { CONWAY } from '@engine/rules/builtin';
 import { createHandler, type Scheduler } from '@worker/handler';
 import { WorkerClient, type FrameScheduler, type WorkerLike } from '@worker/client';
 import { FrameGridMirror } from '@worker/frame-view';
 import { Canvas2DRenderer } from '@render/canvas2d';
-import { CanvasRecorder } from '@render/recorder';
+import { CanvasRecorder, type RecordedCall } from '@render/recorder';
 import type { CompiledTheme, Viewport } from '@render/types';
 
 const UNDER_COVERAGE = process.env['VITEST_COVERAGE'] === '1';
@@ -145,8 +146,85 @@ const GOSPER_GUN: ReadonlyArray<readonly [number, number]> = [
   [13, 8],
 ];
 
+/**
+ * P2-F-2 — the 37k-line raw-call-log snapshot this file used to assert on told a reviewer
+ * nothing on a diff: every generation's re-record touched thousands of unrelated lines. These
+ * helpers turn the same call log into a small, reviewable shape instead: a stable digest (any
+ * change at all moves it), counts by method, a short excerpt, and the actual set of cells the
+ * recorder painted as live at a few checkpoint generations — proof the renderer's *output*, not
+ * just its call count, tracks the simulation. Kept as free functions (not inlined in the test) so
+ * the "digest + invariants still catch a regression" fixture test below can drive them directly
+ * against a hand-built call log, without needing to actually break the renderer to prove it.
+ */
+function digestCalls(calls: readonly RecordedCall[]): string {
+  const hash = createHash('sha256');
+  for (const call of calls) hash.update(`${call.method}(${call.args.join(',')})`);
+  return hash.digest('hex').slice(0, 16);
+}
+
+function callCountsByMethod(calls: readonly RecordedCall[]): Record<RecordedCall['method'], number> {
+  const counts = { fillStyle: 0, fillRect: 0, createImageData: 0, putImageData: 0 };
+  for (const call of calls) counts[call.method] += 1;
+  return counts;
+}
+
+/** Total pixel area covered by `fillRect` calls — the renderer's own background+cell paints. */
+function fillRectArea(calls: readonly RecordedCall[]): number {
+  let area = 0;
+  for (const call of calls) {
+    if (call.method === 'fillRect') area += call.args[2] * call.args[3];
+  }
+  return area;
+}
+
+/**
+ * The world-cell coordinates the recorder actually painted white (this suite's live colour),
+ * read back from its pixel buffer at cell-centre samples. Short by construction: a Gosper gun
+ * plus a handful of gliders is tens of live cells, never the whole grid — that smallness is
+ * itself part of the "dirty-rect, not full-repaint" story this file exists to make reviewable.
+ */
+function paintedLiveCells(recorder: CanvasRecorder, viewport: Viewport): Array<readonly [number, number]> {
+  const cs = viewport.cellSize;
+  const cols = Math.floor(recorder.width / cs);
+  const rows = Math.floor(recorder.height / cs);
+  const cells: Array<readonly [number, number]> = [];
+  for (let cy = 0; cy < rows; cy++) {
+    for (let cx = 0; cx < cols; cx++) {
+      const px = Math.floor(cx * cs + cs / 2);
+      const py = Math.floor(cy * cs + cs / 2);
+      const [r, g, b] = recorder.pixelAt(px, py);
+      if (r === 255 && g === 255 && b === 255) {
+        cells.push([Math.floor(viewport.originX) + cx, Math.floor(viewport.originY) + cy]);
+      }
+    }
+  }
+  return cells;
+}
+
+interface DrawCallSummary {
+  readonly totalCalls: number;
+  readonly callCountsByMethod: Record<RecordedCall['method'], number>;
+  readonly digest: string;
+  readonly firstCalls: readonly RecordedCall[];
+  readonly paintedCellsByGeneration: Record<string, readonly (readonly [number, number])[]>;
+}
+
+function summarize(
+  calls: readonly RecordedCall[],
+  paintedCellsByGeneration: Record<string, readonly (readonly [number, number])[]>,
+  firstN = 12,
+): DrawCallSummary {
+  return {
+    totalCalls: calls.length,
+    callCountsByMethod: callCountsByMethod(calls),
+    digest: digestCalls(calls),
+    firstCalls: calls.slice(0, firstN),
+    paintedCellsByGeneration,
+  };
+}
+
 describe('Canvas Bridge: worker -> client -> renderer, headless, 100 generations of a Gosper gun', () => {
-  it('produces a stable, snapshot-tested draw-call log', { timeout: 30_000 }, async () => {
+  it('produces a stable, reviewable draw-call summary', { timeout: 30_000 }, async () => {
     const { workerLike } = createFakeWorker();
     const client = new WorkerClient({ spawn: () => workerLike, frameScheduler: IMMEDIATE_FRAME_SCHEDULER });
 
@@ -176,12 +254,39 @@ describe('Canvas Bridge: worker -> client -> renderer, headless, 100 generations
     });
     await flush();
 
-    for (let generation = 0; generation < 100; generation++) {
+    const checkpoints = new Set([1, 4, 100]);
+    const paintedCellsByGeneration: Record<string, readonly (readonly [number, number])[]> = {
+      '0': paintedLiveCells(recorder, viewport),
+    };
+
+    for (let generation = 1; generation <= 100; generation++) {
       await client.send({ cmd: 'step', n: 1 });
       await flush();
+      if (checkpoints.has(generation)) {
+        paintedCellsByGeneration[String(generation)] = paintedLiveCells(recorder, viewport);
+      }
     }
 
-    expect(recorder.calls).toMatchSnapshot();
+    const summary = summarize(recorder.calls, paintedCellsByGeneration);
+    expect(summary).toMatchSnapshot();
+
+    // Named invariants (AC: "call counts by method, dirty-rect coverage, painted-cell set").
+    // Unlike the snapshot above, these can't be silently accepted by an `--update` a reviewer
+    // didn't read.
+    expect(Object.keys(summary.paintedCellsByGeneration)).toEqual(['0', '1', '4', '100']);
+    for (const gen of ['0', '1', '4', '100']) {
+      expect(summary.paintedCellsByGeneration[gen]!.length).toBeGreaterThan(0);
+    }
+    // cellSize 4 stays on the vector (fillRect) path — createImageData is only ever called
+    // below the render's tile-path threshold (canvas2d.ts), never here.
+    expect(summary.callCountsByMethod.createImageData).toBe(0);
+    expect(summary.callCountsByMethod.fillRect).toBeGreaterThan(100); // at least one paint per generation
+    // Dirty-rect coverage: 100 generations of a full 512x512 repaint each time would cover
+    // 100x the world's pixel area. A gun plus a few gliders should stay a small fraction of
+    // that — proof this run's log reflects genuine per-chunk dirty rects, not full repaints.
+    const fullWorldArea = recorder.width * recorder.height;
+    const coverageRatio = fillRectArea(recorder.calls) / (fullWorldArea * 100);
+    expect(coverageRatio).toBeLessThan(0.5);
   });
 
   it('zero allocations attributable to the render path across 100 frames', { timeout: 30_000 }, async () => {
@@ -318,5 +423,65 @@ describe('Canvas Bridge: dirty-rect behaviour is proven by the draw-call log', (
     const [, , bgW, bgH] = fillRects[0]!.args;
     expect(bgW).toBe(128); // 32 cells × cellSize 4
     expect(bgH).toBe(128);
+  });
+});
+
+describe('Canvas Bridge: the reshaped assertion shape actually catches a regression (P2-F-2 AC)', () => {
+  // These drive the exact same helper functions the integration test above uses, against
+  // hand-built call logs standing in for "the real renderer" vs. "a deliberately regressed one"
+  // — proving the digest and named invariants would flag a real defect, without needing to
+  // actually break `src/render/canvas2d.ts` to demonstrate it.
+
+  it('the digest moves on any call-log change and holds when nothing did', () => {
+    const before: RecordedCall[] = [
+      { method: 'fillStyle', args: ['#000000'] },
+      { method: 'fillRect', args: [0, 0, 32, 32] },
+    ];
+    const sameShapeRebuilt: RecordedCall[] = [
+      { method: 'fillStyle', args: ['#000000'] },
+      { method: 'fillRect', args: [0, 0, 32, 32] },
+    ];
+    // One pixel taller — the shape a real off-by-one in a dirty rect's height would produce.
+    const regressed: RecordedCall[] = [
+      { method: 'fillStyle', args: ['#000000'] },
+      { method: 'fillRect', args: [0, 0, 32, 33] },
+    ];
+    expect(digestCalls(before)).toBe(digestCalls(sameShapeRebuilt));
+    expect(digestCalls(before)).not.toBe(digestCalls(regressed));
+  });
+
+  it('the vector-path invariant catches a regression that starts allocating ImageData tiles', () => {
+    // What the real test asserts is `callCountsByMethod(calls).createImageData === 0` at
+    // cellSize 4. A renderer that regressed into tiling at that cell size would look like this.
+    const regressed: RecordedCall[] = [
+      { method: 'fillStyle', args: ['#000000'] },
+      { method: 'fillRect', args: [0, 0, 128, 128] },
+      { method: 'createImageData', args: [128, 128] },
+      { method: 'putImageData', args: [0, 0, 128, 128] },
+    ];
+    expect(callCountsByMethod(regressed).createImageData).toBeGreaterThan(0);
+  });
+
+  it('the dirty-rect coverage invariant catches a regression that repaints the whole world every frame', () => {
+    const WORLD_PX = 512;
+    const GENERATIONS = 100;
+    const fullWorldArea = WORLD_PX * WORLD_PX;
+
+    // Healthy: one chunk-sized fillRect per generation, as the real dirty-rect pipeline produces.
+    const healthy: RecordedCall[] = Array.from({ length: GENERATIONS }, () => ({
+      method: 'fillRect' as const,
+      args: [0, 0, 128, 128] as const,
+    }));
+    // Regressed: dirty-rect clipping lost, full 512x512 viewport repainted every generation.
+    const regressed: RecordedCall[] = Array.from({ length: GENERATIONS }, () => ({
+      method: 'fillRect' as const,
+      args: [0, 0, WORLD_PX, WORLD_PX] as const,
+    }));
+
+    const healthyRatio = fillRectArea(healthy) / (fullWorldArea * GENERATIONS);
+    const regressedRatio = fillRectArea(regressed) / (fullWorldArea * GENERATIONS);
+
+    expect(healthyRatio).toBeLessThan(0.5); // what the real test asserts
+    expect(regressedRatio).toBeGreaterThanOrEqual(0.5); // the same assertion would now fail
   });
 });
