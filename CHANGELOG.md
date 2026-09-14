@@ -43,6 +43,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The side-panel rail no longer reserves a blank 320px column when no panel is open. (P2-G-2 follow-up)
 - Bench cases that already report a same-process cost ratio (Zobrist scale, stats overhead) are gated on that ratio, not on how fast the calibrator ran. (P2-F-1 follow-up)
 
+### Fixed
+
+- An open side panel no longer pushes its own right-hand controls — Credits, the second filter column — off the edge of the screen where nothing could reach them. (P2-G-2 follow-up)
+- An open side panel is opaque, so the status readout underneath it no longer shows through as unreadable ghost text. (P2-G-2 follow-up)
+
 ## [0.2.0] — 2026-09-08
 
 Phase 1 — Interaction (*Make it usable.*).

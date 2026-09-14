@@ -224,12 +224,30 @@
       }
 
       .panel-host {
-        width: var(--gol-panel-width);
-        min-width: var(--gol-panel-min-width);
+        /* `--gol-panel-width` is the *panel's* usable width — that is what `clampPanelWidth`
+         * clamps and what the resize handle reports. The dock's own padding, border and resize
+         * handle sit outside it, so they are added here; sharing one number between the outer
+         * box and the inner `min-width` pushed the panel's right-hand controls (Credits, the
+         * second filter column) past the viewport edge, where nothing could reach them. */
+        --gol-panel-chrome-x: calc(2 * var(--gol-space-3) + var(--gol-space-2) + 2px);
+        width: calc(var(--gol-panel-width) + var(--gol-panel-chrome-x));
+        min-width: calc(var(--gol-panel-min-width) + var(--gol-panel-chrome-x));
+        /* Below the active panel's minimum the panel scrolls inside the dock (`overflow: auto`
+         * on `.panel-host-panel`); it never spills off-screen. */
+        max-width: calc(100vw - 2 * var(--gol-space-3));
         height: calc(100vh - 2 * var(--gol-space-3));
         max-height: calc(100vh - 2 * var(--gol-space-3));
         box-sizing: border-box;
         pointer-events: auto;
+      }
+      /* An open dock covers the status bar's corner, and a 5%-white fill let that readout show
+       * through as unreadable ghost text under the charts. Compositing `surface` over the opaque
+       * page backdrop keeps the token colour and stops the bleed. The idle chip stays
+       * translucent — there is nothing behind it but canvas. */
+      .panel-host:not(.panel-host-collapsed) {
+        background:
+          linear-gradient(var(--gol-color-surface), var(--gol-color-surface)),
+          var(--gol-color-bg);
       }
       .panel-host.panel-host-collapsed {
         width: auto;
