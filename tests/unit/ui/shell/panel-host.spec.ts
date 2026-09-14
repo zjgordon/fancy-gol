@@ -54,8 +54,11 @@ describe('attachPanelHost', () => {
     host.register(fixture('stats', 'Statistics', 280));
     expect(mount.contains(host.root)).toBe(true);
     expect(host.getLayout()).toEqual(DEFAULT_PANEL_LAYOUT);
+    expect(host.root.classList.contains('panel-host-collapsed')).toBe(true);
+    expect(host.root.querySelector('.panel-host-frame')).toHaveProperty('hidden', true);
 
     host.open('stats');
+    expect(host.root.classList.contains('panel-host-collapsed')).toBe(false);
     expect(host.getLayout().activeId).toBe('stats');
     expect(host.root.querySelector('.panel-host-body')?.textContent).toContain('Statistics action');
     expect(host.root.style.getPropertyValue('--gol-panel-min-width')).toBe('280px');
@@ -102,6 +105,7 @@ describe('attachPanelHost', () => {
     host.root.querySelector<HTMLButtonElement>('.panel-host-collapse')!.focus();
     pressKey(host.root, 'Escape');
     expect(host.getLayout().activeId).toBeNull();
+    expect(host.root.classList.contains('panel-host-collapsed')).toBe(true);
     expect(document.activeElement).toBe(trigger);
   });
 

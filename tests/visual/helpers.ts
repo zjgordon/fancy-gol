@@ -19,6 +19,11 @@ export async function gotoVisual(page: Page): Promise<void> {
   await gotoApp(page);
   await page.addStyleTag({ content: VISUAL_FONTS });
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  // Phase 2 chrome: library/studio/export in the toolbar, panel-host tab rail on the
+  // dock. Wait until they exist so a screenshot cannot race the composition root.
+  await page.getByRole('button', { name: 'Open pattern library' }).waitFor();
+  await page.getByRole('button', { name: 'Export data' }).waitFor();
+  await page.getByRole('tab', { name: 'Library' }).waitFor();
   // Park the pointer on the toolbar so the canvas fires pointerleave and the cursor readout
   // settles on "—" rather than whatever cell the last move happened to hit.
   await page.locator('#chrome-toolbar').hover();

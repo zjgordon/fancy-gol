@@ -39,6 +39,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Side panels share one dock: they resize, collapse, move left or right, and come back after a reload. (P2-G-2)
 - `npm run bench` gates every case on one of three honest policies instead of a single opt-out-able 10% band: tight regression for deterministic numbers, a machine-normalised calibration ratio for wall-clock CPU timings, and an absolute budget for browser/GPU numbers. (P2-F-1)
 - The canvas-bridge test's 37,000-line raw draw-call snapshot is now an 881-line reviewable summary — a stable digest, counts by method, and the actual live-cell set painted at four checkpoint generations — with the same regression coverage proven against hand-built fixtures. (P2-F-2)
+- The side-panel rail no longer reserves a blank 320px column when no panel is open. (P2-G-2 follow-up)
 
 ## [0.2.0] — 2026-09-08
 

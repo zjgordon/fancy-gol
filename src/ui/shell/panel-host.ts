@@ -158,7 +158,11 @@ export function attachPanelHost(options: PanelHostOptions): PanelHost {
 
     root.dataset['dock'] = layout.dock;
     root.dataset['collapsed'] = layout.collapsed ? 'true' : 'false';
-    root.classList.toggle('panel-host-collapsed', layout.collapsed);
+    // No active panel is the same visual as collapsed: a tab rail, not a 320px
+    // empty column sitting on top of the status bar (caught by P1-H-2 chrome
+    // screenshots once Phase 2 registered three panels into a still-idle dock).
+    const idle = layout.collapsed || layout.activeId === null;
+    root.classList.toggle('panel-host-collapsed', idle);
     options.mount.dataset['dock'] = layout.dock;
     const width = clampPanelWidth(layout.widthPx, minWidth(), getViewportWidth());
     if (width !== layout.widthPx) layout = { ...layout, widthPx: width };
@@ -170,9 +174,10 @@ export function attachPanelHost(options: PanelHostOptions): PanelHost {
     handle.setAttribute('aria-valuenow', String(width));
 
     collapseBtn.textContent = layout.collapsed ? 'Expand' : 'Collapse';
-    collapseBtn.setAttribute('aria-expanded', layout.collapsed ? 'false' : 'true');
+    collapseBtn.setAttribute('aria-expanded', idle ? 'false' : 'true');
+    collapseBtn.hidden = layout.activeId === null;
     dockBtn.textContent = layout.dock === 'right' ? 'Dock left' : 'Dock right';
-    frame.hidden = layout.collapsed || layout.activeId === null;
+    frame.hidden = idle;
 
     for (const btn of tabs.querySelectorAll<HTMLButtonElement>('button[data-panel-id]')) {
       const selected = btn.dataset['panelId'] === layout.activeId;
