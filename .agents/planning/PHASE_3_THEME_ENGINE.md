@@ -143,13 +143,16 @@ src/audio/
 
 ### Workstream A — Pipeline & framework
 
-#### - [~] P3-A-1 · Layered compositor — @cursor, started 2026-09-14
+#### - [x] P3-A-1 · Layered compositor — @cursor, started 2026-09-14, finished 2026-09-14
 **Depends on:** Phase 2 · **Files:** `src/render/compositor.ts`, `src/render/layers.ts`
 **Implementation notes** Own the offscreen canvases for L0–L3, resize them with the viewport at correct dpr, and composite in one pass. L0 repaints only when the camera or theme changes (parallax backgrounds repaint on pan; static ones do not). L1 keeps Phase 0's dirty-rect behaviour intact — **the compositor must not force full repaints of the cell layer.**
+- `LayerStack` (`src/render/layers.ts`) creates the four offscreen canvases once via an injectable `CanvasFactory` (defaults to `OffscreenCanvas`, DOM canvas fallback) and resizes them in place — `allocationCount` counts canvas *objects*, so a size change never looks like a per-frame realloc.
+- `Compositor` (`src/render/compositor.ts`) implements `Renderer`: drives `Canvas2DRenderer` into L1 with `frame.dirty` untouched, paints L0 lazily (`static` vs `parallax`), and blits L0+L1 (or L0–L3 when effects are on) onto the display canvas. Effects stay off until P3-A-3; `client/main.ts` boots through the compositor with effects disabled.
+- Proven in `tests/unit/render/{layers,compositor}.spec.ts`: same-process ≤5% overhead vs bare Canvas2D with effects off; cell-layer draw-call counts match a direct `Canvas2DRenderer`; allocation count stays at 4 across 30 frames and a resize.
 **Acceptance criteria**
-- [ ] With all effects disabled, frame time is within 5% of the Phase 2 baseline (the compositor itself is nearly free).
-- [ ] Dirty-rect draw-call counts from P0-H-3's recorder are unchanged for the cell layer.
-- [ ] Offscreen canvases are reallocated only on resize, never per frame (allocation assertion).
+- [x] With all effects disabled, frame time is within 5% of the Phase 2 baseline (the compositor itself is nearly free).
+- [x] Dirty-rect draw-call counts from P0-H-3's recorder are unchanged for the cell layer.
+- [x] Offscreen canvases are reallocated only on resize, never per frame (allocation assertion).
 
 #### - [ ] P3-A-2 · Age buffer
 **Depends on:** P3-A-1 · **Files:** `src/engine/grid/chunk.ts`, `src/worker/handler.ts`, `src/render/types.ts`

@@ -6,7 +6,7 @@
 import { CONWAY, getBuiltin } from '@engine/rules/builtin';
 import { RuleValidationError } from '@engine/rules/errors';
 import { validateRuleSet } from '@engine/rules/validate';
-import { Canvas2DRenderer } from '@render/canvas2d';
+import { Compositor } from '@render/compositor';
 import type { Viewport as RenderViewport } from '@render/types';
 import { decode as decodeRle } from '@shared/rle';
 import { CHUNK_AREA, type PaintOp, type RuleSet } from '@shared/types';
@@ -126,7 +126,9 @@ function main(): void {
     ...(testMode ? { reducedMotion: () => true } : {}),
   });
 
-  const renderer = new Canvas2DRenderer();
+  // P3-A-1: layered compositor owns L0–L3; effects stay off until P3-A-3 wires passes.
+  const renderer = new Compositor();
+  renderer.setEffectsEnabled(false);
   const mirror = new FrameGridMirror();
   const client = new WorkerClient({
     spawn: () => toWorkerLike(new Worker(new URL('../worker/sim.worker.ts', import.meta.url), { type: 'module' })),

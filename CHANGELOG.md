@@ -7,6 +7,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- A layered compositor owns offscreen L0–L3 canvases and blits them in one pass, without forcing full cell-layer repaints. (P3-A-1)
+
 ## [0.3.0] — 2026-09-14
 
 Phase 2 — The Library & The Stat Engine (*Make it powerful.*).
