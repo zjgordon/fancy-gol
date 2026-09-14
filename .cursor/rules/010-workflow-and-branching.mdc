@@ -7,9 +7,8 @@ alwaysApply: true
 
 ## Current state
 
-- Phase 1 is complete on `phase/1-interaction`. Merge to `main` and tag `v0.2.0`, then start
-  `phase/2-library-and-stats` after the Phase 1 review/retro. Confirm the next task in
-  `.agents/dashboard.html`.
+- Phase 2 shipped on `main` as `v0.3.0`. Confirm the next task in `.agents/dashboard.html`
+  before cutting `phase/3-theme-engine`.
 - **Do not commit implementation code to `main`.**
 
 ## Branch and release model
@@ -19,7 +18,7 @@ its own branch and merged back when every gate for that phase is green, then tag
 
 ```bash
 git checkout main && git pull
-git checkout -b phase/2-library-and-stats   # before any Phase 2 code
+git checkout -b phase/3-theme-engine   # before any Phase 3 code
 ```
 
 | Phase | Branch | Tag on merge |

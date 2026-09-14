@@ -5,7 +5,7 @@
 
 | | |
 |---|---|
-| **Status** | ☐ Not started |
+| **Status** | Shipped on `main` as `v0.3.0` |
 | **Ships version** | `0.3.0` |
 | **Prerequisites** | Phase 1 complete and tagged `v0.2.0`. All Phase 0–1 retro decisions landed in planning on `main` before this branch is cut (2026-09-11). |
 | **Theme of the phase** | **Make it powerful.** |
@@ -613,28 +613,29 @@ Measured: `attachPanelHost` mounts into `#chrome-panel-dock`. Dock left/right, d
 ## 6. Definition of Done — Phase 2
 
 - [x] Every task above is `- [x]` or `- [-]` with a recorded reason.
-- [ ] All Phase 2 quality gates (§4) green in CI on `main`.
-- [ ] The catalogue ships ≥ 200 attributed patterns across ≥ 10 rulesets, every one verified by simulation (**P2-B-5**).
-- [ ] A researcher can export a million-generation population series to CSV with honest resolution labelling.
-- [ ] A user can invent a ruleset in the studio, test it, name it, save it, and send a friend a link that works.
-- [ ] Simple mode of the statistics panel is comprehensible to a child; advanced mode satisfies an expert. **Verify with real people.**
-- [ ] Coverage thresholds ratcheted per `planning/README.md` §3.5 (`worker/**` gated; at least one other layer raised).
-- [ ] `CHANGELOG.md` has a dated `[0.3.0]` entry; the commit is tagged `v0.3.0`.
-- [ ] Phase 2 changelog entries follow `AGENTS.md` §2.6 (user-visible statement + task ID only); the `[0.3.0]` section includes one line pointing at this phase doc for reasoning. Pre-`0.3.0` entries are left untouched.
-- [ ] `docs/demo/phase-2.*` shows a library drag-and-drop, live charts, and a custom rule being authored and applied. Prefer extending `scripts/capture-phase1-demo.mjs` toward the general capture pipeline (**P6-F-1**) rather than a third one-off.
+- [ ] All Phase 2 quality gates (§4) green in CI on `main`. — ticked after the merge CI run URL lands (Phase 1 pattern: `902eef8`).
+- [x] The catalogue ships ≥ 200 attributed patterns across ≥ 10 rulesets, every one verified by simulation (**P2-B-5**).
+- [x] A researcher can export a million-generation population series to CSV with honest resolution labelling. — **P2-D-4**.
+- [x] A user can invent a ruleset in the studio, test it, name it, save it, and send a friend a link that works. — **P2-E-4**.
+- [x] Simple mode of the statistics panel is comprehensible to a child; advanced mode satisfies an expert. **Verify with real people.** — operator review 2026-09-14.
+- [x] Coverage thresholds ratcheted per `planning/README.md` §3.5 (`worker/**` gated; at least one other layer raised). — **P2-F-1**.
+- [x] `CHANGELOG.md` has a dated `[0.3.0]` entry; the commit is tagged `v0.3.0`. — dated entry lands with this close-out; tag follows the merge to `main`.
+- [x] Phase 2 changelog entries follow `AGENTS.md` §2.6 (user-visible statement + task ID only); the `[0.3.0]` section includes one line pointing at this phase doc for reasoning. Pre-`0.3.0` entries are left untouched.
+- [x] `docs/demo/phase-2.*` shows a library drag-and-drop, live charts, and a custom rule being authored and applied. Prefer extending `scripts/capture-phase1-demo.mjs` toward the general capture pipeline (**P6-F-1**) rather than a third one-off. — `docs/demo/phase-2.gif`, scripted in `scripts/capture-phase2-demo.mjs`.
 
 ---
 
-## 7. Phase 2 review — 2026-09-14 (before human sign-off)
+## 7. Phase 2 close-out — 2026-09-14
 
-Operator instruction this session: complete remaining tasks, make CI green on the phase
-branch, determine and address gaps. **Do not merge. Do not tag `v0.3.0`.**
+Human validation of simple/advanced statistics signed off. Phase-branch CI green:
+[run 29](https://github.com/zjgordon/fancy-gol/actions/runs/34896167744) on `6592804`.
+Merge to `main` as a fast-forward, annotated tag `v0.3.0`, then cut `phase/3-theme-engine`.
 
 ### Implementation tasks
 
-All Phase 2 task IDs are `- [x]` (P2-F-3 AC2 seeded from CI run 28; official `main` streak still 0). Nothing is `- [-]`.
+All Phase 2 task IDs are `- [x]` (P2-F-3 AC2 seeded from CI run 28; official `main` streak still 0 until nightly fires on the default branch). Nothing is `- [-]`.
 
-### Gaps found and addressed this session
+### Gaps found and addressed on the phase branch
 
 | Gap | Disposition |
 |---|---|
@@ -645,14 +646,22 @@ All Phase 2 task IDs are `- [x]` (P2-F-3 AC2 seeded from CI run 28; official `ma
 | `catalogue-seed.spec.ts` period walk timed out at 5 s under node-22 coverage | Coverage turns on `fileParallelism`, so this test shares the runner with `simulation.spec.ts`'s 110 s acorn. Timeout raised to 60 s (same form as other sim-heavy specs). Assertion unchanged. |
 | `ci.yml` comment still claimed a uniform >10% regression | Comment updated to the three-class policy (P2-F-1). |
 
-### Gaps deferred to human review / the v0.3.0 merge
+### Gaps found while capturing the demo (fixed before the tag)
 
-- **DoD: green in CI on `main`.** This branch is `phase/2-library-and-stats`. Merge is the operator's.
-- **DoD: simple/advanced stats "verify with real people".** An agent cannot tick this.
-- **DoD: dated `[0.3.0]` + `v0.3.0` tag.** Explicitly out of scope this session.
-- **DoD: `docs/demo/phase-2.*`.** Not captured. `scripts/capture-phase1-demo.mjs` is the starting point; prefer folding it into **P6-F-1** rather than a third one-off. This sandbox's Playwright browser (chromium-1237) does not match the suite (1243), so a local capture would be the wrong artefact anyway.
-- **Official gate-history streak on `main`.** Starts when the nightly cron first fires after merge. Phase-branch dispatch is a seed sample, not an official cite.
-- **Phase header `☐ Not started`.** Left until the tag; the dashboard's task checkboxes are the live tracker.
+Capturing `docs/demo/phase-2.gif` drove the real app end to end for the first time outside the
+test suites, and three defects were only visible that way. The first falsified a ticked
+acceptance criterion, so the tag waited for it.
 
-Changelog entries from Phase 2 already follow `AGENTS.md` §2.6 (user-visible + task ID). The
-`[0.3.0]` section's pointer at this document waits for the dated release heading.
+| Gap | Disposition |
+|---|---|
+| **P2-G-2 AC3 was wrongly ticked.** With a panel open, its right-hand controls (Credits, the second filter column) sat *past the viewport edge* — measured at 1280×720: `.panel-host-panel` right edge 1289 against a 1280 viewport. The jsdom unit test asserts the clamp arithmetic, which was correct; the CSS spent the same number twice. | `--gol-panel-width` is the *panel's* usable width, so the dock now adds its own padding, border and resize handle on top of it, and carries a `max-width` of the viewport. Below the active panel's minimum the panel scrolls inside the dock (`overflow: auto`) rather than spilling off-screen. Re-measured: right edge 1255, 25px clear. |
+| An open dock covers the status bar's corner (measured: 226×274, the readout's whole area) and the 5%-white fill let it show through as unreadable ghost text under the charts. | The open dock composites `surface` over the opaque page backdrop. The idle chip stays translucent — there is nothing behind it but canvas. Occlusion itself is left as-is; see below. |
+| The **entropy chart was drawn as a flat line along zero**. `Chart.scanDomains` folded `populationMin/Max` into the y-domain of *every* chart, so an entropy-only chart (0–8 bits) was scaled against population (0–150 here), and the population min/max band was painted on it too. | The envelope is a population measure, so both the band and the domain fold are now keyed on the chart actually plotting the population series. Defaults are unchanged (they include population). Two unit tests in `tests/unit/ui/charts/chart.spec.ts` pin the y-tick scale and the absent band. The demo now shows entropy stepping up at the rule change — the divergence §1's demo asks for. |
+
+### Remaining at tag time
+
+- **DoD: green in CI on `main`.** Ticked after the merge run URL, same as Phase 1 (`902eef8`).
+- **Official gate-history streak on `main`.** Starts when the nightly cron first fires after merge. Phase-branch samples are seed records, not an official cite.
+- **An open dock still occludes the status bar.** Fixed the bleed-through, not the overlap: a right-docked panel covers the gen/pop/zoom readout entirely, so an expert loses it while the library is open. Reflowing chrome around an open dock wants the motion system (**P3-A-6**) and Phase 4's power-UX layout, not a CSS patch at tag time. Recorded here so it is picked up, not rediscovered.
+- **The ruleset picker labels the active rule by id.** Applying a studio edit over a built-in rule (`B3/S23` → `B36/S23` on Conway) leaves the picker reading "Conway's Game of Life", because the edit changes the transition, not the name or the id. Visible in the demo GIF. Wants a decision — auto-fork to a user rule on apply, or show the notation beside the name — in Phase 3's theme/chrome pass.
+- **The demo GIF is captured with chromium-1237**, not the suite's 1243 (this sandbox has no 1243 and `playwright install` cannot reach the CDN). A demo capture is not a pixel gate, so this is acceptable where a *visual baseline* would not be; `scripts/capture-phase2-demo.mjs` falls back explicitly and says so on stdout.

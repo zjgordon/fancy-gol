@@ -226,11 +226,12 @@ node .agents/scripts/build-dashboard.mjs --check  # exit 1 if out of date  (wire
 its own branch and merged back when every gate for that phase is green.
 
 ```
-main ──●─────────────────────────●─────────────────────────●──────▶
-       │ planning landed         │ merge + tag v0.1.0      │ merge + tag v0.2.0
-       │                         ↑                         ↑
-       └── phase/0-foundation ───┘                         │
-                                 └── phase/1-interaction ──┘
+main ──●───────────●───────────●───────────●──────▶
+       │           │ tag v0.1.0│ tag v0.2.0│ tag v0.3.0
+       │           ↑           ↑           ↑
+       └ phase/0 ──┘           │           │
+                 └ phase/1 ────┘           │
+                               └ phase/2 ──┘
 ```
 
 | Phase | Branch | Merges to main as |
@@ -245,15 +246,15 @@ main ──●──────────────────────
 
 ### Next branch
 
-Phase 1 lives on `phase/1-interaction` and ships as `v0.2.0`. After that merge and tag, start
-Phase 2 with:
+Phase 2 shipped on `main` as `v0.3.0`. After that merge and tag, start Phase 3 with:
 
 ```bash
 git checkout main && git pull
-git checkout -b phase/2-library-and-stats
+git checkout -b phase/3-theme-engine
 ```
 
-Confirm the next task in `.agents/dashboard.html` before cutting the branch.
+Confirm the next task in `.agents/dashboard.html` before cutting the branch. The first Phase 3
+task is **P3-A-1 · Layered compositor**.
 
 **Do not commit implementation code to `main`.** Merge a phase only when its gates are green,
 then tag.

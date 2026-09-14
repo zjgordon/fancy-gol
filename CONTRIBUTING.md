@@ -22,7 +22,7 @@ npm run dev             # Vite on :5173, Express on :8080
 | The contract | [`.agents/AGENTS.md`](.agents/AGENTS.md) |
 | The vision | [`.agents/docs/INCEPTION.md`](.agents/docs/INCEPTION.md) |
 | Binding ADRs | [`.agents/planning/ARCHITECTURE_DECISIONS.md`](.agents/planning/ARCHITECTURE_DECISIONS.md) |
-| The current checklist | [`.agents/planning/PHASE_1_INTERACTION.md`](.agents/planning/PHASE_1_INTERACTION.md) (Phase 0 is shipped; Phase 2 starts after the Phase 1 retro) |
+| The current checklist | [`.agents/planning/PHASE_3_THEME_ENGINE.md`](.agents/planning/PHASE_3_THEME_ENGINE.md) (Phases 0–2 shipped as `v0.1.0`–`v0.3.0`) |
 | Architecture map | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 
 `.agents/` is the source of truth. The dashboard is **generated** — never hand-edit the

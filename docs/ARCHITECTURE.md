@@ -1,9 +1,8 @@
 # Architecture
 
-Phase 1 ships a **usable simulator**: a pure engine in a worker, Canvas2D on the main thread,
-camera + tools + commands for interaction, Default theme tokens, session persistence, and a
-thin Express host with a `/live` broadcast relay. UI wraps the engine; the engine does not know
-the UI exists.
+Phase 2 ships a **powerful simulator**: the Phase 1 interaction layer plus a searchable pattern
+library, a real-time stat engine with charts, and a Ruleset Studio. UI wraps the engine; the
+engine does not know the UI exists.
 
 The binding decisions are [ADR-001…010](../.agents/planning/ARCHITECTURE_DECISIONS.md). This page
 is the map; those pages are the law.
@@ -65,9 +64,22 @@ ban** (ADR-009 amendment 2026-09-11): it is the pure-logic lane every layer may 
 | [ADR-009](../.agents/planning/ARCHITECTURE_DECISIONS.md#adr-009--one-package-hard-internal-boundaries-machine-enforced) | One package, enforced layering. |
 | [ADR-010](../.agents/planning/ARCHITECTURE_DECISIONS.md#adr-010--the-grid-is-a-sparse-map-of-dense-chunks) | Sparse map of dense 32×32 chunks. |
 
+## Phase 2, honestly
+
+Ships as `0.3.0` on `main` (tag `v0.3.0`):
+
+- Searchable, filterable library of ≥ 200 attributed patterns across ≥ 10 rulesets, with animated thumbnails and stamp-or-drag placement.
+- Incremental stats (density, bbox, entropy, Zobrist cycles, growth class) graphed by a hand-written charting module.
+- Ruleset Studio: B/S form + JSON, test bench, save / export / share-link apply.
+- CSV/JSON/PNG/RLE export with downsampled series labelled as such.
+- Panel host, composition root, classed bench gates, and `docs/gate-history/`.
+
+Not in this phase: themes beyond Default, command palette, time-travel timeline, laboratory,
+WebGL, full mobile layout. Those are Phases 3–6. See the [Phase 2 demo](demo/phase-2.gif).
+
 ## Phase 1, honestly
 
-Ships as `0.2.0` on `phase/1-interaction`:
+Shipped as `0.2.0` on `main` (tag `v0.2.0`):
 
 - Brush / eraser / shapes / fill / select / stamp; camera with fractional zoom and inertia.
 - Floating chrome (toolbar, transport, status, ruleset picker), Default light/dark tokens.
@@ -75,8 +87,7 @@ Ships as `0.2.0` on `phase/1-interaction`:
 - Edit undo/redo, `localStorage` autosave, shareable session URLs, `/live` read-only hub.
 - Playwright on Chromium/Firefox/WebKit, visual baselines, interaction performance budgets.
 
-Not in this phase: pattern catalogue, stats graphs, themes beyond Default, command palette,
-WebGL, full mobile layout. Those are Phases 2–6.
+See the [Phase 1 demo](demo/phase-1.gif).
 
 ## Phase 0
 

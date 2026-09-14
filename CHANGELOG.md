@@ -7,6 +7,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-09-14
+
+Phase 2 — The Library & The Stat Engine (*Make it powerful.*).
+Reasoning: [.agents/planning/PHASE_2_LIBRARY_AND_STATS.md](.agents/planning/PHASE_2_LIBRARY_AND_STATS.md).
+
 ### Added
 
 - Full Golly-compatible RLE round-trip (headers, multi-state tags, `#C` provenance comments) shared by the clipboard, stamps, and session save. (P2-A-1)
@@ -764,6 +769,7 @@ renderer and canvas bridge (H), client shell · Express · Docker · CI · this 
   known limitation (P0-H-3). Fixed locally: the reset handler now forces one full `draw()` right
   after resetting the mirror, before repainting the gun. (P0-I-1)
 
-[Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/ZJGordon/fancy-gol/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/ZJGordon/fancy-gol/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/ZJGordon/fancy-gol/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/ZJGordon/fancy-gol/releases/tag/v0.1.0
