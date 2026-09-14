@@ -6,6 +6,7 @@ import {
   ChartLoop,
   CHART_HZ,
   chartTokensFromSet,
+  type ChartSeriesDef,
   type ChartWindow,
 } from '@ui/charts/chart';
 
@@ -21,7 +22,7 @@ class FakeCtx {
   transform = [1, 0, 0, 1, 0, 0];
 
   readonly fillRects: { style: string; x: number; y: number; w: number; h: number }[] = [];
-  readonly fillTexts: { text: string; x: number; y: number; style: string }[] = [];
+  readonly fillTexts: { text: string; x: number; y: number; style: string; align: string }[] = [];
   readonly lineTos: { x: number; y: number }[] = [];
   readonly moveTos: { x: number; y: number }[] = [];
   readonly pathFills: { style: string }[] = [];
@@ -64,7 +65,7 @@ class FakeCtx {
     return { width: text.length * 6 };
   }
   fillText(text: string, x: number, y: number): void {
-    this.fillTexts.push({ text, x, y, style: this.fillStyle });
+    this.fillTexts.push({ text, x, y, style: this.fillStyle, align: this.textAlign });
   }
 }
 
@@ -114,7 +115,14 @@ function windowOf(n: number, opts?: { pop?: (t: number) => number; label?: strin
 }
 
 function makeChart(
-  overrides: { width?: number; height?: number; dpr?: number; yKind?: 'linear' | 'log'; loop?: ChartLoop | null } = {},
+  overrides: {
+    width?: number;
+    height?: number;
+    dpr?: number;
+    yKind?: 'linear' | 'log';
+    loop?: ChartLoop | null;
+    series?: readonly ChartSeriesDef[];
+  } = {},
 ): { chart: Chart; ctx: FakeCtx; canvas: HTMLCanvasElement } {
   const ctx = new FakeCtx();
   const canvas = fakeCanvas();
@@ -127,8 +135,32 @@ function makeChart(
     dpr: overrides.dpr ?? 1,
     loop: overrides.loop ?? null,
     ...(overrides.yKind ? { yKind: overrides.yKind } : {}),
+    ...(overrides.series ? { series: overrides.series } : {}),
   });
   return { chart, ctx, canvas };
+}
+
+const ENTROPY_SERIES: readonly ChartSeriesDef[] = [
+  { id: 'entropy', label: 'Entropy', color: 'accentStrong', value: (p) => p.entropy },
+];
+
+/** Population an order of magnitude above the entropy values, so a shared axis is obvious. */
+function entropyWindow(n: number, opts?: { aggregated?: boolean }): ChartWindow {
+  const points: StatsWindowPoint[] = Array.from({ length: n }, (_, t) => ({
+    ...point(t, 200 + t, t % 3, t % 2),
+    populationMin: 150 + t,
+    populationMax: 260 + t,
+    entropy: 0.2 + (t % 5) * 0.05,
+    tier: opts?.aggregated ? 1 : 0,
+  }));
+  return {
+    points,
+    tier: opts?.aggregated ? 1 : 0,
+    aggregated: Boolean(opts?.aggregated),
+    downsampled: Boolean(opts?.aggregated),
+    sourceCount: n,
+    label: opts?.aggregated ? 'tier 1 · min/max' : 'tier 0 · exact',
+  };
 }
 
 describe('chartTokensFromSet', () => {
@@ -270,6 +302,27 @@ describe('Chart', () => {
     });
     chart.draw();
     expect(ctx.pathFills.some((f) => f.style.includes('rgba'))).toBe(true);
+  });
+
+  it('scales a chart without the population series to its own values', () => {
+    const { chart, ctx } = makeChart({ series: ENTROPY_SERIES });
+    chart.setData(entropyWindow(24));
+    chart.draw();
+    // Y tick labels are the right-aligned ones (`drawAxes`); X labels are centred.
+    const yTicks = ctx.fillTexts
+      .filter((t) => t.align === 'right')
+      .map((t) => Number(t.text))
+      .filter((v) => Number.isFinite(v));
+    expect(yTicks.length).toBeGreaterThan(0);
+    // An entropy trace on a population axis (150–260 here) is a flat line along zero.
+    expect(Math.max(...yTicks)).toBeLessThan(2);
+  });
+
+  it('keeps the population envelope off a chart that does not plot population', () => {
+    const { chart, ctx } = makeChart({ series: ENTROPY_SERIES });
+    chart.setData(entropyWindow(24, { aggregated: true }));
+    chart.draw();
+    expect(ctx.pathFills.some((f) => f.style.includes('rgba'))).toBe(false);
   });
 });
 

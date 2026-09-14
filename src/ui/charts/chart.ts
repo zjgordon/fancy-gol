@@ -100,9 +100,11 @@ export interface ChartSeriesDef {
   readonly value: (point: StatsWindowPoint) => number;
 }
 
+export const POPULATION_SERIES_ID = 'population';
+
 /** The three traces a stats chart shows before P2-D-2 adds stacked state areas. */
 export const DEFAULT_CHART_SERIES: readonly ChartSeriesDef[] = [
-  { id: 'population', label: 'Population', color: 'accent', value: (p) => p.population },
+  { id: POPULATION_SERIES_ID, label: 'Population', color: 'accent', value: (p) => p.population },
   { id: 'births', label: 'Births', color: 'success', value: (p) => p.births },
   { id: 'deaths', label: 'Deaths', color: 'danger', value: (p) => p.deaths },
 ];
@@ -151,6 +153,15 @@ function finiteMinMax(lo: number, hi: number, fallback: readonly [number, number
   return [lo, hi];
 }
 
+/**
+ * The min/max envelope is a *population* measure, so it only belongs on a chart that plots
+ * population. Folding it in unconditionally scaled the entropy trace (0–8 bits) against a
+ * population axis, which drew it as a flat line along zero.
+ */
+function showsPopulation(series: readonly ChartSeriesDef[], hidden: ReadonlySet<string>): boolean {
+  return series.some((s) => s.id === POPULATION_SERIES_ID && !hidden.has(s.id));
+}
+
 function scanDomains(
   points: readonly StatsWindowPoint[],
   series: readonly ChartSeriesDef[],
@@ -160,11 +171,14 @@ function scanDomains(
   let xHi = -Infinity;
   let yLo = Infinity;
   let yHi = -Infinity;
+  const withEnvelope = showsPopulation(series, hidden);
   for (const p of points) {
     if (p.tick < xLo) xLo = p.tick;
     if (p.tick > xHi) xHi = p.tick;
-    if (p.populationMin < yLo) yLo = p.populationMin;
-    if (p.populationMax > yHi) yHi = p.populationMax;
+    if (withEnvelope) {
+      if (p.populationMin < yLo) yLo = p.populationMin;
+      if (p.populationMax > yHi) yHi = p.populationMax;
+    }
     for (const s of series) {
       if (hidden.has(s.id)) continue;
       const v = s.value(p);
@@ -528,7 +542,8 @@ export class Chart {
     const data = this.data;
     const showBand =
       Boolean(data) &&
-      (data!.tier >= 1 || data!.aggregated || data!.downsampled);
+      (data!.tier >= 1 || data!.aggregated || data!.downsampled) &&
+      showsPopulation(this.series, this.hidden);
     if (showBand) {
       drawBand(ctx, points, xScale, yScale, {
         min: (p) => p.populationMin,
