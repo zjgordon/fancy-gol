@@ -5,7 +5,7 @@
 
 | | |
 |---|---|
-| **Status** | ☐ Not started |
+| **Status** | ◐ In progress |
 | **Ships version** | `0.4.0` |
 | **Prerequisites** | Phase 2 complete and tagged `v0.3.0`. |
 | **Theme of the phase** | **Make it fabulous.** |
@@ -143,7 +143,7 @@ src/audio/
 
 ### Workstream A — Pipeline & framework
 
-#### - [ ] P3-A-1 · Layered compositor
+#### - [~] P3-A-1 · Layered compositor — @cursor, started 2026-09-14
 **Depends on:** Phase 2 · **Files:** `src/render/compositor.ts`, `src/render/layers.ts`
 **Implementation notes** Own the offscreen canvases for L0–L3, resize them with the viewport at correct dpr, and composite in one pass. L0 repaints only when the camera or theme changes (parallax backgrounds repaint on pan; static ones do not). L1 keeps Phase 0's dirty-rect behaviour intact — **the compositor must not force full repaints of the cell layer.**
 **Acceptance criteria**
