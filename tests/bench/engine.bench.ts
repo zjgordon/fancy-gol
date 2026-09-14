@@ -196,11 +196,20 @@ export const cases: BenchCase[] = [
     },
     run() {
       const sim = seekSim!;
-      const t0 = performance.now();
-      sim.seek(0);
-      const ms = performance.now() - t0;
-      sim.seek(4_000);
-      return ms;
+      // A single seek is ~0.2–0.5 ms — below timer resolution on GHA, which is
+      // why the 2026-09-14 CI run reported a 46% ratio "regression" against a
+      // 0.24 ms baseline while still 500× under the 250 ms budget. Mean of 32
+      // one-way seeks (restore to 4000 outside each sample) lifts the quantum
+      // without changing what the case measures.
+      const n = 32;
+      let total = 0;
+      for (let i = 0; i < n; i++) {
+        const t0 = performance.now();
+        sim.seek(0);
+        total += performance.now() - t0;
+        sim.seek(4_000);
+      }
+      return total / n;
     },
     teardown() {
       seekSim = undefined;
