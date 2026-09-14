@@ -2,9 +2,9 @@
  * P1-H-3 — interaction performance budgets.
  *
  * Three cases measured on the same CanvasRecorder + Canvas2DRenderer path Phase 0's
- * render benches already use (CPU fills, not GPU raster). Absolute budgets gate in CI;
- * `baselineGate: false` because a 10% band of a sub-frame timer is measurement noise,
- * the same treatment as `render-frame-cpu` / `main-thread-block`.
+ * render benches already use (CPU fills, not GPU raster). `browser` class (P2-F-1):
+ * absolute budgets gate in CI, no regression band on a sub-frame timer — the same
+ * treatment as `render-frame-cpu` / `main-thread-block`.
  *
  *   paint-stroke-latency-p95  brush stroke → paint → draw → pixel changed, ≤ 32 ms p95
  *   pan-1000pxs-1080p         pan at 1000 px/s at 1080p, ≥ 55 fps
@@ -111,7 +111,7 @@ export const cases: BenchCase[] = [
     unit: 'ms',
     budget: 32,
     higherIsBetter: false,
-    baselineGate: false,
+    class: 'browser',
     warmup: 2,
     async setup() {
       const pair = recorderCanvas(WIDTH, HEIGHT);
@@ -176,7 +176,7 @@ export const cases: BenchCase[] = [
     unit: 'fps',
     budget: 55,
     higherIsBetter: true,
-    baselineGate: false,
+    class: 'browser',
     warmup: 2,
     async setup() {
       const pair = recorderCanvas(WIDTH, HEIGHT);
@@ -221,7 +221,7 @@ export const cases: BenchCase[] = [
     unit: 'fps',
     budget: 30,
     higherIsBetter: true,
-    baselineGate: false,
+    class: 'browser',
     warmup: 1,
     async setup() {
       const pair = recorderCanvas(WIDTH, HEIGHT);

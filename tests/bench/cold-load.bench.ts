@@ -5,17 +5,21 @@ import type { BenchCase } from './types.ts';
  * lie. P0-I-1 measured `window.__fancyGolFirstFrameMs` ≈ 38 ms against Vite;
  * P0-I-3's production image measured ≈ 48.6 ms. This case reports the more
  * conservative recorded figure so the §3.6 row lives in the baseline, labelled
- * as recorded rather than re-timed.
+ * as recorded rather than re-timed. `browser` class (absolute budget only) plus
+ * `transcribed: true` so the runner's own table — not just this file's comment —
+ * makes its transcribed nature visible (P2-F-1).
  */
 const RECORDED_COLD_LOAD_MS = 48.6;
 
 export const cases: BenchCase[] = [
   {
-    id: 'cold-load-recorded',
+    id: 'cold-load-transcribed',
     name: 'cold interactive load (recorded P0-I-1/P0-I-3 Playwright, not re-timed)',
     unit: 'ms',
     budget: 1500,
     higherIsBetter: false,
+    class: 'browser',
+    transcribed: true,
     warmup: 0,
     run: () => RECORDED_COLD_LOAD_MS,
   },

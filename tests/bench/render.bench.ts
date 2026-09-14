@@ -108,7 +108,7 @@ export const cases: BenchCase[] = [
     unit: 'ms',
     budget: 16.6,
     higherIsBetter: false,
-    baselineGate: false,
+    class: 'browser',
     warmup: 8,
     async setup() {
       const pair = recorderCanvas(WIDTH, HEIGHT);
@@ -139,7 +139,7 @@ export const cases: BenchCase[] = [
     unit: 'ms',
     budget: 4,
     higherIsBetter: false,
-    baselineGate: false,
+    class: 'browser',
     warmup: 4,
     async setup() {
       const pair = recorderCanvas(WIDTH, HEIGHT);

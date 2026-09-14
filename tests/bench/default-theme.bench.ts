@@ -14,20 +14,20 @@ import type { BenchCase } from './types.ts';
  * `default-theme-render-frame` re-runs `render.bench.ts`'s own `render-frame-cpu` scenario
  * (identical viewport, identical 512² soup, identical `CanvasRecorder` CPU path) with the real
  * compiled Default theme in place of that file's ad hoc stub palette, gated at the *same* 16.6 ms
- * Phase 0 floor (`baselineGate: false`, exactly like the case it mirrors) rather than a fabricated
- * absolute 10 ms figure. That 10 ms number is a real-browser GPU-raster budget; the committed
- * baseline for the *existing*, simpler stub-palette case already measures ~11.8 ms on this CPU
- * recorder path (`bench-baseline.json`'s `render-frame-cpu`, "not GPU raster") — meaning a literal
- * 10 ms gate on this harness would fail on measurement-environment grounds having nothing to do
- * with the theme's own cost, the exact "needs a real browser, relocate rather than claim it here"
- * treatment this project has already applied repeatedly (P1-A-2, P1-D-1, P1-H-2 is where the real
- * figure belongs once Playwright exists).
+ * Phase 0 floor as an absolute-budget-only `browser` class case (P2-F-1), exactly like the case it
+ * mirrors, rather than a fabricated absolute 10 ms figure. That 10 ms number is a real-browser
+ * GPU-raster budget; the committed baseline for the *existing*, simpler stub-palette case already
+ * measures ~11.8 ms on this CPU recorder path (`bench-baseline.json`'s `render-frame-cpu`, "not GPU
+ * raster") — meaning a literal 10 ms gate on this harness would fail on measurement-environment
+ * grounds having nothing to do with the theme's own cost, the exact "needs a real browser, relocate
+ * rather than claim it here" treatment this project has already applied repeatedly (P1-A-2, P1-D-1,
+ * P1-H-2 is where the real figure belongs once Playwright exists).
  *
  * `default-theme-palette-lookup` proves the part that *is* honestly measurable here: the palette
  * itself is a zero-allocation O(1) array lookup (`themes/default/palette.ts`'s whole design), so
- * whatever the render path costs, this theme's palette adds none of it back. Regression-gated
- * (unlike the CPU-recorder case above) because call-count throughput is a stable relative metric,
- * immune to the GPU/sandbox variance the frame-time case isn't.
+ * whatever the render path costs, this theme's palette adds none of it back. `wall-clock` class
+ * (P2-F-1): gated on its ratio to the in-process calibration workload rather than raw ops/sec, so
+ * it survives a slower or noisier CI runner instead of gating nothing (its pre-P2-F-1 state).
  */
 
 const WIDTH = 1920;
@@ -68,7 +68,7 @@ export const cases: BenchCase[] = [
     unit: 'ms',
     budget: 16.6,
     higherIsBetter: false,
-    baselineGate: false,
+    class: 'browser',
     warmup: 8,
     async setup() {
       const pair = recorderCanvas(WIDTH, HEIGHT);
@@ -98,9 +98,7 @@ export const cases: BenchCase[] = [
     name: "Default theme's compiled palette(state, age) call cost (allocation-free O(1) lookup)",
     unit: 'ops/sec',
     higherIsBetter: true,
-    // Pure microbench: GHA shared runners swing >10% easily; absolute "still absurdly fast"
-    // is the real gate (hundreds of millions ops/sec either way).
-    baselineGate: false,
+    class: 'wall-clock',
     warmup: 3,
     run() {
       const { palette } = THEME;

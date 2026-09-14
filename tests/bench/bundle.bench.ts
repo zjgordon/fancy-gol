@@ -27,6 +27,7 @@ export const cases: BenchCase[] = [
     unit: 'kB',
     budget: 120,
     higherIsBetter: false,
+    class: 'deterministic',
     warmup: 0,
     run: () => clientGzipKiB(),
   },

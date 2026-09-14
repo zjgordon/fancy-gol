@@ -1,22 +1,29 @@
 /**
  * One case the P0-I-4 runner (`scripts/bench.mjs`) will load from `tests/bench/*.bench.ts`.
  * `run` does the work and returns the metric — the runner takes the median of N calls.
+ *
+ * Every case declares a `class` (P2-F-1, `planning/README.md` §3.6). There is no per-case
+ * opt-out from a regression gate — each class inherits its own honest policy instead:
+ *
+ *   - `deterministic`  tight ≤3% regression against the committed baseline. No noise excuse.
+ *   - `wall-clock`     gated on `median / calibration`, not raw milliseconds, so the gate
+ *                      survives a slower or noisier runner. Raw ms still prints for humans.
+ *   - `browser`        absolute budget only in this task (gate-history lands in P2-F-3).
  */
+export type BenchClass = 'deterministic' | 'wall-clock' | 'browser';
+
 export interface BenchCase {
   readonly id: string;
   readonly name: string;
   readonly unit: string;
-  /** Absolute Phase 0 floor. Omitted for recorded-only cases (no §3.6 budget). */
+  /** Absolute Phase 0 floor. Optional — `deterministic`/`wall-clock` cases may rely on their class gate alone. Required for `browser` (its only gate). */
   readonly budget?: number;
   readonly higherIsBetter: boolean;
-  /** Extra unrecorded `run()` calls after `setup`, before the 7 measured trials. */
+  readonly class: BenchClass;
+  /** True when the value is transcribed from an external measurement (e.g. a Playwright run), not re-timed by this process. Surfaced in the runner's table, not just the case name. */
+  readonly transcribed?: boolean;
+  /** Extra unrecorded `run()` calls after `setup`, before the N measured trials. */
   readonly warmup?: number;
-  /**
-   * When false, the 10% baseline-regression gate is skipped and only the absolute
-   * budget applies. Use for ratio metrics and sub-millisecond timers whose 10%
-   * band is smaller than measurement noise.
-   */
-  readonly baselineGate?: boolean;
   setup?: () => void | Promise<void>;
   teardown?: () => void | Promise<void>;
   run: () => number | Promise<number>;

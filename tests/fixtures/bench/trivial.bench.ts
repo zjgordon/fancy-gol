@@ -8,6 +8,7 @@ export const cases: BenchCase[] = [
     unit: 'ms',
     budget: 200,
     higherIsBetter: false,
+    class: 'deterministic',
     warmup: 0,
     run: () => 100,
   },

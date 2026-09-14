@@ -34,6 +34,7 @@ export const cases: BenchCase[] = [
     unit: 'steps/sec',
     budget: 60,
     higherIsBetter: true,
+    class: 'wall-clock',
     warmup: 3,
     setup() {
       soup512 = soup(512, 512, 0.5);
@@ -56,6 +57,7 @@ export const cases: BenchCase[] = [
     unit: 'steps/sec',
     budget: 5,
     higherIsBetter: true,
+    class: 'wall-clock',
     warmup: 1,
     setup() {
       soup4096 = soup(4096, 4096, 0.01);
@@ -78,6 +80,7 @@ export const cases: BenchCase[] = [
     name: '1M-cell paint',
     unit: 'ops/sec',
     higherIsBetter: true,
+    class: 'wall-clock',
     warmup: 1,
     setup() {
       paintSim = new Simulation({
@@ -111,6 +114,7 @@ export const cases: BenchCase[] = [
     unit: 'MB',
     budget: 40,
     higherIsBetter: false,
+    class: 'deterministic',
     warmup: 0,
     setup() {
       gc();
@@ -147,9 +151,11 @@ export const cases: BenchCase[] = [
     name: 'snapshot then restore a 512² soup',
     unit: 'ms',
     higherIsBetter: false,
-    // Sub-millisecond-adjacent timer: a 10% band is smaller than CI scheduling noise
-    // (same treatment as seek-4000 / stats-overhead).
-    baselineGate: false,
+    // Sub-millisecond-adjacent timer: a fixed 10% band on raw ms was smaller than CI scheduling
+    // noise (same treatment as seek-4000 / stats-overhead). `wall-clock` gates the ratio to the
+    // in-process calibration workload instead (P2-F-1), which is what fixes the "gates nothing"
+    // orphan this case used to be.
+    class: 'wall-clock',
     warmup: 2,
     setup() {
       snapSim = soup(512, 512, 0.5);
@@ -175,7 +181,7 @@ export const cases: BenchCase[] = [
     unit: 'ms',
     budget: 250,
     higherIsBetter: false,
-    baselineGate: false,
+    class: 'wall-clock',
     warmup: 1,
     setup() {
       seekSim = new Simulation({
@@ -208,7 +214,7 @@ export const cases: BenchCase[] = [
     // density / bbox / centroid / flux join the incremental fold.
     budget: 5,
     higherIsBetter: false,
-    baselineGate: false,
+    class: 'wall-clock',
     warmup: 3,
     setup() {
       statsBaseline = soup(512, 512, 0.5, 4);
@@ -251,7 +257,7 @@ export const cases: BenchCase[] = [
     // mistaken O(cells) scan would land near 100.
     budget: 1.5,
     higherIsBetter: false,
-    baselineGate: false,
+    class: 'wall-clock',
     warmup: 3,
     setup() {
       zobristSmall = soup(32, 32, 0.02, 7);
