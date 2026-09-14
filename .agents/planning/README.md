@@ -190,7 +190,7 @@ is retired.
 |---|---|---|
 | **Deterministic** | `client-js-gzip`, `grid-1m-memory` | Tight regression gate **2–3%**. No noise excuse exists. |
 | **Wall-clock CPU** | `conway-512-soup`, `conway-4096-1pct`, `paint-1m`, `snapshot-restore`, `seek-4000`, `stats-overhead` | Noise-aware gate on a **calibration ratio** (below), not raw milliseconds. |
-| **Browser / GPU / paint** | `render-frame-cpu`, `main-thread-block`, `pan-1000pxs-1080p`, `zoom-32-0.5-32-min-fps`, interaction paint latency | **Absolute budget only**, plus accumulating **gate-history** once that mechanism exists (§3.2 / before Phase 3). |
+| **Browser / GPU / paint** | `render-frame-cpu`, `main-thread-block`, `pan-1000pxs-1080p`, `zoom-32-0.5-32-min-fps`, interaction paint latency | **Absolute budget only**, plus accumulating **gate-history** (`docs/gate-history/`, P2-F-3). |
 
 **Every case gets a budget or a class gate, or is deleted.** `scripts/bench.mjs` enforces this at
 load time now: a case with no `class` (or a `browser`-class case with no `budget`, its only gate)
@@ -316,19 +316,31 @@ pattern as `no-literal-design-tokens`: the policy is a gate, not a convention.
 UI (P2-B-3): library cards show discoverer + year with a link to `source`; a Credits dialog lists
 every collection and its recorded terms.
 
-### 3.10 Gate-history criteria (decided 2026-09-11)
+### 3.10 Gate-history criteria (decided 2026-09-11; implemented P2-F-3, 2026-09-14)
 
 Some acceptance criteria cannot be proven inside the task that owns them (e.g. "non-flaky over 10
 consecutive CI runs"). Those are a **gate-history** class:
 
 - Discharged by an **accumulating CI / nightly record**, not by the implementing task.
-- The record's home is named in **P2-F-3** (workflow + path under `docs/gate-history/` or agreed
-  equivalent).
-- A task may cite `gate-history: <record-id> ≥ N green` instead of pretending to run N CI jobs
-  in-process. Phase 3's **P3-D-2** and browser-class benches consume this.
+- The record lives at **`docs/gate-history/`**:
+  - `records.jsonl` — source of truth, one JSON object per suite-sample
+  - `INDEX.md` — generated summary (do not hand-edit)
+  - `README.md` — how to cite
+- The workflow is **`.github/workflows/nightly-flake.yml`**: nightly cron on the default branch,
+  plus `workflow_dispatch` so a phase branch can seed the log before merge. Each run re-runs the
+  e2e and visual suites (optional inner repeats) and appends to the jsonl.
+- A task cites `gate-history: <record-id> ≥ N green` instead of pretending to run N CI jobs
+  in-process. Current ids: `e2e-nonflake`, `visual-nonflake`. Check with
+  `node scripts/gate-history.mjs cite visual-nonflake 3` (exits 0 only when the **official**
+  streak is met).
+- **Official** streak: samples on `main` whose `event` is `schedule`, `push`, or
+  `workflow_dispatch`. Phase-branch dispatch samples prove the mechanism and are in the log;
+  they do not increment the cite. Phase 3's **P3-D-2** and browser-class benches consume this
+  (browser cases still hold their absolute budget in `npm run bench`; a dedicated `browser-bench`
+  id can join when a nightly bench job exists).
 
-Until P2-F-3 is `- [x]`, criteria that need gate-history keep an honest interim note (local
-repeats + "literal CI streak deferred") — never a silent tick.
+Until three official `main` samples exist, criteria that need gate-history keep an honest
+interim note naming the current official streak — never a silent tick.
 
 ---
 
@@ -355,6 +367,7 @@ fancy-gol/
 ├── scripts/
 │   ├── check-boundaries.mjs         layering enforcement (hand-written)
 │   ├── check-pattern-licenses.mjs   pattern provenance gate (Phase 2)
+│   ├── gate-history.mjs             accumulating flake record (P2-F-3)
 │   ├── bench.mjs                    benchmark runner + budget gate
 │   └── gen-thumbnails.mjs           build-time pattern thumbnails
 ├── src/

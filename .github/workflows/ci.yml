@@ -92,8 +92,8 @@ jobs:
       # client-js-gzip reads dist/client/assets — build before measuring.
       - run: npm run build
 
-      # Compares against the committed bench-baseline.json; fails on a missed
-      # absolute budget or a >10% regression, printing a before/after table.
+      # Three-class gate (planning/README.md §3.6 / P2-F-1): deterministic ≤3%,
+      # wall-clock on the calibration ratio, browser absolute-budget only.
       - run: npm run bench
 
       - name: Upload bench baseline
@@ -215,5 +215,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report-visual
-          path: playwright-report/
+          path: |
+            playwright-report/
+            test-results/
           retention-days: 14

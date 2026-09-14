@@ -313,10 +313,10 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 
 #### - [ ] P3-D-2 · Per-theme visual regression
 **Depends on:** P3-D-1, P1-H-2, P2-F-3 · **Files:** `tests/visual/themes/*`
-**Implementation notes** For each of 6 themes × {shell, library panel, statistics panel, dialog, grid at 3 zooms} — 48 baselines. Animations frozen via the test flag, tick pinned, PRNG seeded. Mask fps/ms readouts. Stability across consecutive CI runs is a **gate-history** criterion (`planning/README.md` §3.10 / P2-F-3), not something this task can honestly prove in one PR.
+**Implementation notes** For each of 6 themes × {shell, library panel, statistics panel, dialog, grid at 3 zooms} — 48 baselines. Animations frozen via the test flag, tick pinned, PRNG seeded. Mask fps/ms readouts. Stability across consecutive CI runs is a **gate-history** criterion: `gate-history: visual-nonflake ≥ 3 green` (`docs/gate-history/`, `planning/README.md` §3.10). Tick that criterion only when `node scripts/gate-history.mjs cite visual-nonflake 3` is green. Until three official `main` samples exist, leave the honest interim note — do not treat a single PR as a streak.
 **Acceptance criteria**
 - [ ] All 48 baselines committed.
-- [ ] Gate-history record shows the suite stable across ≥ 3 consecutive scheduled/CI runs (or interim honest note until three nightlies exist).
+- [ ] Gate-history: `visual-nonflake` ≥ 3 green (`docs/gate-history/`). Interim until three official `main` samples exist: local repeats plus `node scripts/gate-history.mjs cite visual-nonflake 3` (currently unmet by construction — the workflow lands in Phase 2 and the first `main` nightlies follow the `v0.3.0` merge).
 - [ ] A deliberate token change in one theme fails only that theme's baselines.
 - [ ] Suite runtime stays under 6 minutes.
 

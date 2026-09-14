@@ -32,6 +32,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Ruleset Studio form: B/S chips, a neighbourhood diagram, a state editor, and a Randomise button that says when a rule looks explosive. (P2-E-2)
 - The Ruleset Studio runs a short test battery on a candidate rule and shows growth, period, and a thumbnail for each seed. (P2-E-3)
 - Save a studio rule to this browser or a share link, and import a .golrule.json with the same issue list the editor already uses. (P2-E-4)
+- Nightly (and on-demand) e2e + visual runs append a citeable flake record at `docs/gate-history/`, so later phases can write `gate-history: visual-nonflake ≥ 3 green` instead of pretending to run N CI jobs in one PR. (P2-F-3)
 
 ### Changed
 

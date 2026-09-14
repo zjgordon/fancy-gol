@@ -45,8 +45,8 @@ See `planning/README.md` §3.6. Absolute floors:
 | Client JS bundle (gzip) | ≤ 120 kB | ≤ 180 kB |
 
 Regression policy is **per class** (deterministic 2–3%, wall-clock via calibration ratio,
-browser absolute + gate-history) — owned by **P2-F-1**. Until then, do not claim a uniform
->10% regression gate. Updating `bench-baseline.json` is a reviewed commit, never a reflex.
+browser absolute + gate-history at `docs/gate-history/`, P2-F-3). Updating `bench-baseline.json`
+is a reviewed commit, never a reflex.
 
 ## Other standing gates
 

@@ -1,0 +1,103 @@
+name: Gate history
+
+# P2-F-3 — accumulating flake record for criteria that cannot be proven in-task
+# (planning/README.md §3.10). Each run appends one sample per suite to
+# docs/gate-history/records.jsonl and regenerates INDEX.md.
+#
+# GitHub only fires `schedule` on the default branch. `workflow_dispatch` is
+# how a phase branch seeds the log before merge. Official cites count `main`
+# samples only; phase-branch dispatch proves the mechanism.
+
+on:
+  schedule:
+    # 05:17 UTC — odd minute, dodge the Actions cron stampede.
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+    inputs:
+      repeats:
+        description: Inner repeats of each suite in this job
+        required: false
+        default: '1'
+      suites:
+        description: Comma-separated suites (e2e, visual)
+        required: false
+        default: 'e2e,visual'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gate-history-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_CURRENT: '22'
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+
+jobs:
+  flake:
+    name: flake sample
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_CURRENT }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install screenshot fonts
+        run: sudo apt-get update && sudo apt-get install -y fonts-dejavu-core fonts-liberation
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - run: npm run build
+
+      - name: Run suites and append gate-history
+        env:
+          E2E_SKIP_BUILD: '1'
+          CI: 'true'
+        run: |
+          node scripts/gate-history.mjs sample \
+            --suites "${{ github.event.inputs.suites || 'e2e,visual' }}" \
+            --repeats "${{ github.event.inputs.repeats || '1' }}" \
+            --event "${{ github.event_name }}" \
+            --branch "${{ github.ref_name }}" \
+            --sha "${{ github.sha }}" \
+            --run-id "${{ github.run_id }}" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Upload gate-history + Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-history-${{ github.run_id }}
+          path: |
+            docs/gate-history/
+            playwright-report/
+          retention-days: 90
+
+      - name: Commit record
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/gate-history/records.jsonl docs/gate-history/INDEX.md
+          if git diff --cached --quiet; then
+            echo "no record change"
+            exit 0
+          fi
+          git commit -m "$(cat <<'EOF'
+          chore(agents): append gate-history sample [skip ci]
+
+          Nightly / dispatch flake sample for P2-F-3. Agents cite
+          docs/gate-history/ rather than pretending to run N CI jobs
+          in-task.
+          EOF
+          )"
+          git push

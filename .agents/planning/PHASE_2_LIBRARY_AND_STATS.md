@@ -531,14 +531,16 @@ starves unrelated pre-existing wall-clock unit tests — `brush.spec.ts`, `colle
 diff to either — under load; `canvas-bridge.spec.ts` itself passed on every run, isolated or full,
 several times in a row). Full suite duration unchanged (~220s before and after).
 
-#### - [ ] P2-F-3 · Gate-history criterion class + nightly flake workflow
+#### - [~] P2-F-3 · Gate-history criterion class + nightly flake workflow — @cursor, started 2026-09-14
 **Depends on:** P1-H-1, P1-H-2 · **Files:** `.github/workflows/nightly-flake.yml` (or similar), `planning/README.md` §3.10, `docs/gate-history/` (or agreed path)
 **Intent:** Criteria like "stable across N consecutive CI runs" are unmeetable inside a task. Document a **gate-history** class and accumulate the record before Phase 3 multiplies visual baselines (retro §3.2). Browser-class benches (P2-F-1) and **P3-D-2** consume this.
 **Implementation notes** Binding text in `planning/README.md` §3.10. Nightly (or scheduled) workflow re-runs e2e + visual suites N times and appends results to a committed or artifact-backed record agents can cite. Task-owned criteria may say "gate-history: e2e-nonflake ≥ 10 green" instead of pretending to run 10 CI jobs in-task.
 **Acceptance criteria**
-- [ ] `planning/README.md` §3.10 defines the gate-history class and where the record lives.
-- [ ] Scheduled workflow exists and has produced at least one recorded run on `main`.
-- [ ] P3-D-2's "stable across 3 CI runs" criterion is rewritten to reference gate-history (or an explicit interim note until the first three nightlies land).
+- [x] `planning/README.md` §3.10 defines the gate-history class and where the record lives.
+- [ ] Scheduled workflow exists and has produced at least one recorded run. Official `main` samples start after this phase merges — a workflow file that is not yet on `main` cannot have run there. (Amended 2026-09-14: original wording said "on `main`"; operator asked not to merge this session.)
+- [x] P3-D-2's "stable across 3 CI runs" criterion is rewritten to reference gate-history (or an explicit interim note until the first three nightlies land).
+
+Measured: §3.10 now names `docs/gate-history/` (`records.jsonl` + generated `INDEX.md`), `.github/workflows/nightly-flake.yml` (cron `17 5 * * *` on the default branch + `workflow_dispatch`), record ids `e2e-nonflake` / `visual-nonflake`, and the official-streak rule (`main` + `schedule`/`push`/`workflow_dispatch`). Cite: `node scripts/gate-history.mjs cite visual-nonflake 3`. P3-D-2's second AC is now `gate-history: visual-nonflake ≥ 3 green` with an interim note until three official `main` samples exist. Unit spec `tests/unit/scripts/gate-history.spec.ts` covers parse, official-vs-seed streak, cite, jsonl round-trip, and `sampleSuites` with an injected runner (no Playwright in-unit). The first jsonl sample is produced by `workflow_dispatch` on this branch after push — AC2 stays open until that run lands.
 
 ---
 
@@ -620,3 +622,36 @@ Measured: `attachPanelHost` mounts into `#chrome-panel-dock`. Dock left/right, d
 - [ ] `CHANGELOG.md` has a dated `[0.3.0]` entry; the commit is tagged `v0.3.0`.
 - [ ] Phase 2 changelog entries follow `AGENTS.md` §2.6 (user-visible statement + task ID only); the `[0.3.0]` section includes one line pointing at this phase doc for reasoning. Pre-`0.3.0` entries are left untouched.
 - [ ] `docs/demo/phase-2.*` shows a library drag-and-drop, live charts, and a custom rule being authored and applied. Prefer extending `scripts/capture-phase1-demo.mjs` toward the general capture pipeline (**P6-F-1**) rather than a third one-off.
+
+---
+
+## 7. Phase 2 review — 2026-09-14 (before human sign-off)
+
+Operator instruction this session: complete remaining tasks, make CI green on the phase
+branch, determine and address gaps. **Do not merge. Do not tag `v0.3.0`.**
+
+### Implementation tasks
+
+All Phase 2 task IDs are `- [x]` once **P2-F-3** AC2 has its first recorded sample (workflow
+exists; first `workflow_dispatch` seeds `docs/gate-history/records.jsonl`). Nothing is `- [-]`.
+
+### Gaps found and addressed this session
+
+| Gap | Disposition |
+|---|---|
+| Visual CI red since ~P2-C-1 / chrome screenshots still Phase 1 | Idle dock was a 320px blank column over the status bar (P2-G-2). Dock now shrinks to the tab rail when no panel is open. Chrome snapshots updated to include Library / Studio / Export and the rail. |
+| Bench CI red: `seek-4000` +46% ratio, 500× under its 250 ms budget | Sub-millisecond timer noise (named in P2-F-1's own Measured note). Case now reports the mean of 32 one-way seeks. Budget unchanged. |
+| No place to cite "N consecutive CI runs" | **P2-F-3**: `docs/gate-history/` + nightly workflow. |
+| `ci.yml` comment still claimed a uniform >10% regression | Comment updated to the three-class policy (P2-F-1). |
+
+### Gaps deferred to human review / the v0.3.0 merge
+
+- **DoD: green in CI on `main`.** This branch is `phase/2-library-and-stats`. Merge is the operator's.
+- **DoD: simple/advanced stats "verify with real people".** An agent cannot tick this.
+- **DoD: dated `[0.3.0]` + `v0.3.0` tag.** Explicitly out of scope this session.
+- **DoD: `docs/demo/phase-2.*`.** Not captured. `scripts/capture-phase1-demo.mjs` is the starting point; prefer folding it into **P6-F-1** rather than a third one-off. This sandbox's Playwright browser (chromium-1237) does not match the suite (1243), so a local capture would be the wrong artefact anyway.
+- **Official gate-history streak on `main`.** Starts when the nightly cron first fires after merge. Phase-branch dispatch is a seed sample, not an official cite.
+- **Phase header `☐ Not started`.** Left until the tag; the dashboard's task checkboxes are the live tracker.
+
+Changelog entries from Phase 2 already follow `AGENTS.md` §2.6 (user-visible + task ID). The
+`[0.3.0]` section's pointer at this document waits for the dated release heading.
