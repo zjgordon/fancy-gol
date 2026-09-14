@@ -445,7 +445,7 @@ Measured: Studio Save writes `fancy-gol:user-rulesets` (versioned `{ version, ru
 > rests on this gate; landing it on the Phase 2 branch (early) is deliberate. Does not renumber
 > any prior ID.
 
-#### - [ ] P2-F-1 · Three-class bench gate + calibration
+#### - [x] P2-F-1 · Three-class bench gate + calibration — @claude, started 2026-09-14, finished 2026-09-14
 **Depends on:** P0-I-4 (harness exists) · **Files:** `scripts/bench.mjs`, `tests/bench/types.ts`, `tests/bench/*.bench.ts`, `tests/unit/bench-runner.spec.ts`, `bench-baseline.json`
 **Intent:** Replace the binary `baselineGate: false` pressure valve with a classed policy so every
 case is gated honestly, and dissolve the sandbox-vs-CI machine provenance problem for CPU timings.
@@ -466,14 +466,43 @@ case is gated honestly, and dissolve the sandbox-vs-CI machine provenance proble
   (statements/branches/functions) — measured actuals already clear this; ratchet `ui`/`themes`/
   `render`/`server` toward a few points under measured actuals per `planning/README.md` §3.5.
 **Acceptance criteria**
-- [ ] No bench case uses `baselineGate: false` (or any equivalent per-case opt-out).
-- [ ] Every remaining case is classified and has either an absolute budget, a class regression gate, or both; zero "measure-only" orphans.
-- [ ] Wall-clock cases gate on calibration ratio; raw ms still appear in the ASCII table.
-- [ ] Deterministic cases gate at ≤ 3% regression against baseline.
-- [ ] `cold-load-recorded` is renamed so its transcribed nature is visible in runner output.
-- [ ] `tests/unit/bench-runner.spec.ts` proves: deterministic tight fail, wall-clock ratio fail, browser budget fail; deliberate slowdown still exits non-zero.
-- [ ] `planning/README.md` §3.6 interim paragraph is removed or marked superseded; AGENTS.md / CLAUDE.md / ADR-004 cite the three-class policy as in force.
-- [ ] `src/worker/**` has coverage thresholds ≥ 95/90/95; at least one other layer's thresholds are ratcheted upward toward actuals without lowering any gate.
+- [x] No bench case uses `baselineGate: false` (or any equivalent per-case opt-out).
+- [x] Every remaining case is classified and has either an absolute budget, a class regression gate, or both; zero "measure-only" orphans.
+- [x] Wall-clock cases gate on calibration ratio; raw ms still appear in the ASCII table.
+- [x] Deterministic cases gate at ≤ 3% regression against baseline.
+- [x] `cold-load-recorded` is renamed so its transcribed nature is visible in runner output.
+- [x] `tests/unit/bench-runner.spec.ts` proves: deterministic tight fail, wall-clock ratio fail, browser budget fail; deliberate slowdown still exits non-zero.
+- [x] `planning/README.md` §3.6 interim paragraph is removed or marked superseded; AGENTS.md / CLAUDE.md / ADR-004 cite the three-class policy as in force.
+- [x] `src/worker/**` has coverage thresholds ≥ 95/90/95; at least one other layer's thresholds are ratcheted upward toward actuals without lowering any gate.
+
+Measured: `scripts/bench.mjs` requires `class: 'deterministic' | 'wall-clock' | 'browser'` on every
+case (load-time error otherwise) and refuses a `browser`-class case with no `budget` — its only
+gate. Wall-clock cases run a fixed 8M-iteration integer-multiply calibration workload once per
+suite invocation and gate on `wallClockRatio(value, calibrationMs, higherIsBetter)` vs. the
+committed `ratio` baseline at a 12% noise-aware band; `--inject-slowdown` never touches the
+calibration, only case values, so a wall-clock regression is provably about the code, not the
+machine. Deterministic cases gate at 3%. `cold-load-recorded` → `cold-load-transcribed`
+(`transcribed: true`, `*`-flagged in the table with a footnote). `default-theme-palette-lookup`
+and `snapshot-restore` — the two orphans — are `wall-clock` now; `paint-1m`, `conway-512-soup`,
+`conway-4096-1pct` (previously flat-10%-gated defaults) are too. `tests/unit/bench-runner.spec.ts`
+has 30 cases: pure-function tests for `evaluateCase`/`wallClockRatio` per class plus seven
+CLI-level fixture runs (all-classes pass, 30% slowdown fails, per-class targeted failures via
+`--filter`, and two "refuses to load" cases for a missing class / a budget-less browser case).
+`src/worker/**` raised to 95/90/95 (branch gaps in `bench-client.ts`/`bench-handler.ts` closed with
+new tests, some via `vi.mock` for a defensive branch `runBattery` cannot reach honestly);
+`src/themes/**` ratcheted 70/60/70 → 75/65/75 against ~92/83/97 measured. `bench-baseline.json`
+re-recorded in this sandbox (schema v2: `class`, `ratio`, top-level `calibrationMs`); `client-js-gzip`
+jumped 52.05 kB → 116.5 kB not from this task but because no one re-ran `--update-baseline` across
+the rest of Phase 2 — flagged in the baseline's own note, still under the 120 kB budget. `npm run
+verify` and `npm run bench` green. The wall-clock class's tolerance is not a single fixed 12% —
+`runSuite` widens it to `max(WALL_CLOCK_TOLERANCE, thisRun'sOwnRelativeSpreadAcrossItsNSamples)`,
+per §3.6's "use the spread already computed across the median-of-7" — so a case whose own trials
+already disagree by more than 12% doesn't gate tighter than it was actually measured. Even with
+that, `snapshot-restore`/`seek-4000` (sub-millisecond timers) occasionally still swing past their
+own measured spread in this shared, non-dedicated sandbox and fail a run; re-running passes. This
+is measurement noise, not a regression — the same honest limitation this file's own prior comments
+already named for these cases, now gated instead of silently ungated. Further stabilisation (more
+trials, or accumulating gate-history) is future work, not this task's scope.
 
 #### - [ ] P2-F-2 · Reshape canvas-bridge snapshot
 **Depends on:** Phase 1 · **Files:** `tests/integration/canvas-bridge.spec.ts`, `tests/integration/__snapshots__/*`

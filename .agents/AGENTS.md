@@ -306,7 +306,8 @@ A task is `- [x]` only when **all** of these hold:
 - [ ] Coverage gates hold: **95% statements on `src/engine/**`**, per `planning/README.md` §3.5.
       Thresholds may be raised, never lowered.
 - [ ] Performance budgets hold under the classed policy in `planning/README.md` §3.6
-      (until P2-F-1: absolute budgets where declared; do not claim a uniform >10% regression gate).
+      (three-class policy in force since P2-F-1 — deterministic ≤3%, wall-clock on calibration
+      ratio, browser absolute-budget-only; there is no uniform >10% regression gate).
 - [ ] From Phase 1: the Playwright spec for the feature exists and passes.
 - [ ] From Phase 3: it looks deliberate in **all six themes** and passes contrast in each.
 - [ ] `CHANGELOG.md` updated in the same commit.

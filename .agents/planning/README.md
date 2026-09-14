@@ -142,9 +142,10 @@ Enforced by `vitest --coverage` thresholds in `vitest.config.ts`:
 |---|---|---|---|
 | `src/engine/**` | **95%** | **90%** | **95%** |
 | `src/shared/**` | 95% | 90% | 95% |
-| `src/worker/**` | **95%** (from P2-F-1) | **90%** | **95%** |
+| `src/worker/**` | **95%** (P2-F-1) | **90%** | **95%** |
 | `src/render/**` | 85% | 75% | 85% |
-| `src/ui/**`, `src/themes/**` | 70% | 60% | 70% |
+| `src/ui/**` | 70% | 60% | 70% |
+| `src/themes/**` | **75%** (P2-F-1) | **65%** | **75%** |
 | `src/server/**` | 85% | 75% | 85% |
 | `src/audio/**` | **95/90/95 when the directory is created (P3-B-1)** | | |
 | `src/client/**` | **85%** (P2-G-1; `main.ts` excluded) | **75%** | **75%** |
@@ -164,8 +165,8 @@ composition root. Extracted wiring is gated; do not re-exclude the whole tree.
 
 Budgets tighten per phase; each phase document restates the numbers it must hit. The **regression
 policy is not a single 10% band** — three kinds of number share one harness and inherit different
-gates (decided 2026-09-11; implemented by **P2-F-1**). Until P2-F-1 lands, be honest about what
-the build actually does today (below).
+gates (decided 2026-09-11; implemented by **P2-F-1**, landed 2026-09-14). The three-class policy
+below is in force; there is no interim exception left to cite.
 
 #### Absolute floors (unchanged)
 
@@ -179,7 +180,7 @@ the build actually does today (below).
 | Cold interactive load (local, gzip) | ≤ 1500 ms | ≤ 800 ms |
 | Client JS bundle (gzip, excl. themes) | ≤ 120 kB | ≤ 180 kB |
 
-#### Target gate policy (three classes — P2-F-1)
+#### Target gate policy (three classes — P2-F-1, in force)
 
 Every bench case lands in **exactly one** class and inherits that class's policy. There is no
 per-case `baselineGate: false` escape hatch — that valve was pulled ten times in Phases 0–1 and
@@ -191,9 +192,10 @@ is retired.
 | **Wall-clock CPU** | `conway-512-soup`, `conway-4096-1pct`, `paint-1m`, `snapshot-restore`, `seek-4000`, `stats-overhead` | Noise-aware gate on a **calibration ratio** (below), not raw milliseconds. |
 | **Browser / GPU / paint** | `render-frame-cpu`, `main-thread-block`, `pan-1000pxs-1080p`, `zoom-32-0.5-32-min-fps`, interaction paint latency | **Absolute budget only**, plus accumulating **gate-history** once that mechanism exists (§3.2 / before Phase 3). |
 
-**Every case gets a budget or a class gate, or is deleted.** A measured number nobody checks is
-decoration (`default-theme-palette-lookup` and `snapshot-restore` currently gate nothing — fix or
-cut in P2-F-1).
+**Every case gets a budget or a class gate, or is deleted.** `scripts/bench.mjs` enforces this at
+load time now: a case with no `class` (or a `browser`-class case with no `budget`, its only gate)
+fails the run rather than silently measuring nothing. `default-theme-palette-lookup` and
+`snapshot-restore` — the two cases that used to gate nothing — are `wall-clock` now.
 
 **Calibration (wall-clock class):** `scripts/bench.mjs` runs a fixed synthetic workload (no
 allocation, no I/O) in the same process as the suite. Wall-clock cases report raw milliseconds
@@ -203,17 +205,18 @@ per-runner baseline files and closes the Node-24-sandbox-vs-Node-22-CI provenanc
 cases. Band on the ratio may still be noise-aware (use the spread already computed across the
 median-of-7); do not fall back to "turn the gate off".
 
-**Transcribed / non-timed cases:** rename `cold-load-recorded` so its transcribed nature is
-visible in the runner output (it is not re-timed by `npm run bench`). It does not pretend to be a
-live wall-clock measurement.
+**Transcribed / non-timed cases:** `cold-load-recorded` is renamed `cold-load-transcribed` and
+carries `transcribed: true`, which the runner's table marks with a `*` and a footnote — visible in
+the output itself, not just this file's comment. It does not pretend to be a live wall-clock
+measurement.
 
-#### Interim honesty (until P2-F-1)
+#### Status: in force (P2-F-1 closed 2026-09-14)
 
-Today: absolute budgets are enforced where a case declares `budget`; the flat **>10% baseline
-regression** check runs only for cases that leave `baselineGate` at its default (6 of 16 as of
-the Phase 0–1 retro). Ten cases opt out; two have neither budget nor gate. **Do not claim a
-uniform >10% regression gate** in process docs, commit messages, or PR templates until P2-F-1
-closes. Softened claims point here.
+Every case in `tests/bench/*.bench.ts` declares a `class`; there is no `baselineGate: false`
+opt-out left anywhere in the tree. The flat, uniform **>10% baseline regression** check described
+in earlier revisions of this document no longer exists in any form — deterministic cases gate at
+≤3%, wall-clock cases gate on the calibration ratio, browser cases gate on their absolute budget
+alone. `tests/unit/bench-runner.spec.ts` proves a failing case in each of the three classes.
 
 ### 3.7 Accessibility & motion baseline
 

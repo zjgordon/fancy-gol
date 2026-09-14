@@ -73,7 +73,8 @@ easing solvers, audio synthesis and boundary checker are all hand-written by des
 
 **Automated Proof** — nothing is done until its tests pass, `npm run verify` is green, coverage
 holds (**95% statements on `src/engine/**`**), and benchmarks meet `planning/README.md` §3.6
-(classed gates; until P2-F-1 do not claim a uniform >10% regression).
+(three-class gates — deterministic ≤3%, wall-clock on calibration ratio, browser absolute-budget-only —
+in force since P2-F-1; there is no uniform >10% regression band).
 
 **Changelog** — Keep-a-Changelog format, updated in the *same commit* as the change. From
 Phase 2 / `v0.3.0`: user-visible statement + task ID only; reasoning lives in the phase doc and

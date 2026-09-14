@@ -182,8 +182,10 @@ baseline. Updating the baseline is a reviewed commit, never a reflex.
 **Forced by:** Phase 0–1 retrospective §3.1; operator decision to fix the gate and soften claims
 until the fix lands.
 **Invalidates the prior wording** "a >10% regression fails the build" as a universal rule.
-**Owning task:** `P2-F-1`. Until that task is `- [x]`, process docs describe the interim reality
-(absolute budgets where declared; baseline regression only where not opted out) per §3.6.
+**Owning task:** `P2-F-1`, closed 2026-09-14. The three-class policy (§3.6) is now in force:
+`scripts/bench.mjs` requires a `class` on every case (no `baselineGate: false` opt-out remains),
+deterministic cases gate at ≤3%, wall-clock cases gate on a same-process calibration ratio, and
+browser cases hold an absolute budget only. There is no further interim wording to soften.
 **Does not invalidate** P0-I-4's existence, budgets table, or CI `bench` job — only the regression
 policy shape.
 
