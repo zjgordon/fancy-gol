@@ -111,4 +111,70 @@ describe('createBenchClient', () => {
     });
     await expect(client.run({})).rejects.toThrow('bad rule');
   });
+
+  it('ignores an object event with an unrecognised type', async () => {
+    const client = createBenchClient(() => {
+      const worker: WorkerLike = {
+        postMessage() {
+          worker.onmessage?.({ data: { type: 'not-a-real-event' } });
+          worker.onmessage?.({
+            data: { type: 'done', report: { cases: [] } } satisfies BenchEvent,
+          });
+        },
+        onmessage: null,
+        onerror: null,
+        terminate() {},
+      };
+      return worker;
+    });
+    await expect(client.run(CONWAY)).resolves.toEqual({ cases: [] });
+  });
+
+  it('wraps a thrown non-Error from a synchronous postMessage failure', async () => {
+    const client = createBenchClient(() => {
+      const worker: WorkerLike = {
+        postMessage() {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error
+          throw 'boom';
+        },
+        onmessage: null,
+        onerror: null,
+        terminate() {},
+      };
+      return worker;
+    });
+    await expect(client.run(CONWAY)).rejects.toThrow('boom');
+  });
+
+  it('rethrows a plain Error from a synchronous postMessage failure', async () => {
+    const client = createBenchClient(() => {
+      const worker: WorkerLike = {
+        postMessage() {
+          throw new Error('spawn failed');
+        },
+        onmessage: null,
+        onerror: null,
+        terminate() {},
+      };
+      return worker;
+    });
+    await expect(client.run(CONWAY)).rejects.toThrow('spawn failed');
+  });
+
+  it('treats a synchronous postMessage failure named AbortError as a cancellation', async () => {
+    const client = createBenchClient(() => {
+      const worker: WorkerLike = {
+        postMessage() {
+          const err = new Error('aborted');
+          err.name = 'AbortError';
+          throw err;
+        },
+        onmessage: null,
+        onerror: null,
+        terminate() {},
+      };
+      return worker;
+    });
+    await expect(client.run(CONWAY)).rejects.toMatchObject({ name: 'AbortError' });
+  });
 });

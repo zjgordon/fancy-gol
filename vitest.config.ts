@@ -73,9 +73,13 @@ export default defineConfig({
       thresholds: {
         'src/engine/**': { statements: 95, branches: 90, functions: 95 },
         'src/shared/**': { statements: 95, branches: 90, functions: 95 },
+        // P2-F-1: worker ratcheted to the engine/shared bar — measured actuals clear it.
+        'src/worker/**': { statements: 95, branches: 90, functions: 95 },
         'src/render/**': { statements: 85, branches: 75, functions: 85 },
         'src/ui/**': { statements: 70, branches: 60, functions: 70 },
-        'src/themes/**': { statements: 70, branches: 60, functions: 70 },
+        // P2-F-1: ratcheted 70/60/70 -> 75/65/75, a few points under measured actuals
+        // (planning/README.md §3.5's ratchet rule), not the full 20+ points of slack.
+        'src/themes/**': { statements: 75, branches: 65, functions: 75 },
         'src/server/**': { statements: 85, branches: 75, functions: 85 },
         'src/client/**': { statements: 85, branches: 75, functions: 75 },
       },
