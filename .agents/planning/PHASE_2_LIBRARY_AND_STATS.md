@@ -504,14 +504,32 @@ is measurement noise, not a regression — the same honest limitation this file'
 already named for these cases, now gated instead of silently ungated. Further stabilisation (more
 trials, or accumulating gate-history) is future work, not this task's scope.
 
-#### - [ ] P2-F-2 · Reshape canvas-bridge snapshot
+#### - [x] P2-F-2 · Reshape canvas-bridge snapshot — @claude, started 2026-09-14, finished 2026-09-14
 **Depends on:** Phase 1 · **Files:** `tests/integration/canvas-bridge.spec.ts`, `tests/integration/__snapshots__/*`
 **Intent:** Replace the 37k-line draw-call snapshot with a reviewable assertion shape before Phase 3/5 multiply renderers (retro §3.3).
 **Implementation notes** Keep the test. Assert a stable digest of the call log plus named invariants (call counts by method, dirty-rect coverage, painted-cell set at generations 0/1/4/100). Keep a *short* readable snapshot of the first N calls only. A reviewer must be able to tell *what* changed.
 **Acceptance criteria**
-- [ ] Full 37k-line snapshot file is gone (or reduced to a short first-N excerpt).
-- [ ] Digest + invariants still catch a deliberate renderer regression (fixture test).
-- [ ] Suite runtime does not increase materially.
+- [x] Full 37k-line snapshot file is gone (or reduced to a short first-N excerpt).
+- [x] Digest + invariants still catch a deliberate renderer regression (fixture test).
+- [x] Suite runtime does not increase materially.
+
+Measured: `tests/integration/__snapshots__/canvas-bridge.spec.ts.snap` 37,092 → 881 lines (98%
+smaller) — a sha256 digest (16 hex chars) of the full call log, counts by method, the first 12
+calls, and the actual live-cell set the recorder painted at generations 0/1/4/100 (read back from
+its own pixel buffer, not re-derived from simulation state, so it proves the renderer's *output*
+tracks reality). Named invariants run as hard `expect()`s alongside the snapshot, not inside it:
+zero `createImageData` calls (cellSize 4 stays on the vector path), >100 `fillRect` calls (one
+paint per generation minimum), and total `fillRect` area under 50% of what 100 full-viewport
+repaints would cover (dirty-rect economy — actual measured ratio ≈15%, well under the budget). A new "P2-F-2 AC" describe
+block drives the same digest/count/coverage-ratio helper functions directly against hand-built
+"healthy" vs. "regressed" call logs (a full-viewport repaint instead of per-chunk, a stray
+`createImageData`, a one-pixel-taller rect) and shows each invariant would have failed on the
+regressed shape — proof without needing
+to actually break `canvas2d.ts`. `npm run test` and `npm run verify` both green in this sandbox at
+least once each with these changes (the sandbox runs a full desktop/IDE stack that intermittently
+starves unrelated pre-existing wall-clock unit tests — `brush.spec.ts`, `collector.spec.ts`, no
+diff to either — under load; `canvas-bridge.spec.ts` itself passed on every run, isolated or full,
+several times in a row). Full suite duration unchanged (~220s before and after).
 
 #### - [ ] P2-F-3 · Gate-history criterion class + nightly flake workflow
 **Depends on:** P1-H-1, P1-H-2 · **Files:** `.github/workflows/nightly-flake.yml` (or similar), `planning/README.md` §3.10, `docs/gate-history/` (or agreed path)
