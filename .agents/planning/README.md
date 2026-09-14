@@ -336,7 +336,11 @@ consecutive CI runs"). Those are a **gate-history** class:
   - `README.md` — how to cite
 - The workflow is **`.github/workflows/nightly-flake.yml`**: nightly cron on the default branch,
   plus `workflow_dispatch` so a phase branch can seed the log before merge. Each run re-runs the
-  e2e and visual suites (optional inner repeats) and appends to the jsonl.
+  e2e and visual suites (optional inner repeats) and appends to the jsonl. GitHub's
+  `workflow_dispatch` API 404s until the file exists on the **default** branch — a phase-branch
+  file cannot be dispatched. Until merge, seed samples may be appended from a green CI run of
+  the same Playwright projects (`append --event push`); they are still seed samples, not an
+  official streak.
 - A task cites `gate-history: <record-id> ≥ N green` instead of pretending to run N CI jobs
   in-process. Current ids: `e2e-nonflake`, `visual-nonflake`. Check with
   `node scripts/gate-history.mjs cite visual-nonflake 3` (exits 0 only when the **official**

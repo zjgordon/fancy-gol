@@ -16,11 +16,12 @@ Phase-branch dispatch samples prove the mechanism; they do not count toward the 
 
 | record-id | official (main) | all-branches | last official |
 |---|---:|---:|---|
-| `e2e-nonflake` | 0 | 0 | — |
-| `visual-nonflake` | 0 | 0 | — |
+| `e2e-nonflake` | 0 | 1 | — |
+| `visual-nonflake` | 0 | 1 | — |
 
 ## Log (newest first)
 
 | at | id | ok | branch | event | run |
 |---|---|---|---|---|---|
-| — | — | — | — | — | no samples yet |
+| 2026-09-14T20:58:29.978Z | `visual-nonflake` | green | `phase/2-library-and-stats` | push | [34895308935](https://github.com/zjgordon/fancy-gol/actions/runs/34895308935) |
+| 2026-09-14T20:58:29.944Z | `e2e-nonflake` | green | `phase/2-library-and-stats` | push | [34895308935](https://github.com/zjgordon/fancy-gol/actions/runs/34895308935) |

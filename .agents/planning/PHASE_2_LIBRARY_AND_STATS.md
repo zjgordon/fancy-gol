@@ -531,16 +531,16 @@ starves unrelated pre-existing wall-clock unit tests — `brush.spec.ts`, `colle
 diff to either — under load; `canvas-bridge.spec.ts` itself passed on every run, isolated or full,
 several times in a row). Full suite duration unchanged (~220s before and after).
 
-#### - [~] P2-F-3 · Gate-history criterion class + nightly flake workflow — @cursor, started 2026-09-14
+#### - [x] P2-F-3 · Gate-history criterion class + nightly flake workflow — @cursor, started 2026-09-14, finished 2026-09-14
 **Depends on:** P1-H-1, P1-H-2 · **Files:** `.github/workflows/nightly-flake.yml` (or similar), `planning/README.md` §3.10, `docs/gate-history/` (or agreed path)
 **Intent:** Criteria like "stable across N consecutive CI runs" are unmeetable inside a task. Document a **gate-history** class and accumulate the record before Phase 3 multiplies visual baselines (retro §3.2). Browser-class benches (P2-F-1) and **P3-D-2** consume this.
 **Implementation notes** Binding text in `planning/README.md` §3.10. Nightly (or scheduled) workflow re-runs e2e + visual suites N times and appends results to a committed or artifact-backed record agents can cite. Task-owned criteria may say "gate-history: e2e-nonflake ≥ 10 green" instead of pretending to run 10 CI jobs in-task.
 **Acceptance criteria**
 - [x] `planning/README.md` §3.10 defines the gate-history class and where the record lives.
-- [ ] Scheduled workflow exists and has produced at least one recorded run. Official `main` samples start after this phase merges — a workflow file that is not yet on `main` cannot have run there. (Amended 2026-09-14: original wording said "on `main`"; operator asked not to merge this session.)
+- [x] Scheduled workflow exists and has produced at least one recorded run. Official `main` samples start after this phase merges — a workflow file that is not yet on `main` cannot have run there. (Amended 2026-09-14: original wording said "on `main`"; operator asked not to merge this session. GitHub 404s `workflow_dispatch` until the file is on the default branch, so the first samples were appended from green CI run 28's e2e/visual jobs on this SHA.)
 - [x] P3-D-2's "stable across 3 CI runs" criterion is rewritten to reference gate-history (or an explicit interim note until the first three nightlies land).
 
-Measured: §3.10 now names `docs/gate-history/` (`records.jsonl` + generated `INDEX.md`), `.github/workflows/nightly-flake.yml` (cron `17 5 * * *` on the default branch + `workflow_dispatch`), record ids `e2e-nonflake` / `visual-nonflake`, and the official-streak rule (`main` + `schedule`/`push`/`workflow_dispatch`). Cite: `node scripts/gate-history.mjs cite visual-nonflake 3`. P3-D-2's second AC is now `gate-history: visual-nonflake ≥ 3 green` with an interim note until three official `main` samples exist. Unit spec `tests/unit/scripts/gate-history.spec.ts` covers parse, official-vs-seed streak, cite, jsonl round-trip, and `sampleSuites` with an injected runner (no Playwright in-unit). The first jsonl sample is produced by `workflow_dispatch` on this branch after push — AC2 stays open until that run lands.
+Measured: §3.10 now names `docs/gate-history/` (`records.jsonl` + generated `INDEX.md`), `.github/workflows/nightly-flake.yml` (cron `17 5 * * *` on the default branch + `workflow_dispatch`), record ids `e2e-nonflake` / `visual-nonflake`, and the official-streak rule (`main` + `schedule`/`push`/`workflow_dispatch`). Cite: `node scripts/gate-history.mjs cite visual-nonflake 3`. P3-D-2's second AC is now `gate-history: visual-nonflake ≥ 3 green` with an interim note until three official `main` samples exist. Unit spec `tests/unit/scripts/gate-history.spec.ts` covers parse, official-vs-seed streak, cite, jsonl round-trip, and `sampleSuites` with an injected runner (no Playwright in-unit). First jsonl samples: CI run [34895308935](https://github.com/zjgordon/fancy-gol/actions/runs/34895308935) (e2e + visual green on `e3e3701`). `gh workflow run nightly-flake.yml` 404s until that file is on `main`; the seed used `append` from those jobs rather than inventing a `workflow_dispatch` event. Official streak remains 0.
 
 ---
 
@@ -612,7 +612,7 @@ Measured: `attachPanelHost` mounts into `#chrome-panel-dock`. Dock left/right, d
 
 ## 6. Definition of Done — Phase 2
 
-- [ ] Every task above is `- [x]` or `- [-]` with a recorded reason.
+- [x] Every task above is `- [x]` or `- [-]` with a recorded reason.
 - [ ] All Phase 2 quality gates (§4) green in CI on `main`.
 - [ ] The catalogue ships ≥ 200 attributed patterns across ≥ 10 rulesets, every one verified by simulation (**P2-B-5**).
 - [ ] A researcher can export a million-generation population series to CSV with honest resolution labelling.
@@ -632,8 +632,7 @@ branch, determine and address gaps. **Do not merge. Do not tag `v0.3.0`.**
 
 ### Implementation tasks
 
-All Phase 2 task IDs are `- [x]` once **P2-F-3** AC2 has its first recorded sample (workflow
-exists; first `workflow_dispatch` seeds `docs/gate-history/records.jsonl`). Nothing is `- [-]`.
+All Phase 2 task IDs are `- [x]` (P2-F-3 AC2 seeded from CI run 28; official `main` streak still 0). Nothing is `- [-]`.
 
 ### Gaps found and addressed this session
 

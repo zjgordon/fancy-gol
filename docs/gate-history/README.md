@@ -33,6 +33,11 @@ A `workflow_dispatch` on a phase branch is a **seed** sample — it proves the
 pipeline before the workflow file exists on `main`. It is in the log. It does
 not increment the official streak.
 
+GitHub 404s `workflow_dispatch` until the workflow file exists on the default
+branch. Until merge, seed the log with `node scripts/gate-history.mjs append`
+from a green CI run of the same Playwright projects (`event: push`). Do not
+invent a `workflow_dispatch` event that did not happen.
+
 `node scripts/gate-history.mjs cite visual-nonflake 3` exits 0 only when the
 official streak is met. `--all-branches` is the debug view.
 
