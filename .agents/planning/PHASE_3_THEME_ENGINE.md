@@ -191,7 +191,7 @@ src/audio/
 - [x] The indicator explains *which* passes were dropped, in plain language.
 - [x] Quality 0 is proven to hit 60 fps on a throttled 4× CPU-slowdown profile for every theme. — synthetic Default-shaped stack until Workstream C themes exist; re-asserted per theme in C-* / P3-E-1.
 
-#### - [ ] P3-A-5 · Effect library
+#### - [~] P3-A-5 · Effect library — @cursor, started 2026-09-15
 **Depends on:** P3-A-3 · **Files:** `src/render/effects/*.ts`
 **Ship these reusable passes** (each parameterised, each used by ≥ 1 theme):
 `bloom` (downsample-blur-add), `scanlines`, `chromaticAberration`, `vignette`, `filmGrain`, `crtCurvature`, `phosphorDecay`, `starfield` (parallax, seeded), `parchmentTexture` (procedural, generated once), `gridGlow`, `birthFlash`, `deathParticles`, `trailFade`, `hueShiftByAge`, `sunGradient` (Synthwave horizon), `textRain` (Flatline).
