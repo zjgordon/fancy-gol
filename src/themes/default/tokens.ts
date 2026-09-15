@@ -9,6 +9,9 @@
  * `success*`) — is checked against WCAG AA (4.5:1) by `tests/unit/themes/default/tokens.spec.ts`
  * using `shared/color.ts`'s `contrastRatio`, composited over its actual backdrop where a token is
  * translucent. This is this task's first acceptance criterion, not a claim taken on faith.
+ *
+ * P3-C-1 re-read every group: colour roles stay the P1-E-3 AA/CVD pair; type/space/radius/
+ * shadow/effect are unchanged; motion durations shorten to a desktop-app 90/180/280 ms scale.
  */
 import type { TokenSet } from '@themes/types';
 
@@ -39,7 +42,7 @@ const SHADOW: TokenSet['shadow'] = {
 };
 
 const MOTION: TokenSet['motion'] = {
-  duration: { instant: '0ms', fast: '150ms', slow: '600ms', slower: '900ms' },
+  duration: { instant: '0ms', fast: '90ms', slow: '180ms', slower: '280ms' },
   easing: {
     linear: 'linear',
     standard: 'cubic-bezier(0.22, 0.61, 0.36, 1)',

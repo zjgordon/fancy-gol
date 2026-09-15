@@ -25,13 +25,13 @@ export interface TrailSpec {
   readonly fadeMs: number;
 }
 
-/** Default (restrained) choreography — Default theme and the motion runtime fallback. */
+/** Default choreography — crisp, short, no bounce (P3-C-1). Also the motion-runtime fallback. */
 export const DEFAULT_ENTER: Choreography = {
   durationKey: 'slow',
   easingKey: 'decelerate',
-  delayStepMs: 40,
+  delayStepMs: 24,
   keyframes: [
-    { offset: 0, opacity: 0, transform: 'translateY(6px)' },
+    { offset: 0, opacity: 0, transform: 'translateY(4px)' },
     { offset: 1, opacity: 1, transform: 'translateY(0px)' },
   ],
 };
@@ -41,23 +41,23 @@ export const DEFAULT_EXIT: Choreography = {
   easingKey: 'accelerate',
   keyframes: [
     { offset: 0, opacity: 1, transform: 'translateY(0px)' },
-    { offset: 1, opacity: 0, transform: 'translateY(4px)' },
+    { offset: 1, opacity: 0, transform: 'translateY(2px)' },
   ],
 };
 
 export const DEFAULT_EMPHASIS: Choreography = {
   durationKey: 'fast',
-  easingKey: 'bounce',
+  easingKey: 'standard',
   keyframes: [
     { offset: 0, transform: 'scale(1)' },
-    { offset: 0.45, transform: 'scale(1.04)' },
+    { offset: 0.4, transform: 'scale(1.02)' },
     { offset: 1, transform: 'scale(1)' },
   ],
 };
 
 export function defaultMotionSignature(): MotionSignature {
   return {
-    durationMs: { instant: 0, fast: 150, slow: 600, slower: 900 },
+    durationMs: { instant: 0, fast: 90, slow: 180, slower: 280 },
     easings: { ...PRESET_EASINGS },
     enter: DEFAULT_ENTER,
     exit: DEFAULT_EXIT,

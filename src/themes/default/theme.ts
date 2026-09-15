@@ -1,12 +1,15 @@
 /**
- * The Default theme (P1-E-3 / P3-A-6): restrained motion — real easing curves, default
- * enter/exit/emphasis choreographies. No render hooks, no post-processing, `cost: 'low'`.
+ * The Default theme (P3-C-1): restrained and excellent. Light and dark variants, crisp
+ * motion, UI-click sound pack, no render hooks, no post-processing, `cost: 'low'`.
+ * Quality 0 is lossless because there is nothing to drop.
  */
 import type { AdaptiveThemeModule } from '@themes/registry';
 import type { ThemeModule } from '@themes/types';
 import { defaultMotionSignature } from '@themes/motion/choreography';
+import { DEFAULT_QUALITY } from './quality';
+import { DARK_AGE_TABLE, LIGHT_AGE_TABLE, makeDefaultPalette } from './palette';
+import { DEFAULT_SOUND_PACK } from './sound';
 import { DEFAULT_DARK_TOKENS, DEFAULT_LIGHT_TOKENS } from './tokens';
-import { DARK_STATE_RAMP, LIGHT_STATE_RAMP, makeDefaultPalette } from './palette';
 
 const DEFAULT_MOTION = defaultMotionSignature();
 
@@ -14,18 +17,22 @@ export const DEFAULT_DARK_THEME: ThemeModule = {
   id: 'default-dark',
   name: 'Default (dark)',
   tokens: DEFAULT_DARK_TOKENS,
-  palette: makeDefaultPalette(DARK_STATE_RAMP, DEFAULT_DARK_TOKENS.color.bg),
+  palette: makeDefaultPalette(DARK_AGE_TABLE, DEFAULT_DARK_TOKENS.color.bg),
   motion: DEFAULT_MOTION,
+  sound: DEFAULT_SOUND_PACK,
   cost: 'low',
+  quality: DEFAULT_QUALITY,
 };
 
 export const DEFAULT_LIGHT_THEME: ThemeModule = {
   id: 'default-light',
   name: 'Default (light)',
   tokens: DEFAULT_LIGHT_TOKENS,
-  palette: makeDefaultPalette(LIGHT_STATE_RAMP, DEFAULT_LIGHT_TOKENS.color.bg),
+  palette: makeDefaultPalette(LIGHT_AGE_TABLE, DEFAULT_LIGHT_TOKENS.color.bg),
   motion: DEFAULT_MOTION,
+  sound: DEFAULT_SOUND_PACK,
   cost: 'low',
+  quality: DEFAULT_QUALITY,
 };
 
 /** The id a theme picker actually lists and selects — `themes/registry.ts`'s

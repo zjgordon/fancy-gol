@@ -93,9 +93,9 @@
   /* ---------------------------------------------------------------------------------------- */
 
   --gol-duration-instant: 0ms; /* No visible animation — the value every transition collapses to under `prefers-reduced-motion`. Default: 0ms. */
-  --gol-duration-fast: 150ms; /* Micro-interactions: hover, a toggle, the chrome show/hide fade. Default: 150ms (matches `client/index.html`'s interim value). */
-  --gol-duration-slow: 600ms; /* Choreographed entrances — the cold-start intro's per-region fade. Default: 600ms (matches `client/index.html`'s interim value). */
-  --gol-duration-slower: 900ms; /* The rare full-scene transition (a Phase 3 theme cross-fade). Default: 900ms. */
+  --gol-duration-fast: 90ms; /* Micro-interactions: hover, a toggle, the chrome show/hide fade. Default: 90ms — crisp desktop-app, not cinematic (P3-C-1). */
+  --gol-duration-slow: 180ms; /* Choreographed entrances — a panel arriving. Default: 180ms (P3-C-1 shortened the old 600ms intro). */
+  --gol-duration-slower: 280ms; /* The rare full-scene transition (a Phase 3 theme cross-fade). Default: 280ms. */
   --gol-ease-linear: linear; /* Constant-rate motion — a marching-ants dash, a progress sweep. Default: `linear`. */
   --gol-ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1); /* The default curve for almost everything. Default: matches `client/index.html`'s interim `--gol-ease-standard`. */
   --gol-ease-decelerate: cubic-bezier(0, 0, 0.2, 1); /* Entrances — fast in, settles gently. Default: the Material "decelerate" curve. */

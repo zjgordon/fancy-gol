@@ -105,6 +105,29 @@ export type VoiceKind =
   | 'pad'
   | 'drone';
 
+/** Discrete UI cues a theme's sound pack may map. Shared with `events.ts`. */
+export type UiCue = 'tool-select' | 'panel-open' | 'panel-close' | 'error' | 'confirm';
+
+/** One synthesised cue: a voice kind plus optional overrides. */
+export interface SoundCue {
+  readonly kind: VoiceKind;
+  readonly params?: VoiceParams;
+}
+
+/**
+ * A theme's synthesised sound pack (ADR-008, P3-C-*). Zero audio assets — every cue is a
+ * `VoiceKind`. `ambient: null` is an explicit "no bed" (Default), not an omitted field.
+ * `sim` omitted means the pack is UI-only; EventMapper then skips birth ticks / texture.
+ */
+export interface SoundPack {
+  readonly ambient: SoundCue | null;
+  readonly ui: Partial<Record<UiCue, SoundCue>>;
+  readonly sim?: {
+    readonly birth?: SoundCue;
+    readonly generation?: SoundCue;
+  };
+}
+
 export interface VoiceEnvelope {
   readonly attack: number;
   readonly decay: number;

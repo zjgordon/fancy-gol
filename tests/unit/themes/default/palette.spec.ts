@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { colorDistance, parseCssColor, simulateColorBlindness, type ColorBlindnessKind, type RGB } from '@shared/color';
-import { DARK_STATE_RAMP, LIGHT_STATE_RAMP, makeDefaultPalette, type StateRamp } from '@themes/default/palette';
+import { BUILTIN_RULESETS } from '@engine/rules/builtin';
+import {
+  AGE_RAMP_STEPS,
+  DARK_AGE_TABLE,
+  DARK_STATE_RAMP,
+  LIGHT_STATE_RAMP,
+  PALETTE_STATE_COUNT,
+  makeDefaultPalette,
+  type StateRamp,
+} from '@themes/default/palette';
 
 /** A palette is only as useful as its *weakest* pair — this is deliberately more conservative
  * than either ramp's measured worst case (dark ~71, light ~59 under both simulated conditions),
@@ -65,7 +74,8 @@ describe.each([
 
 describe('makeDefaultPalette', () => {
   const bg = '#0e0f11';
-  const palette = makeDefaultPalette(DARK_STATE_RAMP, bg);
+  const palette = makeDefaultPalette(DARK_AGE_TABLE, bg);
+  const lastAge = AGE_RAMP_STEPS - 1;
 
   it('renders the dead state (0) as the background colour, at any age', () => {
     expect(palette(0, 0)).toBe(bg);
@@ -76,26 +86,52 @@ describe('makeDefaultPalette', () => {
     expect(palette(1, 0)).toBe(DARK_STATE_RAMP[0]?.born);
   });
 
-  it('renders a steady cell (age > 0) with its ramp colour', () => {
-    expect(palette(1, 1)).toBe(DARK_STATE_RAMP[0]?.steady);
+  it('renders a settled cell at the last age step with its ramp colour', () => {
+    expect(palette(1, lastAge)).toBe(DARK_STATE_RAMP[0]?.steady);
     expect(palette(1, 500)).toBe(DARK_STATE_RAMP[0]?.steady);
   });
 
-  it('maps each of the 8 states to its own ramp entry', () => {
+  it('age is a real ramp: born, mid, and steady are distinct steps', () => {
+    const born = palette(1, 0);
+    const mid = palette(1, 4);
+    const steady = palette(1, lastAge);
+    expect(born).not.toBe(steady);
+    expect(mid).not.toBe(born);
+    expect(mid).not.toBe(steady);
+  });
+
+  it('maps each of the 8 live states to its own ramp entry', () => {
     for (let state = 1; state <= 8; state++) {
-      expect(palette(state, 1)).toBe(DARK_STATE_RAMP[state - 1]?.steady);
+      expect(palette(state, lastAge)).toBe(DARK_STATE_RAMP[state - 1]?.steady);
     }
   });
 
-  it('wraps rather than crashing for a state beyond the ramp, never a silent blank', () => {
-    expect(() => palette(9, 1)).not.toThrow();
-    expect(palette(9, 1)).toBe(DARK_STATE_RAMP[0]?.steady);
-    expect(typeof palette(9, 1)).toBe('string');
+  it('covers every builtin ruleset state id without wrapping collisions inside the catalogue', () => {
+    const maxId = Math.max(...BUILTIN_RULESETS.map((rs) => rs.states.length - 1));
+    expect(PALETTE_STATE_COUNT).toBeGreaterThanOrEqual(maxId);
+    for (const rs of BUILTIN_RULESETS) {
+      const colors = new Set<string>();
+      for (const def of rs.states) {
+        const hex = palette(def.id, lastAge);
+        expect(typeof hex).toBe('string');
+        if (def.id === 0) {
+          expect(hex).toBe(bg);
+          continue;
+        }
+        colors.add(hex);
+      }
+      const liveCount = rs.states.filter((s) => s.id !== 0).length;
+      expect(colors.size, rs.id).toBe(liveCount);
+    }
   });
 
-  it('is a pure array lookup: identical calls are referentially the same string, and no OKLCH input is re-derived', () => {
-    // Calling the same (state, age) twice returns the exact same precomputed string reference —
-    // consistent with `palette()` never recomputing colour maths per call.
+  it('wraps rather than crashing for a state beyond the table, never a silent blank', () => {
+    expect(() => palette(PALETTE_STATE_COUNT + 1, 1)).not.toThrow();
+    expect(palette(PALETTE_STATE_COUNT + 1, lastAge)).toBe(DARK_STATE_RAMP[0]?.steady);
+    expect(typeof palette(PALETTE_STATE_COUNT + 1, 1)).toBe('string');
+  });
+
+  it('is a pure array lookup: identical calls are referentially the same string', () => {
     expect(palette(3, 1)).toBe(palette(3, 1));
   });
 });

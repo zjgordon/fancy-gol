@@ -19,6 +19,7 @@ import {
   createPhosphorDecayPass,
   createTrailFadePass,
 } from './effects-passes';
+import { stagesForQuality, type EffectQuality } from './ctx';
 import type { EffectPass } from './pass';
 import {
   createBloomPass,
@@ -96,9 +97,30 @@ export const EFFECT_LIBRARY: readonly LibraryEntry[] = [
   { id: 'textRain', themes: ['flatline'], create: () => createTextRainPass({ seed: 3 }) },
 ];
 
+export const THEME_IDS: readonly ThemeId[] = [
+  'default',
+  'chiba-city',
+  'flatline',
+  'sids-place',
+  'void-walker',
+  'synthwave',
+];
+
 /** Build the pass stack a theme will use (default costs; themes may parameterise further). */
 export function createThemePassStack(theme: ThemeId): EffectPass[] {
   return EFFECT_LIBRARY.filter((e) => e.themes.includes(theme)).map((e) => e.create());
+}
+
+/** Declared-cost sum of passes still running at this quality. Disposes the stack. */
+export function declaredCostAtQuality(theme: ThemeId, quality: EffectQuality): number {
+  const active = new Set(stagesForQuality(quality));
+  const stack = createThemePassStack(theme);
+  let cost = 0;
+  for (const pass of stack) {
+    if (active.has(pass.stage)) cost += pass.cost;
+  }
+  for (const pass of stack) pass.dispose();
+  return cost;
 }
 
 /**
@@ -107,14 +129,8 @@ export function createThemePassStack(theme: ThemeId): EffectPass[] {
  */
 export function mostExpensiveThemeDeclaredCostMs(): { theme: ThemeId; costMs: number } {
   let best: { theme: ThemeId; costMs: number } = { theme: 'default', costMs: 0 };
-  for (const theme of [
-    'chiba-city',
-    'flatline',
-    'sids-place',
-    'void-walker',
-    'synthwave',
-  ] as const) {
-    const costMs = createThemePassStack(theme).reduce((s, p) => s + p.cost, 0);
+  for (const theme of THEME_IDS) {
+    const costMs = declaredCostAtQuality(theme, 3);
     if (costMs > best.costMs) best = { theme, costMs };
   }
   return best;

@@ -57,7 +57,7 @@ function alphasFrom(strokes: readonly { style: string }[]): number[] {
 
 describe('trailLength / trailAlpha', () => {
   it('sizes the tail from a motion-token duration at the chart cadence', () => {
-    expect(trailLength(motion.durationMs.slow, CHART_HZ)).toBe(Math.round((600 * 20) / 1000));
+    expect(trailLength(motion.durationMs.slow, CHART_HZ)).toBe(Math.round((180 * 20) / 1000));
     expect(trailLength(0)).toBe(2);
   });
 

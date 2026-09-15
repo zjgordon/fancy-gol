@@ -7,14 +7,16 @@
  * the ESLint rule at `scripts/eslint-rules/no-literal-design-tokens.mjs` (wired into
  * `eslint.config.js` for `src/ui/**`) makes that a build failure, not a convention.
  *
- * `ThemeModule` is ADR-008's full contract. Phase 1's Default theme (P1-E-3) only ever
- * populates `id`, `name`, `tokens`, `palette` and `motion` — the render hooks, `sound` and
- * `shaders` fields are Phase 3 scope, declared as optional here now so the registry (P1-E-2)
- * and every later theme slot in without a breaking change to this file or its callers.
+ * `ThemeModule` is ADR-008's full contract: tokens, palette, motion, optional sound pack and
+ * render hooks, plus a quality spec (P3-C-1). Default populates every field that a restrained
+ * theme needs — hooks stay undefined because there is nothing to draw beyond the grid.
  */
+import type { SoundPack } from '@audio/types';
 import type { CellPalette, Viewport } from '@render/types';
 import type { StateId } from '@shared/types';
 import type { Choreography, TrailSpec } from './motion/choreography';
+
+export type { SoundPack } from '@audio/types';
 
 export type { Choreography, ChoreographyKind, MotionKeyframe, TrailSpec } from './motion/choreography';
 
@@ -189,9 +191,9 @@ export interface ThemeModule {
    * an extension of that shape, not a replacement for it. */
   readonly palette: CellPalette;
   readonly motion: MotionSignature;
-  /** `SoundPack` — Phase 3. `src/audio/types.ts` doesn't exist yet, so this is honestly `unknown`
-   * rather than a type this task would have to invent and then discard. */
-  readonly sound?: unknown;
+  /** Synthesised pack, or omitted only when a later theme can justify silence. Default ships
+   * UI clicks with `ambient: null` — an explicit empty bed, not a missing field. */
+  readonly sound?: SoundPack;
   readonly drawBackground?: (ctx: Canvas2DContext, vp: Viewport, tick: number) => void;
   readonly drawCellOverride?: (ctx: Canvas2DContext, cell: CellDrawInfo) => void;
   readonly postProcess?: (ctx: Canvas2DContext, vp: Viewport, tick: number) => void;
@@ -199,4 +201,15 @@ export interface ThemeModule {
   /** Drives the Phase 3 auto-degrade governor (ADR-008's guard rail). Every theme states its own
    * cost; Phase 1's Default is always `'low'` — "it must be the *fastest* theme" (P1-E-3). */
   readonly cost: 'low' | 'medium' | 'high';
+  /**
+   * Quality ladder 0–3 (P3-C-*). `losslessAtQuality0` is true only for Default: it has no
+   * passes, so dropping post/effects/background changes nothing visible.
+   */
+  readonly quality?: ThemeQualitySpec;
+}
+
+/** Governor ceiling and whether quality 0 is visually identical to quality 3. */
+export interface ThemeQualitySpec {
+  readonly max: 0 | 1 | 2 | 3;
+  readonly losslessAtQuality0: boolean;
 }

@@ -74,7 +74,7 @@ describe('themes/types.ts — the ThemeModule contract (P1-E-1)', () => {
       palette,
       motion,
       cost: 'high',
-      sound: { muted: true },
+      sound: { ambient: null, ui: {} },
       drawBackground: () => {},
       drawCellOverride: () => {},
       postProcess: () => {},

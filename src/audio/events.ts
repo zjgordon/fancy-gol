@@ -11,14 +11,16 @@ import {
   AGGREGATION_WINDOW_MS,
   TEXTURE_RATE_PER_SEC,
   type AudioContextLike,
+  type SoundPack,
   type StereoPannerNodeLike,
+  type UiCue,
   type VoiceKind,
   type VoiceParams,
 } from './types';
 import { getOrCreateNoiseBuffer, spawnVoice, type VoiceHandle } from './voices';
 import type { Mixer } from './mixer';
 
-export type UiCue = 'tool-select' | 'panel-open' | 'panel-close' | 'error' | 'confirm';
+export type { UiCue } from './types';
 
 export interface BirthSample {
   /** Number of births in this sample (may be 1). */
@@ -53,6 +55,8 @@ export interface EventMapperOptions {
   readonly clock?: EventMapperClock;
   readonly windowMs?: number;
   readonly textureRatePerSec?: number;
+  /** When set, UI cues and sim enablement come from the pack. Unset keeps P3-B-3 defaults. */
+  readonly pack?: SoundPack;
 }
 
 const UI_VOICES: Record<UiCue, { kind: VoiceKind; params: VoiceParams }> = {
@@ -90,6 +94,8 @@ export class EventMapper {
   /** Last discrete sim voice kind (null while texture-only). */
   lastDiscreteKind: VoiceKind | null = null;
 
+  private pack: SoundPack | undefined;
+
   constructor(options: EventMapperOptions) {
     this.ctx = options.context;
     this.mixer = options.mixer;
@@ -98,7 +104,14 @@ export class EventMapper {
     this.clock = options.clock ?? { nowMs: () => Date.now() };
     this.windowMs = options.windowMs ?? AGGREGATION_WINDOW_MS;
     this.textureRate = options.textureRatePerSec ?? TEXTURE_RATE_PER_SEC;
+    this.pack = options.pack;
     this.windowStartMs = this.clock.nowMs();
+  }
+
+  /** Hot-swap the active theme's pack. A UI-only pack silences sim voices on the next flush. */
+  setPack(pack: SoundPack | undefined): void {
+    this.pack = pack;
+    if (pack && pack.sim === undefined) this.stopTexture();
   }
 
   /**
@@ -106,7 +119,7 @@ export class EventMapper {
    */
   noteBirths(sample: BirthSample): void {
     this.ensureAlive();
-    if (this.policy.isFullySilent()) return;
+    if (this.policy.isFullySilent() || !this.simEnabled()) return;
     const at = sample.atMs ?? this.clock.nowMs();
     this.rollWindow(at);
     if (sample.count <= 0) return;
@@ -121,7 +134,7 @@ export class EventMapper {
    */
   noteGeneration(sample: GenerationSample): void {
     this.ensureAlive();
-    if (this.policy.isFullySilent()) return;
+    if (this.policy.isFullySilent() || !this.simEnabled()) return;
     if (sample.births <= 0) return;
     this.generationTicks += 1;
     this.noteBirths({
@@ -137,12 +150,13 @@ export class EventMapper {
   noteUi(cue: UiCue): void {
     this.ensureAlive();
     if (this.policy.isFullySilent()) return;
-    const mapping = UI_VOICES[cue];
+    const mapping = this.pack?.ui[cue] ?? UI_VOICES[cue];
+    if (!mapping) return;
     this.scheduler.schedule({
       when: this.ctx.currentTime,
       kind: mapping.kind,
       bus: 'event',
-      params: mapping.params,
+      ...(mapping.params ? { params: mapping.params } : {}),
     });
   }
 
@@ -180,6 +194,10 @@ export class EventMapper {
     this.disposed = true;
     this.stopTexture();
     this.resetWindow(this.clock.nowMs());
+  }
+
+  private simEnabled(): boolean {
+    return this.pack === undefined || this.pack.sim !== undefined;
   }
 
   private rollWindow(atMs: number, force = false): void {

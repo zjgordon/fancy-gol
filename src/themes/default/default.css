@@ -70,9 +70,9 @@
   --gol-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.45);
 
   --gol-duration-instant: 0ms;
-  --gol-duration-fast: 150ms;
-  --gol-duration-slow: 600ms;
-  --gol-duration-slower: 900ms;
+  --gol-duration-fast: 90ms;
+  --gol-duration-slow: 180ms;
+  --gol-duration-slower: 280ms;
   --gol-ease-linear: linear;
   --gol-ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
   --gol-ease-decelerate: cubic-bezier(0, 0, 0.2, 1);

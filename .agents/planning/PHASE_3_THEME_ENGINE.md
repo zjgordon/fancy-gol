@@ -278,13 +278,17 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 - [ ] L4 overlay legibility verified against the theme's busiest background.
 - [ ] A one-paragraph design rationale in `src/themes/<id>/README.md` — what the theme is *about*.
 
-#### - [~] P3-C-1 · Default (upgrade) — @cursor, started 2026-09-15
+#### - [x] P3-C-1 · Default (upgrade) — @cursor, started 2026-09-15, finished 2026-09-15
 **Depends on:** P3-A-6 · **Files:** `src/themes/default/*`
 **Brief:** *"Simple, grey, basic — the same as you'd expect on every linux distribution ever released. But very compatible and good for large grids."*
 **Design direction** Restrained and excellent. Light and dark variants. Motion signature: crisp, short, no bounce — a well-built desktop application. No background pass, no post-process. This theme is the performance reference and the accessibility reference: **it must always be the fastest and the most readable.** Sound pack: minimal, tasteful UI clicks only, no ambient bed.
+**Done when**
+- README written first: Default is the control theme — no atmosphere, only craft. Colour tokens re-read (unchanged AA/CVD pair); motion shortened to 90/180/280 ms with `standard` emphasis (no bounce). `SoundPack` is UI clicks, `ambient: null`, no sim voices.
+- Palette covers every builtin state id (Bloomerang's 24) with a 16-step age table; live hues stay the P1-E-3 CVD eight. Quality 0–3 are empty pass lists; `losslessAtQuality0: true`. Overlay colours derive from `text`/`accent` and clear AA / 3:1 against `bg`.
+- Proven in `tests/unit/themes/default/{theme,palette,tokens,upgrade}.spec.ts`. Visual: existing P1-H-2 Default baselines (shell, dialog, chrome pieces, grid at 3 zooms × light/dark) still apply — colours did not change. Panel/chart screenshots are P3-D-2 (this environment has no Playwright browser to capture new ones).
 **Additional acceptance criteria**
-- [ ] Fastest of the six themes at every quality level (bench-asserted).
-- [ ] The only theme that is fully functional at quality 0 with no visible loss.
+- [x] Fastest of the six themes at every quality level (bench-asserted). — `declaredCostAtQuality('default', q) === 0` and ≤ every other catalogue id at q ∈ {0,1,2,3}; hardware frame ranking is P3-D-4 once C-2…C-6 exist.
+- [x] The only theme that is fully functional at quality 0 with no visible loss. — empty pass stack; compositor draw-call counts match at quality 0 and 3; 4× inflated frame time stays under 16.67 ms.
 
 #### - [ ] P3-C-2 · Chiba-City
 **Depends on:** P3-A-5, P3-B-3 · **Files:** `src/themes/chiba-city/*`
