@@ -1,23 +1,28 @@
 /**
- * Injectable Web Audio graph for node-environment unit tests (P3-B-1).
- * Tracks param automation so mute ramps are assertable without a real AudioContext.
+ * Injectable Web Audio graph for node-environment unit tests (P3-B-1 / P3-B-2).
  */
 import type {
+  AudioBufferLike,
+  AudioBufferSourceNodeLike,
   AudioContextLike,
   AudioContextState,
   AudioNodeLike,
   AudioParamLike,
+  BiquadFilterNodeLike,
+  BiquadFilterTypeName,
   DynamicsCompressorNodeLike,
   GainNodeLike,
+  OscillatorNodeLike,
+  OscillatorTypeName,
 } from '../../../src/audio/types';
 
 export interface ParamEvent {
-  readonly kind: 'set' | 'linear' | 'cancel';
+  readonly kind: 'set' | 'linear' | 'expo' | 'cancel';
   readonly value?: number;
   readonly time: number;
 }
 
-class FakeParam implements AudioParamLike {
+export class FakeParam implements AudioParamLike {
   value: number;
   readonly events: ParamEvent[] = [];
 
@@ -35,12 +40,17 @@ class FakeParam implements AudioParamLike {
     this.events.push({ kind: 'linear', value, time: endTime });
   }
 
+  exponentialRampToValueAtTime(value: number, endTime: number): void {
+    this.value = value;
+    this.events.push({ kind: 'expo', value, time: endTime });
+  }
+
   cancelScheduledValues(startTime: number): void {
     this.events.push({ kind: 'cancel', time: startTime });
   }
 }
 
-class FakeNode implements AudioNodeLike {
+export class FakeNode implements AudioNodeLike {
   readonly connections: AudioNodeLike[] = [];
 
   connect(dest: AudioNodeLike): AudioNodeLike {
@@ -65,15 +75,77 @@ class FakeCompressor extends FakeNode implements DynamicsCompressorNodeLike {
   readonly release = new FakeParam(0.25);
 }
 
+export class FakeOscillator extends FakeNode implements OscillatorNodeLike {
+  type: OscillatorTypeName = 'sine';
+  readonly frequency = new FakeParam(440);
+  readonly detune = new FakeParam(0);
+  startedAt: number | null = null;
+  stoppedAt: number | null = null;
+
+  start(when = 0): void {
+    this.startedAt = when;
+  }
+
+  stop(when = 0): void {
+    this.stoppedAt = when;
+  }
+}
+
+export class FakeBuffer implements AudioBufferLike {
+  readonly channels: Float32Array[];
+
+  constructor(
+    readonly numberOfChannels: number,
+    readonly length: number,
+    readonly sampleRate: number,
+  ) {
+    this.channels = Array.from({ length: numberOfChannels }, () => new Float32Array(length));
+  }
+
+  getChannelData(channel: number): Float32Array {
+    return this.channels[channel]!;
+  }
+}
+
+export class FakeBufferSource extends FakeNode implements AudioBufferSourceNodeLike {
+  buffer: AudioBufferLike | null = null;
+  loop = false;
+  startedAt: number | null = null;
+  stoppedAt: number | null = null;
+
+  start(when = 0): void {
+    this.startedAt = when;
+  }
+
+  stop(when = 0): void {
+    this.stoppedAt = when;
+  }
+}
+
+export class FakeBiquad extends FakeNode implements BiquadFilterNodeLike {
+  type: BiquadFilterTypeName = 'lowpass';
+  readonly frequency = new FakeParam(350);
+  readonly Q = new FakeParam(1);
+  readonly gain = new FakeParam(0);
+}
+
 export class FakeAudioContext implements AudioContextLike {
   state: AudioContextState = 'suspended';
   currentTime = 0;
+  sampleRate = 48000;
   readonly destination = new FakeNode();
   createGainCount = 0;
   createCompressorCount = 0;
+  createOscillatorCount = 0;
+  createBufferCount = 0;
+  createBufferSourceCount = 0;
+  createBiquadCount = 0;
   resumeCount = 0;
   suspendCount = 0;
   closeCount = 0;
+  readonly oscillators: FakeOscillator[] = [];
+  readonly bufferSources: FakeBufferSource[] = [];
+  readonly filters: FakeBiquad[] = [];
 
   createGain(): GainNodeLike {
     this.createGainCount += 1;
@@ -83,6 +155,32 @@ export class FakeAudioContext implements AudioContextLike {
   createDynamicsCompressor(): DynamicsCompressorNodeLike {
     this.createCompressorCount += 1;
     return new FakeCompressor();
+  }
+
+  createOscillator(): OscillatorNodeLike {
+    this.createOscillatorCount += 1;
+    const osc = new FakeOscillator();
+    this.oscillators.push(osc);
+    return osc;
+  }
+
+  createBuffer(numberOfChannels: number, length: number, sampleRate: number): AudioBufferLike {
+    this.createBufferCount += 1;
+    return new FakeBuffer(numberOfChannels, length, sampleRate);
+  }
+
+  createBufferSource(): AudioBufferSourceNodeLike {
+    this.createBufferSourceCount += 1;
+    const src = new FakeBufferSource();
+    this.bufferSources.push(src);
+    return src;
+  }
+
+  createBiquadFilter(): BiquadFilterNodeLike {
+    this.createBiquadCount += 1;
+    const filter = new FakeBiquad();
+    this.filters.push(filter);
+    return filter;
   }
 
   resume(): Promise<void> {
@@ -170,5 +268,40 @@ export class MemoryStorage {
 
   removeItem(key: string): void {
     this.map.delete(key);
+  }
+}
+
+/** Manual clock for scheduler tests — no real timers. */
+export class ManualClock {
+  wallMs = 0;
+  private readonly intervals = new Map<number, { fn: () => void; ms: number; next: number }>();
+  private nextId = 1;
+
+  nowMs(): number {
+    return this.wallMs;
+  }
+
+  setInterval(fn: () => void, ms: number): unknown {
+    const id = this.nextId++;
+    this.intervals.set(id, { fn, ms, next: this.wallMs + ms });
+    return id;
+  }
+
+  clearInterval(id: unknown): void {
+    this.intervals.delete(id as number);
+  }
+
+  /** Advance wall clock and fire due intervals (simulates render load between ticks). */
+  advance(ms: number, frameMs = 16.667): void {
+    const target = this.wallMs + ms;
+    while (this.wallMs < target) {
+      this.wallMs = Math.min(target, this.wallMs + frameMs);
+      for (const entry of this.intervals.values()) {
+        while (entry.next <= this.wallMs) {
+          entry.fn();
+          entry.next += entry.ms;
+        }
+      }
+    }
   }
 }

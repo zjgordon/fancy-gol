@@ -237,13 +237,16 @@ src/audio/
 - [x] Zero audio files in `dist/`.
 - [x] `vitest.config.ts` gates `src/audio/**` at ≥ 95/90/95 from the commit that creates the directory.
 
-#### - [~] P3-B-2 · Voice primitives & scheduler — @cursor, started 2026-09-15
+#### - [x] P3-B-2 · Voice primitives & scheduler — @cursor, started 2026-09-15, finished 2026-09-15
 **Depends on:** P3-B-1 · **Files:** `src/audio/{voices,scheduler}.ts`
 **Implementation notes** Look-ahead scheduling on a 25 ms interval with a 100 ms horizon — `setTimeout`-triggered `start()` calls jitter audibly and will make the whole feature feel cheap. Voices: `blip`, `click`, `sweep`, `noiseBurst`, `pluck`, `pad`, `drone`, each parameterised by pitch, duration, filter and envelope.
+- `spawnVoice` builds inspectable oscillator / noise → optional biquad → ADSR gain graphs; noise buffers are deterministic LCG and cached per context.
+- `Scheduler` arms against `AudioContext.currentTime` on a 25 ms tick with a 100 ms horizon; mute / reduced-motion / 24-voice oldest-first stealing via `AudioPolicy`.
+- Proven in `tests/unit/audio/voices-scheduler.spec.ts` (per-voice graph asserts, ≤5 ms timing under a 60 fps load, 1,000 events/sec cap).
 **Acceptance criteria**
-- [ ] Scheduled events land within 5 ms of their intended time under a 60 fps render load.
-- [ ] 24-voice cap enforced with oldest-first stealing; a 1,000-events-per-second burst never exceeds it.
-- [ ] Each voice has a unit test asserting the constructed node graph (no audio playback needed).
+- [x] Scheduled events land within 5 ms of their intended time under a 60 fps render load.
+- [x] 24-voice cap enforced with oldest-first stealing; a 1,000-events-per-second burst never exceeds it.
+- [x] Each voice has a unit test asserting the constructed node graph (no audio playback needed).
 
 #### - [ ] P3-B-3 · Event mapping & rate aggregation
 **Depends on:** P3-B-2 · **Files:** `src/audio/events.ts`

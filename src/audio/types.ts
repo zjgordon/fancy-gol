@@ -1,15 +1,27 @@
 /**
- * P3-B-1 — public audio types (ADR-009: `themes/` may import `audio/types` only).
+ * P3-B-1 / P3-B-2 — public audio types (ADR-009: `themes/` may import `audio/types` only).
  *
  * Narrow surfaces so unit tests can inject graph doubles without a real AudioContext.
  */
 
 export type AudioContextState = 'suspended' | 'running' | 'closed';
 
+export type OscillatorTypeName = 'sine' | 'square' | 'sawtooth' | 'triangle';
+export type BiquadFilterTypeName =
+  | 'lowpass'
+  | 'highpass'
+  | 'bandpass'
+  | 'notch'
+  | 'allpass'
+  | 'peaking'
+  | 'lowshelf'
+  | 'highshelf';
+
 export interface AudioParamLike {
   value: number;
   setValueAtTime(value: number, startTime: number): void;
   linearRampToValueAtTime(value: number, endTime: number): void;
+  exponentialRampToValueAtTime(value: number, endTime: number): void;
   cancelScheduledValues(startTime: number): void;
 }
 
@@ -30,12 +42,46 @@ export interface DynamicsCompressorNodeLike extends AudioNodeLike {
   readonly release: AudioParamLike;
 }
 
+export interface OscillatorNodeLike extends AudioNodeLike {
+  type: OscillatorTypeName;
+  readonly frequency: AudioParamLike;
+  readonly detune: AudioParamLike;
+  start(when?: number): void;
+  stop(when?: number): void;
+}
+
+export interface AudioBufferLike {
+  readonly length: number;
+  readonly sampleRate: number;
+  readonly numberOfChannels: number;
+  getChannelData(channel: number): Float32Array;
+}
+
+export interface AudioBufferSourceNodeLike extends AudioNodeLike {
+  buffer: AudioBufferLike | null;
+  loop: boolean;
+  start(when?: number): void;
+  stop(when?: number): void;
+}
+
+export interface BiquadFilterNodeLike extends AudioNodeLike {
+  type: BiquadFilterTypeName;
+  readonly frequency: AudioParamLike;
+  readonly Q: AudioParamLike;
+  readonly gain: AudioParamLike;
+}
+
 export interface AudioContextLike {
   readonly state: AudioContextState;
   readonly currentTime: number;
+  readonly sampleRate: number;
   readonly destination: AudioNodeLike;
   createGain(): GainNodeLike;
   createDynamicsCompressor(): DynamicsCompressorNodeLike;
+  createOscillator(): OscillatorNodeLike;
+  createBuffer(numberOfChannels: number, length: number, sampleRate: number): AudioBufferLike;
+  createBufferSource(): AudioBufferSourceNodeLike;
+  createBiquadFilter(): BiquadFilterNodeLike;
   resume(): Promise<void>;
   suspend(): Promise<void>;
   close(): Promise<void>;
@@ -44,6 +90,32 @@ export interface AudioContextLike {
 export type AudioContextFactory = () => AudioContextLike;
 
 export type AudioBusId = 'master' | 'ambient' | 'event';
+
+export type VoiceKind =
+  | 'blip'
+  | 'click'
+  | 'sweep'
+  | 'noiseBurst'
+  | 'pluck'
+  | 'pad'
+  | 'drone';
+
+export interface VoiceEnvelope {
+  readonly attack: number;
+  readonly decay: number;
+  readonly sustain: number;
+  readonly release: number;
+}
+
+export interface VoiceParams {
+  readonly pitch?: number;
+  readonly duration?: number;
+  readonly filter?: number;
+  readonly gain?: number;
+  readonly envelope?: Partial<VoiceEnvelope>;
+  /** Sweep end pitch (Hz). Only used by `sweep`. */
+  readonly pitchEnd?: number;
+}
 
 export interface AudioPrefs {
   readonly muted: boolean;
@@ -64,3 +136,9 @@ export const VOICE_CAP = 24;
 
 /** Short mute ramp — short enough to feel instant, long enough to avoid a click. */
 export const MUTE_RAMP_SEC = 0.012;
+
+/** Look-ahead scheduler tick (P3-B-2). */
+export const SCHEDULER_INTERVAL_MS = 25;
+
+/** How far ahead of the playhead voices are armed (P3-B-2). */
+export const SCHEDULER_HORIZON_SEC = 0.1;
