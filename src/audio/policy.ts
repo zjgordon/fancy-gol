@@ -72,9 +72,22 @@ export class AudioPolicy {
     return !this.prefs.muted && !this.reducedMotion();
   }
 
-  /** Discrete UI / event cues — silenced only by mute (reduced motion still allows them). */
+  /** Discrete UI / event cues — silenced by mute. Reduced motion is enforced by EventMapper for sim. */
   canPlayEvent(): boolean {
     return !this.prefs.muted;
+  }
+
+  /** True when the user prefers reduced motion. */
+  prefersReducedMotion(): boolean {
+    return this.reducedMotion();
+  }
+
+  /**
+   * P3-B-3: mute or reduced-motion silences the whole event mapper (sim + UI).
+   * Ambient beds already use {@link canPlayAmbient}.
+   */
+  isFullySilent(): boolean {
+    return this.prefs.muted || this.reducedMotion();
   }
 
   setMuted(muted: boolean): void {

@@ -10,6 +10,7 @@ import {
   SCHEDULER_INTERVAL_MS,
   type AudioBusId,
   type AudioContextLike,
+  type AudioNodeLike,
   type VoiceKind,
   type VoiceParams,
 } from './types';
@@ -22,6 +23,8 @@ export interface ScheduleRequest {
   readonly kind: VoiceKind;
   readonly bus?: Exclude<AudioBusId, 'master'>;
   readonly params?: VoiceParams;
+  /** Stereo pan in [-1, 1]. Wired through a StereoPannerNode when set. */
+  readonly pan?: number;
 }
 
 export interface SchedulerClock {
@@ -59,6 +62,8 @@ export class Scheduler {
   private disposed = false;
   /** Absolute audio times at which voices actually started (for timing ACs). */
   readonly startedAt: number[] = [];
+  /** Most recently armed voice graphs (for pan / topology inspection). */
+  readonly armed: VoiceHandle[] = [];
 
   constructor(options: SchedulerOptions) {
     this.ctx = options.context;
@@ -162,9 +167,18 @@ export class Scheduler {
     const alloc = this.policy.allocateVoice(this.clock.nowMs());
     if (alloc.stealId !== undefined) this.stopVoice(alloc.stealId);
 
+    let destination: AudioNodeLike = this.mixer.bus(busId);
+    if (request.pan !== undefined) {
+      const panner = this.ctx.createStereoPanner();
+      const pan = clampPan(request.pan);
+      panner.pan.setValueAtTime(pan, Math.max(request.when, this.ctx.currentTime));
+      panner.connect(destination);
+      destination = panner;
+    }
+
     const handle = spawnVoice({
       context: this.ctx,
-      destination: this.mixer.bus(busId),
+      destination,
       kind: request.kind,
       id: alloc.id,
       when: request.when,
@@ -180,6 +194,7 @@ export class Scheduler {
     });
     this.live.set(handle.id, handle);
     this.startedAt.push(handle.startTime);
+    this.armed.push(handle);
   }
 
   private reapFinished(): void {
@@ -204,4 +219,10 @@ function defaultBus(kind: VoiceKind): Exclude<AudioBusId, 'master'> {
 
 function needsNoise(kind: VoiceKind): boolean {
   return kind === 'click' || kind === 'noiseBurst';
+}
+
+function clampPan(v: number): number {
+  if (!(v >= -1)) return -1;
+  if (v > 1) return 1;
+  return v;
 }

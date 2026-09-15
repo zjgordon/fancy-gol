@@ -248,15 +248,18 @@ src/audio/
 - [x] 24-voice cap enforced with oldest-first stealing; a 1,000-events-per-second burst never exceeds it.
 - [x] Each voice has a unit test asserting the constructed node graph (no audio playback needed).
 
-#### - [~] P3-B-3 · Event mapping & rate aggregation — @cursor, started 2026-09-15
+#### - [x] P3-B-3 · Event mapping & rate aggregation — @cursor, started 2026-09-15, finished 2026-09-15
 **Depends on:** P3-B-2 · **Files:** `src/audio/events.ts`
 **Intent:** The difference between "delightful" and "please make it stop."
 **Implementation notes** Map simulation and UI events to voices through an aggregator: within each 50 ms window, collapse N births into one voice whose pitch/amplitude encode the count and whose pan encodes the centroid's screen position. Above a rate threshold, cross-fade from discrete events into a continuous texture driven by the birth rate. UI events (tool select, panel open, error) always play discretely.
+- `EventMapper` aggregates births over `AGGREGATION_WINDOW_MS` (50), emits ≤ 1 discrete voice per window (≤ 20/sec), and above `TEXTURE_RATE_PER_SEC` (400) holds a looping noise bed instead.
+- Stereo pan via `StereoPannerNode` tracks the birth centroid; UI cues map 1:1 to voices; mute / reduced-motion (`isFullySilent`) silences the whole mapper.
+- Proven in `tests/unit/audio/events.spec.ts`.
 **Acceptance criteria**
-- [ ] At 10,000 births/sec the output is a stable texture with ≤ 20 voices/sec, not a machine-gun.
-- [ ] Panning tracks the on-screen centroid of activity (verified via node-graph inspection).
-- [ ] A single glider produces a single clean, pleasant tick per generation.
-- [ ] Reduced motion or mute silences everything, verified by a graph-state assertion.
+- [x] At 10,000 births/sec the output is a stable texture with ≤ 20 voices/sec, not a machine-gun.
+- [x] Panning tracks the on-screen centroid of activity (verified via node-graph inspection).
+- [x] A single glider produces a single clean, pleasant tick per generation.
+- [x] Reduced motion or mute silences everything, verified by a graph-state assertion.
 
 ---
 

@@ -60,8 +60,13 @@ export function spawnVoice(options: SpawnVoiceOptions): VoiceHandle {
   const stopAt = startAt + duration;
 
   const envelope = ctx.createGain();
-  envelope.gain.setValueAtTime(0.0001, startAt);
-  scheduleAdsr(envelope.gain, startAt, duration, peak, env);
+  const peakSafe = Math.max(peak, 0.0001);
+  if (params.loop) {
+    envelope.gain.setValueAtTime(peakSafe, startAt);
+  } else {
+    envelope.gain.setValueAtTime(0.0001, startAt);
+    scheduleAdsr(envelope.gain, startAt, duration, peak, env);
+  }
   envelope.connect(destination);
 
   let source: OscillatorNodeLike | AudioBufferSourceNodeLike;
@@ -88,8 +93,7 @@ export function spawnVoice(options: SpawnVoiceOptions): VoiceHandle {
       filter = hp;
       noise.connect(hp);
       hp.connect(envelope);
-      noise.start(startAt);
-      noise.stop(stopAt + env.release);
+      startSource(noise, startAt, stopAt + env.release, Boolean(params.loop));
       break;
     }
     case 'sweep': {
@@ -115,8 +119,7 @@ export function spawnVoice(options: SpawnVoiceOptions): VoiceHandle {
       filter = bp;
       noise.connect(bp);
       bp.connect(envelope);
-      noise.start(startAt);
-      noise.stop(stopAt + env.release);
+      startSource(noise, startAt, stopAt + env.release, Boolean(params.loop));
       break;
     }
     case 'pluck': {
@@ -168,11 +171,12 @@ export function spawnVoice(options: SpawnVoiceOptions): VoiceHandle {
   }
 
   let stopped = false;
+  const endTime = params.loop ? Number.POSITIVE_INFINITY : stopAt + env.release;
   const handle: VoiceHandle = {
     id,
     kind,
     startTime: startAt,
-    stopTime: stopAt + env.release,
+    stopTime: endTime,
     graph: { kind, source, filter, envelope, destination },
     get stopped() {
       return stopped;
@@ -203,6 +207,17 @@ export function spawnVoice(options: SpawnVoiceOptions): VoiceHandle {
     },
   };
   return handle;
+}
+
+function startSource(
+  node: AudioBufferSourceNodeLike,
+  startAt: number,
+  stopAt: number,
+  loop: boolean,
+): void {
+  node.loop = loop;
+  node.start(startAt);
+  if (!loop) node.stop(stopAt);
 }
 
 /** Cached per-context noise buffers keyed by duration bucket (ms). */

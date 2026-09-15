@@ -71,6 +71,10 @@ export interface BiquadFilterNodeLike extends AudioNodeLike {
   readonly gain: AudioParamLike;
 }
 
+export interface StereoPannerNodeLike extends AudioNodeLike {
+  readonly pan: AudioParamLike;
+}
+
 export interface AudioContextLike {
   readonly state: AudioContextState;
   readonly currentTime: number;
@@ -82,6 +86,7 @@ export interface AudioContextLike {
   createBuffer(numberOfChannels: number, length: number, sampleRate: number): AudioBufferLike;
   createBufferSource(): AudioBufferSourceNodeLike;
   createBiquadFilter(): BiquadFilterNodeLike;
+  createStereoPanner(): StereoPannerNodeLike;
   resume(): Promise<void>;
   suspend(): Promise<void>;
   close(): Promise<void>;
@@ -115,6 +120,8 @@ export interface VoiceParams {
   readonly envelope?: Partial<VoiceEnvelope>;
   /** Sweep end pitch (Hz). Only used by `sweep`. */
   readonly pitchEnd?: number;
+  /** Loop buffer sources (texture beds). */
+  readonly loop?: boolean;
 }
 
 export interface AudioPrefs {
@@ -142,3 +149,15 @@ export const SCHEDULER_INTERVAL_MS = 25;
 
 /** How far ahead of the playhead voices are armed (P3-B-2). */
 export const SCHEDULER_HORIZON_SEC = 0.1;
+
+/** Birth aggregation window (P3-B-3). */
+export const AGGREGATION_WINDOW_MS = 50;
+
+/**
+ * Births/sec at or above this → continuous texture instead of discrete ticks (P3-B-3).
+ * 10 000 births/sec collapses to ≤ 20 voices/sec (one texture update per window).
+ */
+export const TEXTURE_RATE_PER_SEC = 400;
+
+/** Hard ceiling on sim voice emission rate (P3-B-3 AC). */
+export const MAX_SIM_VOICES_PER_SEC = 20;

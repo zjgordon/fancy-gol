@@ -17,6 +17,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - UI enter/exit/emphasis choreography runs through a hand-written motion system (bézier + spring); panels, dialogs, toasts and tooltips no longer use CSS transitions. (P3-A-6)
 - Audio starts muted: lazy `AudioContext` on first gesture, ambient/event mixer with a master limiter, and prefs that persist mute/volume with a 24-voice cap ready for synth voices. (P3-B-1)
 - Seven synthesised voices (blip, click, sweep, noise burst, pluck, pad, drone) schedule on a 25 ms look-ahead clock with a hard 24-voice steal cap — still zero audio assets. (P3-B-2)
+- Births aggregate into one panned voice per 50 ms window, cross-fading into a looping texture above 400 births/sec so a 10 000/sec flood stays ≤ 20 voices/sec. (P3-B-3)
 
 ## [0.3.0] — 2026-09-14
 

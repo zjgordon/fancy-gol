@@ -14,6 +14,7 @@ import type {
   GainNodeLike,
   OscillatorNodeLike,
   OscillatorTypeName,
+  StereoPannerNodeLike,
 } from '../../../src/audio/types';
 
 export interface ParamEvent {
@@ -129,6 +130,10 @@ export class FakeBiquad extends FakeNode implements BiquadFilterNodeLike {
   readonly gain = new FakeParam(0);
 }
 
+export class FakeStereoPanner extends FakeNode implements StereoPannerNodeLike {
+  readonly pan = new FakeParam(0);
+}
+
 export class FakeAudioContext implements AudioContextLike {
   state: AudioContextState = 'suspended';
   currentTime = 0;
@@ -140,12 +145,14 @@ export class FakeAudioContext implements AudioContextLike {
   createBufferCount = 0;
   createBufferSourceCount = 0;
   createBiquadCount = 0;
+  createPannerCount = 0;
   resumeCount = 0;
   suspendCount = 0;
   closeCount = 0;
   readonly oscillators: FakeOscillator[] = [];
   readonly bufferSources: FakeBufferSource[] = [];
   readonly filters: FakeBiquad[] = [];
+  readonly panners: FakeStereoPanner[] = [];
 
   createGain(): GainNodeLike {
     this.createGainCount += 1;
@@ -181,6 +188,13 @@ export class FakeAudioContext implements AudioContextLike {
     const filter = new FakeBiquad();
     this.filters.push(filter);
     return filter;
+  }
+
+  createStereoPanner(): StereoPannerNodeLike {
+    this.createPannerCount += 1;
+    const panner = new FakeStereoPanner();
+    this.panners.push(panner);
+    return panner;
   }
 
   resume(): Promise<void> {
