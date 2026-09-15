@@ -466,13 +466,20 @@ describe('thumbnail performance (client/main.ts\'s per-frame cost, P1-D-4 AC1)',
       // Warm-up: steady-state JIT cost, not first-call compilation (this file's own convention).
       for (let i = 0; i < 10; i++) for (const sim of sims) sim.step();
 
+      // Median of several trials — a single long `performance.now()` window under a contested
+      // vitest worker pool was false-failing ~2.28 ms against the 2 ms budget while isolation
+      // stayed well under. Same absolute budget; quieter measurement.
       const iterations = 200;
-      const start = performance.now();
-      for (let i = 0; i < iterations; i++) {
-        for (const sim of sims) sim.step();
+      const samples: number[] = [];
+      for (let trial = 0; trial < 7; trial++) {
+        const start = performance.now();
+        for (let i = 0; i < iterations; i++) {
+          for (const sim of sims) sim.step();
+        }
+        samples.push((performance.now() - start) / iterations);
       }
-      const elapsed = performance.now() - start;
-      expect(elapsed / iterations).toBeLessThan(2);
+      samples.sort((a, b) => a - b);
+      expect(samples[3]!).toBeLessThan(2);
     },
   );
 });

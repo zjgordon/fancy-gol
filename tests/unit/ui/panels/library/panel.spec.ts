@@ -114,12 +114,21 @@ describe('createLibraryPanel', () => {
     Object.defineProperty(viewport, 'clientHeight', { value: 320, configurable: true });
     viewport.scrollTop = 4000;
     viewport.dispatchEvent(new Event('scroll'));
-    const t0 = performance.now();
-    viewport.scrollTop = 4080;
-    viewport.dispatchEvent(new Event('scroll'));
-    const elapsed = performance.now() - t0;
+
+    // Median of several scroll ticks — a single sample under a contested vitest pool was
+    // false-failing ~23 ms against the 16.6 ms frame budget while isolation stayed well under.
+    const samples: number[] = [];
+    for (let trial = 0; trial < 7; trial++) {
+      viewport.scrollTop = 4000 + trial * 80;
+      viewport.dispatchEvent(new Event('scroll'));
+      const t0 = performance.now();
+      viewport.scrollTop = 4080 + trial * 80;
+      viewport.dispatchEvent(new Event('scroll'));
+      samples.push(performance.now() - t0);
+    }
+    samples.sort((a, b) => a - b);
     expect(panel.root.querySelectorAll('.lib-card').length).toBeLessThan(20);
-    if (!UNDER_COVERAGE) expect(elapsed).toBeLessThan(16.6);
+    if (!UNDER_COVERAGE) expect(samples[3]!).toBeLessThan(16.6);
     panel.dispose();
     host.dispose();
   });
