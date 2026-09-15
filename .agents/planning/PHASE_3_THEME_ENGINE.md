@@ -303,15 +303,19 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 - [x] Bloom is confined to live cells and never washes out the L4 overlay. — threshold 72; below-threshold bg texels unchanged; L4 is drawn after compositor.draw().
 - [x] Readable at zoom levels from `cellSize` 0.5 to 64. — live vs bg luma gap holds independently of zoom; haze grid drops minor lines below cellSize 4.
 
-#### - [~] P3-C-3 · Flatline — @cursor, started 2026-09-15
+#### - [x] P3-C-3 · Flatline — @cursor, started 2026-09-15, finished 2026-09-15
 **Depends on:** P3-A-5, P3-B-3 · **Files:** `src/themes/flatline/*`
 **Brief:** *"Retro console. Monochromatic, 'falling' text effects on UI elements."*
 **Design direction** Single-hue amber (or user-selectable green/white) phosphor on black. Cells are drawn as glyph-ish blocks with `phosphorDecay` — dead cells leave a fading ghost, which is both beautiful and genuinely informative (you can see where a pattern has been). Passes: `phosphorDecay`, `crtCurvature` (subtle, and off at quality ≤ 1), `scanlines`, `textRain` on the background at very low opacity. Chrome: monospace everything, box-drawing-character borders. **Motion signature is the star**: panels *type themselves in* character by character, values *scramble* to their new digits, and panels dissolve into falling characters on exit. Sound: teletype clatter for UI, a soft hum ambient, a discrete click per generation at low speeds.
+**Done when**
+- README written first: a terminal that outlived its operator. Tokens are amber/mono/square (green and white tubes share the module; only amber is registered). Palette: 16-step phosphor spike, 24 states, CVD-spaced live hues with Conway rotated to amber-gold. Motion: 80/220/400 ms with `textReveal` typewriter/scramble/fall. Sound: teletype clatter, soft sine hum, discrete generation click.
+- Passes: low-opacity `textRain` + `phosphorDecay` (Float32 ghosts, `reset()` on grid clear) + scanlines + subtle CRT (no-op at quality ≤ 1). Quality 0 is palette-only (`losslessAtQuality0: false`). Overlay AA against bg and a busy phosphor glyph. Age buffer on when Flatline is active.
+- Proven in `tests/unit/themes/flatline/{theme,palette,tokens,flatline-css}.spec.ts` plus typewriter/reduced-motion cases in `tests/unit/themes/motion.spec.ts`. Per-theme screenshots remain P3-D-2 (this environment cannot install Playwright Chromium 1243).
 **Additional acceptance criteria**
-- [ ] The typing choreography is capped so a large panel never takes longer than 400 ms to appear.
-- [ ] Under reduced motion, all text appears instantly — no character animation whatsoever.
-- [ ] Phosphor ghosts fully clear on grid clear (no permanent burn-in bug).
-- [ ] `textRain` costs < 1.5 ms/frame at 1080p.
+- [x] The typing choreography is capped so a large panel never takes longer than 400 ms to appear. — `maxDurationMs: 400` on enter; a 2000-character panel with a 2000 ms duration key still settles at 400 ms.
+- [x] Under reduced motion, all text appears instantly — no character animation whatsoever. — duration 0 skips `textReveal`; original text is never mutated.
+- [x] Phosphor ghosts fully clear on grid clear (no permanent burn-in bug). — `EffectPass.reset()` / `Compositor.resetEffects()`; client clear paths call it; ghosts stored as `Float32Array` so fade actually decays.
+- [x] `textRain` costs < 1.5 ms/frame at 1080p. — warm median at 1920×1080 is under `FLATLINE_TEXT_RAIN_BUDGET_MS` (1.5); declaredCost 1.2.
 
 #### - [ ] P3-C-4 · Sids-Place
 **Depends on:** P3-A-5, P3-B-3 · **Files:** `src/themes/sids-place/*`

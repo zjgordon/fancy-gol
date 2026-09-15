@@ -116,6 +116,11 @@ export class Compositor implements Renderer {
     this.effectsEnabled = passes.length > 0;
   }
 
+  /** Drop phosphor ghosts and other transient pass state (grid clear). */
+  resetEffects(): void {
+    this.effects.resetTransient();
+  }
+
   /**
    * When false, L2/L3 are skipped and no passes run — frame cost stays within 5% of bare
    * Canvas2D (P3-A-1). `setEffectPasses` turns this on when the list is non-empty.

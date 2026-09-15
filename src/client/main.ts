@@ -7,7 +7,7 @@ import { CONWAY, getBuiltin } from '@engine/rules/builtin';
 import { RuleValidationError } from '@engine/rules/errors';
 import { validateRuleSet } from '@engine/rules/validate';
 import { Compositor } from '@render/compositor';
-import { createChibaCityPassStack } from '@render/effects/library';
+import { createChibaCityPassStack, createFlatlinePassStack } from '@render/effects/library';
 import type { Viewport as RenderViewport } from '@render/types';
 import { decode as decodeRle } from '@shared/rle';
 import { CHUNK_AREA, type PaintOp, type RuleSet } from '@shared/types';
@@ -44,6 +44,7 @@ import type { StampTool } from '@ui/tools/stamp';
 import { ThemeRegistry, compileTheme } from '@themes/registry';
 import { DEFAULT_DARK_THEME, DEFAULT_THEME } from '@themes/default/theme';
 import { CHIBA_CITY_THEME } from '@themes/chiba-city/theme';
+import { FLATLINE_THEME } from '@themes/flatline/theme';
 import type { ThemeModule } from '@themes/types';
 import { chartTokensFromSet } from '@ui/charts/chart';
 import { createStatisticsPanel } from '@ui/panels/statistics/panel';
@@ -174,15 +175,32 @@ function main(): void {
   const themeRegistry = new ThemeRegistry();
   themeRegistry.register(DEFAULT_THEME);
   themeRegistry.register(CHIBA_CITY_THEME);
+  themeRegistry.register(FLATLINE_THEME);
 
   function applyThemeVisuals(theme: ThemeModule): void {
     const dataId = theme.id.startsWith('default') ? 'default' : theme.id;
     document.documentElement.dataset['theme'] = dataId;
     renderer.setTheme(compileTheme(theme));
-    const chiba = theme.id === 'chiba-city';
-    renderer.setEffectPasses(chiba ? createChibaCityPassStack() : []);
-    renderer.setBackgroundMode(chiba ? 'parallax' : 'static');
-    void client.send({ cmd: 'setAgeBuffer', enabled: chiba });
+    if (theme.id === 'chiba-city') {
+      renderer.setEffectPasses(createChibaCityPassStack());
+      renderer.setBackgroundMode('parallax');
+      void client.send({ cmd: 'setAgeBuffer', enabled: true });
+      return;
+    }
+    if (theme.id === 'flatline') {
+      renderer.setEffectPasses(createFlatlinePassStack());
+      renderer.setBackgroundMode('static');
+      void client.send({ cmd: 'setAgeBuffer', enabled: true });
+      return;
+    }
+    renderer.setEffectPasses([]);
+    renderer.setBackgroundMode('static');
+    void client.send({ cmd: 'setAgeBuffer', enabled: false });
+  }
+
+  function afterGridClear(): void {
+    renderer.resetEffects();
+    if (hasFrame) renderer.draw({ cells: mirror.view(), dirty: null, tick: lastTick });
   }
 
   function toRenderViewport(): RenderViewport {
@@ -356,7 +374,7 @@ function main(): void {
       void (async () => {
         await client.send({ cmd: 'clear' });
         mirror.reset();
-        if (hasFrame) renderer.draw({ cells: mirror.view(), dirty: null, tick: lastTick });
+        afterGridClear();
         await client.send({ cmd: 'paint', ops: gunOps(20, 20, primaryLiveState(activeRuleset)) });
       })();
     },
@@ -371,7 +389,7 @@ function main(): void {
         if (!confirmed) return;
         await client.send({ cmd: 'clear' });
         mirror.reset();
-        if (hasFrame) renderer.draw({ cells: mirror.view(), dirty: null, tick: lastTick });
+        afterGridClear();
       })();
     },
     randomSoup() {
@@ -602,6 +620,7 @@ function main(): void {
     if (!confirmed) return;
     await client.send({ cmd: 'clear' });
     mirror.reset();
+    afterGridClear();
     const ops = decodeRle(resolved.rle)
       .cells.filter((c) => c.state !== 0)
       .map((c) => ({ x: c.x, y: c.y, state: c.state }));
@@ -711,7 +730,7 @@ function main(): void {
       if (reset) {
         await client.send({ cmd: 'clear' });
         mirror.reset();
-        if (hasFrame) renderer.draw({ cells: mirror.view(), dirty: null, tick: lastTick });
+        afterGridClear();
       }
       autosave.scheduleSave();
     },

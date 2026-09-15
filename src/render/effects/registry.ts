@@ -91,6 +91,12 @@ export class EffectRegistry {
     }
   }
 
+  /** Drop transient pass state without disposing the stack (grid clear). */
+  resetTransient(): void {
+    this.ensureAlive();
+    for (const pass of this.passes) pass.reset?.();
+  }
+
   /**
    * Forward a viewport resize to every pass. Does not touch compositor layer canvases — the
    * caller (`Compositor.resize`) owns those.

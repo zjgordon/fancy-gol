@@ -410,6 +410,27 @@
           outline-color: var(--gol-color-accent-strong);
         }
       }
+
+      html[data-theme='flatline'] {
+        --gol-shadow-chrome: none;
+        text-shadow: 0 0 8px var(--gol-color-accent);
+      }
+      html[data-theme='flatline'] .chrome-panel,
+      html[data-theme='flatline'] .panel-host:not(.panel-host-collapsed),
+      html[data-theme='flatline'] .dialog-surface,
+      html[data-theme='flatline'] .toast {
+        box-shadow: none;
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+      }
+      html[data-theme='flatline'] .panel-host-title::before {
+        content: '┌─ ';
+        color: var(--gol-color-accent);
+      }
+      html[data-theme='flatline'] .panel-host-title::after {
+        content: ' ─┐';
+        color: var(--gol-color-accent);
+      }
       .controls button:disabled {
         background: var(--gol-color-elevated);
         color: var(--gol-color-muted);

@@ -131,6 +131,22 @@ export function createChibaCityPassStack(): EffectPass[] {
   ];
 }
 
+/** textRain at 1080p must stay under this (P3-C-3 AC). */
+export const FLATLINE_TEXT_RAIN_BUDGET_MS = 1.5;
+
+/** Flatline's tuned stack (ADR-009: lives in render/, not themes/). */
+export function createFlatlinePassStack(
+  phosphor: readonly [number, number, number] = [255, 176, 0],
+): EffectPass[] {
+  const hex = `#${phosphor.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+  return [
+    createTextRainPass({ seed: 3, opacity: 0.055, color: hex, columns: 48 }),
+    createPhosphorDecayPass({ color: phosphor, fade: 0.9 }),
+    createScanlinesPass({ opacity: 0.14 }),
+    createCrtCurvaturePass({ amount: 0.06 }),
+  ];
+}
+
 /** Declared-cost sum of passes still running at this quality. Disposes the stack. */
 export function declaredCostAtQuality(theme: ThemeId, quality: EffectQuality): number {
   const active = new Set(stagesForQuality(quality));

@@ -25,6 +25,9 @@ export abstract class TimedPass implements EffectPass {
     return this.samples;
   }
 
+  /** Subclasses override to drop ghosts / pools. Default is a no-op. */
+  reset(): void {}
+
   render(ctx: EffectCtx): void {
     this.ensureAlive();
     const t0 = performance.now();

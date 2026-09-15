@@ -21,7 +21,7 @@ class PhosphorDecayPass extends TimedPass {
   readonly declaredCost = 1.5;
   private readonly fade: number;
   private readonly color: readonly [number, number, number];
-  private ghost: Uint8ClampedArray | null = null;
+  private ghost: Float32Array | null = null;
   private gw = 0;
   private gh = 0;
 
@@ -36,11 +36,15 @@ class PhosphorDecayPass extends TimedPass {
     this.ghost?.fill(0);
   }
 
+  override reset(): void {
+    this.clearGhosts();
+  }
+
   protected renderTimed(ctx: EffectCtx): void {
     const w = ctx.viewport.widthPx | 0;
     const h = ctx.viewport.heightPx | 0;
     if (!this.ghost || this.gw !== w || this.gh !== h) {
-      this.ghost = new Uint8ClampedArray(w * h);
+      this.ghost = new Float32Array(w * h);
       this.gw = w;
       this.gh = h;
     }

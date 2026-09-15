@@ -18,7 +18,13 @@ import type { Choreography, TrailSpec } from './motion/choreography';
 
 export type { SoundPack } from '@audio/types';
 
-export type { Choreography, ChoreographyKind, MotionKeyframe, TrailSpec } from './motion/choreography';
+export type {
+  Choreography,
+  ChoreographyKind,
+  MotionKeyframe,
+  TextReveal,
+  TrailSpec,
+} from './motion/choreography';
 
 // ---------------------------------------------------------------------------------------------
 // Colour

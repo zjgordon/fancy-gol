@@ -6,6 +6,9 @@ import { PRESET_EASINGS } from './easing';
 
 export type ChoreographyKind = 'enter' | 'exit' | 'emphasis';
 
+/** How chrome text arrives, leaves, or acknowledges — Flatline's star move. */
+export type TextReveal = 'typewriter' | 'scramble' | 'fall';
+
 export interface MotionKeyframe {
   readonly offset: number;
   readonly opacity?: number;
@@ -18,6 +21,13 @@ export interface Choreography {
   readonly keyframes: readonly MotionKeyframe[];
   /** Stagger between siblings on multi-element enters (shell intro). */
   readonly delayStepMs?: number;
+  /**
+   * Character animation on text nodes (no layout reads). `animate()` restores
+   * the original text when the choreography settles.
+   */
+  readonly textReveal?: TextReveal;
+  /** Hard cap on duration — Flatline type-in never exceeds 400 ms. */
+  readonly maxDurationMs?: number;
 }
 
 export interface TrailSpec {

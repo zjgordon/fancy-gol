@@ -20,6 +20,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Births aggregate into one panned voice per 50 ms window, cross-fading into a looping texture above 400 births/sec so a 10 000/sec flood stays ≤ 20 voices/sec. (P3-B-3)
 - Default is a finished theme: crisp 90/180/280 ms motion, UI-click sound with no ambient bed, and an age-ramped palette for every builtin ruleset — still the fastest, and identical at quality 0. (P3-C-1)
 - Chiba-City is a finished theme: neon cyan haze, white-hot-to-green cells, dpr-pitched scanlines, live-cell bloom, and a modem-hum bed. (P3-C-2)
+- Flatline is a finished theme: amber phosphor on black, typewriter chrome (capped at 400 ms), falling ghosts that clear with the grid, and a soft CRT hum. (P3-C-3)
 
 ## [0.3.0] — 2026-09-14
 

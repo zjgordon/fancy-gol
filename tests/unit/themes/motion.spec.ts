@@ -119,6 +119,47 @@ describe('animate()', () => {
     el.remove();
     vi.useRealTimers();
   });
+
+  it('typewriter is capped at maxDurationMs even for a huge panel', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'requestAnimationFrame', 'performance'] });
+    const motion = {
+      ...defaultMotionSignature(),
+      durationMs: { instant: 0, fast: 80, slow: 220, slower: 2000 },
+      enter: {
+        ...defaultMotionSignature().enter,
+        durationKey: 'slower' as const,
+        easingKey: 'linear' as const,
+        maxDurationMs: 400,
+        textReveal: 'typewriter' as const,
+      },
+    };
+    const el = document.createElement('div');
+    el.textContent = 'X'.repeat(2000);
+    document.body.appendChild(el);
+    const done = animateAsync(el, 'enter', { motion, reducedMotion: false });
+    await vi.advanceTimersByTimeAsync(400);
+    await done;
+    expect(el.textContent).toBe('X'.repeat(2000));
+    el.remove();
+    vi.useRealTimers();
+  });
+
+  it('reduced motion leaves text untouched — no character animation', async () => {
+    const motion = {
+      ...defaultMotionSignature(),
+      enter: {
+        ...defaultMotionSignature().enter,
+        textReveal: 'typewriter' as const,
+        maxDurationMs: 400,
+      },
+    };
+    const el = document.createElement('div');
+    el.textContent = 'READY';
+    document.body.appendChild(el);
+    await animateAsync(el, 'enter', { motion, reducedMotion: true });
+    expect(el.textContent).toBe('READY');
+    el.remove();
+  });
 });
 
 describe('runtime', () => {

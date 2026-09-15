@@ -20,6 +20,11 @@ export interface EffectPass {
   readonly stage: EffectStage;
   render(ctx: EffectCtx): void;
   resize?(widthPx: number, heightPx: number, dpr: number): void;
+  /**
+   * Drop transient state (phosphor ghosts, particle pools) without disposing.
+   * Grid clear calls this so burn-in cannot outlive the world.
+   */
+  reset?(): void;
   dispose(): void;
 }
 
