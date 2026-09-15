@@ -223,7 +223,7 @@ src/audio/
 
 ### Workstream B — Audio
 
-#### - [ ] P3-B-1 · Audio context, mixer, policy
+#### - [~] P3-B-1 · Audio context, mixer, policy — @cursor, started 2026-09-15
 **Depends on:** Phase 2 · **Files:** `src/audio/{context,mixer,policy}.ts`
 **Implementation notes** Lazy context creation; unlock on the first user gesture; suspend on `visibilitychange` and on simulation pause; a master limiter so no theme can be painfully loud; per-bus gain with smooth ramps (never a click). Persist mute and volume. **When creating `src/audio/**`, add coverage thresholds 95/90/95 to `vitest.config.ts` in the same commit** (`planning/README.md` §3.5) — do not leave the layer unmeasured.
 **Acceptance criteria**
