@@ -290,7 +290,7 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 - [x] Fastest of the six themes at every quality level (bench-asserted). — `declaredCostAtQuality('default', q) === 0` and ≤ every other catalogue id at q ∈ {0,1,2,3}; hardware frame ranking is P3-D-4 once C-2…C-6 exist.
 - [x] The only theme that is fully functional at quality 0 with no visible loss. — empty pass stack; compositor draw-call counts match at quality 0 and 3; 4× inflated frame time stays under 16.67 ms.
 
-#### - [ ] P3-C-2 · Chiba-City
+#### - [~] P3-C-2 · Chiba-City — @cursor, started 2026-09-15
 **Depends on:** P3-A-5, P3-B-3 · **Files:** `src/themes/chiba-city/*`
 **Brief:** *"Retro cyberpunk. Neon accents, scanline overlays, and high-contrast greens."*
 **Design direction** Near-black background with a faint cyan grid receding into haze. Cells ignite white-hot on birth and cool through cyan to deep green with age (age ramp). Passes: `scanlines` (subtle, dpr-aware so they never moiré), `bloom` on live cells, `chromaticAberration` at the viewport edges only, `filmGrain`. Chrome: thin neon borders, monospace UI, angular corners, a faint flicker on focus. Motion: fast, mechanical, with a 1-frame overshoot — like a terminal responding. Sound: filtered square-wave blips, a low modem-hum ambient bed, a satisfying mechanical click on tool change.
