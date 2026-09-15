@@ -331,7 +331,7 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 - [x] Cell irregularity is deterministic per world coordinate (panning away and back shows the identical pattern — a "shimmering terrain" bug here would be very visible). — `sidsTileShape(x,y)` from integer world coords; same cell, same inset/offset.
 - [x] Contrast of ink-on-parchment meets AA (this palette is the highest-risk of the six — verify early). — every chrome text pairing ≥ 4.5:1 including muted on elevated.
 
-#### - [ ] P3-C-5 · Void-Walker
+#### - [~] P3-C-5 · Void-Walker — @cursor, started 2026-09-15
 **Depends on:** P3-A-5, P3-B-3 · **Files:** `src/themes/void-walker/*`
 **Brief:** *"Deep space. Deep purples, starlight textures, and soft glowing edges for 'alive' cells."*
 **Design direction** Near-black violet gradient, parallax `starfield` (three seeded layers that drift with the camera — this is what sells the depth). Cells glow: a soft radial falloff whose intensity and hue are driven by age, newborn cells flaring bright white-violet then settling to a cool purple. Deaths emit a small, short-lived particle puff. Passes: `starfield`, `bloom` (the strongest of any theme), `vignette`, `deathParticles`. Chrome: translucent dark panels with soft light bleeding through the edges, wide letter-spaced type. Motion: slow, floating, ease-out-heavy — nothing snaps. Sound: bell-like plucks with long reverb tails (convolution from a synthesised impulse — still zero assets), a deep evolving pad ambient.
