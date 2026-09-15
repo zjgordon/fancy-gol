@@ -278,7 +278,7 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 - [ ] L4 overlay legibility verified against the theme's busiest background.
 - [ ] A one-paragraph design rationale in `src/themes/<id>/README.md` — what the theme is *about*.
 
-#### - [ ] P3-C-1 · Default (upgrade)
+#### - [~] P3-C-1 · Default (upgrade) — @cursor, started 2026-09-15
 **Depends on:** P3-A-6 · **Files:** `src/themes/default/*`
 **Brief:** *"Simple, grey, basic — the same as you'd expect on every linux distribution ever released. But very compatible and good for large grids."*
 **Design direction** Restrained and excellent. Light and dark variants. Motion signature: crisp, short, no bounce — a well-built desktop application. No background pass, no post-process. This theme is the performance reference and the accessibility reference: **it must always be the fastest and the most readable.** Sound pack: minimal, tasteful UI clicks only, no ambient bed.
