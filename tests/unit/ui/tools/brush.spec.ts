@@ -280,13 +280,23 @@ describe('Brush', () => {
       warm.onDown(ctxAt(0, 0));
       warm.onMove(ctxAt(5000, 0, coalesced));
 
-      const brush = new Brush({ size: 1, shape: 'square' });
-      brush.onDown(ctxAt(0, 0));
-      const start = performance.now();
-      brush.onMove(ctxAt(5000, 0, coalesced));
-      const elapsedMs = performance.now() - start;
+      // Median of several trials — a single `performance.now()` sample under a contested
+      // vitest worker pool was false-failing ~16.8 ms against the 16.6 ms frame budget while
+      // isolation stayed well under. Same absolute budget; quieter measurement.
+      const samples: number[] = [];
+      let lastBrush: Brush | undefined;
+      for (let trial = 0; trial < 7; trial++) {
+        const brush = new Brush({ size: 1, shape: 'square' });
+        brush.onDown(ctxAt(0, 0));
+        const start = performance.now();
+        brush.onMove(ctxAt(5000, 0, coalesced));
+        samples.push(performance.now() - start);
+        lastBrush = brush;
+      }
+      samples.sort((a, b) => a - b);
+      const elapsedMs = samples[3]!;
 
-      expect(brush.preview().length).toBeGreaterThanOrEqual(5000);
+      expect(lastBrush!.preview().length).toBeGreaterThanOrEqual(5000);
       if (!UNDER_COVERAGE) expect(elapsedMs).toBeLessThan(16.6);
     });
   });
