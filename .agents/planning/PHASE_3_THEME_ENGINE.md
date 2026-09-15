@@ -303,7 +303,7 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 - [x] Bloom is confined to live cells and never washes out the L4 overlay. — threshold 72; below-threshold bg texels unchanged; L4 is drawn after compositor.draw().
 - [x] Readable at zoom levels from `cellSize` 0.5 to 64. — live vs bg luma gap holds independently of zoom; haze grid drops minor lines below cellSize 4.
 
-#### - [ ] P3-C-3 · Flatline
+#### - [~] P3-C-3 · Flatline — @cursor, started 2026-09-15
 **Depends on:** P3-A-5, P3-B-3 · **Files:** `src/themes/flatline/*`
 **Brief:** *"Retro console. Monochromatic, 'falling' text effects on UI elements."*
 **Design direction** Single-hue amber (or user-selectable green/white) phosphor on black. Cells are drawn as glyph-ish blocks with `phosphorDecay` — dead cells leave a fading ghost, which is both beautiful and genuinely informative (you can see where a pattern has been). Passes: `phosphorDecay`, `crtCurvature` (subtle, and off at quality ≤ 1), `scanlines`, `textRain` on the background at very low opacity. Chrome: monospace everything, box-drawing-character borders. **Motion signature is the star**: panels *type themselves in* character by character, values *scramble* to their new digits, and panels dissolve into falling characters on exit. Sound: teletype clatter for UI, a soft hum ambient, a discrete click per generation at low speeds.
