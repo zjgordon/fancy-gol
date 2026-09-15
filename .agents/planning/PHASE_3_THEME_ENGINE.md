@@ -237,7 +237,7 @@ src/audio/
 - [x] Zero audio files in `dist/`.
 - [x] `vitest.config.ts` gates `src/audio/**` at ≥ 95/90/95 from the commit that creates the directory.
 
-#### - [ ] P3-B-2 · Voice primitives & scheduler
+#### - [~] P3-B-2 · Voice primitives & scheduler — @cursor, started 2026-09-15
 **Depends on:** P3-B-1 · **Files:** `src/audio/{voices,scheduler}.ts`
 **Implementation notes** Look-ahead scheduling on a 25 ms interval with a 100 ms horizon — `setTimeout`-triggered `start()` calls jitter audibly and will make the whole feature feel cheap. Voices: `blip`, `click`, `sweep`, `noiseBurst`, `pluck`, `pad`, `drone`, each parameterised by pitch, duration, filter and envelope.
 **Acceptance criteria**
