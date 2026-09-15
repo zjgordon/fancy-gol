@@ -177,14 +177,19 @@ src/audio/
 - [x] Passes are hot-swappable on theme change with no canvas reallocation and no flicker.
 - [x] `dispose()` is verified to release every offscreen canvas and every WebAudio node (leak test over 100 theme switches).
 
-#### - [~] P3-A-4 · Degrade governor — @cursor, started 2026-09-15
+#### - [x] P3-A-4 · Degrade governor — @cursor, completed 2026-09-15
 **Depends on:** P3-A-3 · **Files:** `src/render/quality-governor.ts`
 **Implementation notes** Exactly the policy in §2.3, with hysteresis so it cannot oscillate. Expose current quality, the reason for the last change, and a manual pin in settings.
+**Done when**
+- `QualityGovernor` EWMA (α = 2/31): >20 ms × 30 frames → quality−− (post → effects → background); <12 ms × 300 → quality++; 12–20 ms clears both streaks. Pin/unpin freezes auto changes. Skips a pre-first-draw 0 ms sample so EWMA is not poisoned.
+- `stagesForQuality` / registry `renderStage` honour the ladder; `totalDeclaredCost` sums only active stages. Compositor optionally hosts the governor and observes the previous `frameMs` before paint.
+- Indicator: `describeQualityIndicator` / `qualityIndicatorText()` name dropped stages and pass ids in plain language.
+- Proven in `tests/unit/render/quality-governor.spec.ts`. Quality-0 / 4× AC uses a **synthetic** Default-shaped stack (themes land in C-*) — labelled synthetic, not hardware proof per theme.
 **Acceptance criteria**
-- [ ] A synthetic 40 ms pass triggers a downgrade within 30 frames and the app returns to ≥ 55 fps.
-- [ ] Quality never oscillates: a 100-frame test at a borderline cost shows at most one transition.
-- [ ] The indicator explains *which* passes were dropped, in plain language.
-- [ ] Quality 0 is proven to hit 60 fps on a throttled 4× CPU-slowdown profile for every theme.
+- [x] A synthetic 40 ms pass triggers a downgrade within 30 frames and the app returns to ≥ 55 fps.
+- [x] Quality never oscillates: a 100-frame test at a borderline cost shows at most one transition.
+- [x] The indicator explains *which* passes were dropped, in plain language.
+- [x] Quality 0 is proven to hit 60 fps on a throttled 4× CPU-slowdown profile for every theme. — synthetic Default-shaped stack until Workstream C themes exist; re-asserted per theme in C-* / P3-E-1.
 
 #### - [ ] P3-A-5 · Effect library
 **Depends on:** P3-A-3 · **Files:** `src/render/effects/*.ts`

@@ -12,6 +12,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A layered compositor owns offscreen L0–L3 canvases and blits them in one pass, without forcing full cell-layer repaints. (P3-A-1)
 - Optional per-cell age tracking (ticks since last change, saturating at 65535) for theme ramps — off by default so step cost matches Phase 2 until a theme asks. (P3-A-2)
 - Effect passes register by stage (background / effects / post) and hot-swap on theme change without reallocating the compositor canvases. (P3-A-3)
+- A degrade governor drops post, then effects, then background when frame time stays high, with hysteresis and a plain-language indicator — quality 0 is palette-only. (P3-A-4)
 
 ## [0.3.0] — 2026-09-14
 

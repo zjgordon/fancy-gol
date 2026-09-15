@@ -19,6 +19,7 @@ import {
   type Canvas2DContext,
   type CompositorLayerId,
 } from './layers';
+import type { QualityGovernor } from './quality-governor';
 import type { CompiledTheme, RenderFrame, Renderer, RenderStats, Viewport } from './types';
 
 /** How L0 decides whether a camera move forces a background repaint. */
@@ -37,6 +38,11 @@ export interface CompositorOptions {
   readonly cellRenderer?: Renderer;
   /** Effect-pass registry. Defaults to a fresh empty registry. */
   readonly effects?: EffectRegistry;
+  /**
+   * Optional degrade governor (P3-A-4). When set, each `draw` feeds the previous frame's
+   * `frameMs` into `observeFrame` before painting so quality can drop before the expensive work.
+   */
+  readonly qualityGovernor?: QualityGovernor;
 }
 
 type DisplayCanvas = HTMLCanvasElement | OffscreenCanvas;
@@ -59,6 +65,7 @@ export class Compositor implements Renderer {
   private readonly layers: LayerStack;
   private readonly cellRenderer: Renderer;
   private readonly effects: EffectRegistry;
+  private qualityGovernor: QualityGovernor | null;
   private display: DisplayCanvas | null = null;
   private displayCtx: Canvas2DContext | null = null;
   private viewport: Viewport | null = null;
@@ -77,6 +84,10 @@ export class Compositor implements Renderer {
     this.layers = new LayerStack(options.canvasFactory ?? defaultCanvasFactory);
     this.cellRenderer = options.cellRenderer ?? new Canvas2DRenderer();
     this.effects = options.effects ?? new EffectRegistry();
+    this.qualityGovernor = options.qualityGovernor ?? null;
+    if (this.qualityGovernor) {
+      this.effects.setQuality(this.qualityGovernor.getQuality());
+    }
   }
 
   /** Expose a layer surface for tests (e.g. attach `CanvasRecorder` to L1). */
@@ -119,6 +130,26 @@ export class Compositor implements Renderer {
 
   setEffectQuality(q: EffectQuality): void {
     this.effects.setQuality(q);
+    // Manual override without a governor (tests); with a governor, prefer pin()/unpin().
+    this.l0Dirty = true;
+  }
+
+  /** Attach or replace the degrade governor. Syncs registry quality from the governor. */
+  setQualityGovernor(governor: QualityGovernor | null): void {
+    this.qualityGovernor = governor;
+    if (governor) this.effects.setQuality(governor.getQuality());
+    this.l0Dirty = true;
+  }
+
+  getQualityGovernor(): QualityGovernor | null {
+    return this.qualityGovernor;
+  }
+
+  /** Plain-language status copy when quality &lt; 3; empty string at full quality. */
+  qualityIndicatorText(): string {
+    if (!this.qualityGovernor) return '';
+    const text = this.qualityGovernor.indicatorText();
+    return text === 'effects at full quality' ? '' : text;
   }
 
   /** Births/deaths/transitions for reactive passes this frame (from the worker stats). */
@@ -200,6 +231,14 @@ export class Compositor implements Renderer {
     const displayCtx = this.requireDisplayCtx();
     const viewport = this.requireViewport();
     const theme = this.requireTheme();
+
+    // Apply last frame's cost before painting so a downgrade skips this frame's expensive stages.
+    if (this.qualityGovernor) {
+      const qBefore = this.qualityGovernor.getQuality();
+      this.qualityGovernor.observeFrame(this.stats.frameMs);
+      if (this.qualityGovernor.getQuality() !== qBefore) this.l0Dirty = true;
+    }
+
     const t0 = performance.now();
     const frameTime = (t0 - this.frameTimeOrigin) / 1000;
 

@@ -6,6 +6,7 @@
  * Stage order is always background → effects → post within each stage's registration order.
  */
 import type { EffectCtx, EffectQuality } from './ctx';
+import { stagesForQuality } from './ctx';
 import type { EffectPass, EffectStage } from './pass';
 
 const STAGES: readonly EffectStage[] = ['background', 'effects', 'post'];
@@ -113,7 +114,7 @@ export class EffectRegistry {
     base: Omit<EffectCtx, 'quality' | 'reducedMotion'>,
   ): void {
     this.ensureAlive();
-    if (this.quality === 0) return;
+    if (!stagesForQuality(this.quality).includes(stage)) return;
     const ctx: EffectCtx = {
       ...base,
       quality: this.quality,
@@ -126,9 +127,11 @@ export class EffectRegistry {
 
   /** Sum of declared `cost` values still active at the current quality (governor input). */
   totalDeclaredCost(): number {
-    if (this.quality === 0) return 0;
+    const active = new Set(stagesForQuality(this.quality));
     let sum = 0;
-    for (const pass of this.passes) sum += pass.cost;
+    for (const pass of this.passes) {
+      if (active.has(pass.stage)) sum += pass.cost;
+    }
     return sum;
   }
 
