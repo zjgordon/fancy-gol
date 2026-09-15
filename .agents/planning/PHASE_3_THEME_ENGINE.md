@@ -206,7 +206,7 @@ src/audio/
 - [x] Every pass declares and honours a measured cost; the sum for the most expensive theme fits the frame budget at quality 3 on a mid-range machine.
 - [x] Particle systems are allocation-free in steady state and hard-capped.
 
-#### - [ ] P3-A-6 · Motion system
+#### - [~] P3-A-6 · Motion system — @cursor, started 2026-09-15
 **Depends on:** Phase 1 tokens · **Files:** `src/themes/motion/{easing,choreography,animate}.ts`
 **Implementation notes** Hand-written cubic-bézier solver (Newton–Raphson, ~30 lines) and a spring solver. `animate()` uses the Web Animations API where available and falls back to rAF. All existing Phase 1/2 components are migrated to it in this task — that migration is the point.
 **Acceptance criteria**
