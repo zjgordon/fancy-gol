@@ -1,0 +1,68 @@
+/*
+ * Chiba-City token values (P3-C-2), the static twin of `tokens.ts`. Not linked
+ * from `client/index.html` — `ThemeRegistry.activate()` writes these at runtime.
+ * Drift against `CHIBA_CITY_TOKENS` fails `chiba-city-css.spec.ts`.
+ */
+
+:root {
+  color-scheme: dark;
+
+  --gol-color-bg: #05090c;
+  --gol-color-surface: rgba(46, 230, 214, 0.08);
+  --gol-color-elevated: rgba(46, 230, 214, 0.14);
+  --gol-color-border: rgba(46, 230, 214, 0.42);
+  --gol-color-border-strong: rgba(94, 255, 232, 0.78);
+  --gol-color-text: #e7fff9;
+  --gol-color-muted: #8ec9c0;
+  --gol-color-accent: #2ee6d6;
+  --gol-color-accent-strong: #6ffff0;
+  --gol-color-accent-pressed: #1aaea3;
+  --gol-color-on-accent: #021014;
+  --gol-color-scrim: rgba(2, 8, 12, 0.72);
+  --gol-color-danger: #ff4d8d;
+  --gol-color-danger-strong: #ff7aa8;
+  --gol-color-success: #3dff8a;
+  --gol-color-success-strong: #74ffb0;
+
+  --gol-font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --gol-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --gol-font-size-xs: 11px;
+  --gol-font-size-sm: 13px;
+  --gol-font-size-md: 15px;
+  --gol-font-size-lg: 18px;
+  --gol-font-size-xl: 22px;
+  --gol-font-size-xxl: 28px;
+  --gol-font-weight-regular: 400;
+  --gol-font-weight-medium: 600;
+  --gol-font-weight-bold: 700;
+  --gol-letter-spacing-normal: 0;
+  --gol-letter-spacing-wide: 0.08em;
+
+  --gol-space-1: 4px;
+  --gol-space-2: 8px;
+  --gol-space-3: 12px;
+  --gol-space-4: 16px;
+  --gol-space-5: 24px;
+  --gol-space-6: 32px;
+  --gol-space-7: 48px;
+
+  --gol-radius-sm: 0px;
+  --gol-radius-md: 0px;
+  --gol-radius-lg: 2px;
+
+  --gol-shadow-sm: 0 0 8px rgba(46, 230, 214, 0.28);
+  --gol-shadow-md: 0 0 18px rgba(46, 230, 214, 0.38);
+  --gol-shadow-lg: 0 0 36px rgba(46, 230, 214, 0.48);
+
+  --gol-duration-instant: 0ms;
+  --gol-duration-fast: 70ms;
+  --gol-duration-slow: 120ms;
+  --gol-duration-slower: 200ms;
+  --gol-ease-linear: linear;
+  --gol-ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --gol-ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --gol-ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
+  --gol-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --gol-blur-chrome: blur(6px);
+}

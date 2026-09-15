@@ -56,15 +56,18 @@ interface MutableChunkView {
   liveMaxX: number;
   liveMaxY: number;
   at(localIndex: number): number;
+  age?(localIndex: number): number;
 }
 
 export class FrameGridMirror {
   private readonly pages = new Map<number, Uint8Array>();
+  private readonly ages = new Map<number, Uint16Array>();
 
   // One reused ChunkView, re-pointed at whichever chunk was last visited, and one reused
   // GridView wrapping the (mutating-in-place) `pages` map — see the class doc's warning about
   // the ChunkView's validity window.
   private scratchData: Uint8Array = new Uint8Array(0);
+  private scratchAge: Uint16Array | null = null;
   private readonly reusableChunkView: MutableChunkView = {
     cx: 0,
     cy: 0,
@@ -74,6 +77,7 @@ export class FrameGridMirror {
     liveMaxX: 0,
     liveMaxY: 0,
     at: (li) => this.scratchData[li] ?? DEAD,
+    age: (li) => this.scratchAge?.[li] ?? 0,
   };
   private readonly gridView: GridView = {
     boundary: 'infinite',
@@ -92,6 +96,11 @@ export class FrameGridMirror {
     for (let i = 0; i < chunks.keys.length; i++) {
       const key = chunks.keys[i]!;
       this.pages.set(key, chunks.data.subarray(i * CHUNK_AREA, (i + 1) * CHUNK_AREA));
+      if (chunks.ages) {
+        this.ages.set(key, chunks.ages.subarray(i * CHUNK_AREA, (i + 1) * CHUNK_AREA));
+      } else {
+        this.ages.delete(key);
+      }
     }
   }
 
@@ -111,12 +120,14 @@ export class FrameGridMirror {
   /** Discards every chunk the mirror currently holds — see the class doc's "known limitation" for when a caller needs this. */
   reset(): void {
     this.pages.clear();
+    this.ages.clear();
   }
 
   private chunkView(key: number, data: Uint8Array): ChunkView {
     this.reusableChunkView.cx = unpackChunkX(key);
     this.reusableChunkView.cy = unpackChunkY(key);
     this.scratchData = data;
+    this.scratchAge = this.ages.get(key) ?? null;
     let population = 0;
     let minX = 0;
     let minY = 0;

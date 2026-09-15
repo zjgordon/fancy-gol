@@ -278,6 +278,76 @@ class TextRainPass extends TimedPass {
   }
 }
 
+export interface HazeGridOptions {
+  readonly bg?: string;
+  readonly line?: string;
+}
+
+/** Chiba-City L0: near-black fill with a faint cyan grid that recedes into haze. */
+export function createHazeGridPass(opts: HazeGridOptions = {}): TimedPass {
+  return new HazeGridPass(opts);
+}
+
+class HazeGridPass extends TimedPass {
+  readonly id = 'hazeGrid';
+  readonly stage = 'background' as const;
+  readonly declaredCost = 0.4;
+  private readonly bg: string;
+  private readonly line: string;
+
+  constructor(opts: HazeGridOptions) {
+    super();
+    this.bg = opts.bg ?? '#05090c';
+    this.line = opts.line ?? '#2ee6d6';
+  }
+
+  protected renderTimed(ctx: EffectCtx): void {
+    const { widthPx: w, heightPx: h, originX, originY, cellSize } = ctx.viewport;
+    ctx.target.globalAlpha = 1;
+    ctx.target.fillStyle = this.bg;
+    ctx.target.fillRect(0, 0, w, h);
+
+    if (cellSize < 0.5) return;
+
+    const cx = w * 0.5;
+    const cy = h * 0.5;
+    const maxR = Math.hypot(cx, cy) || 1;
+    const decadeOnly = cellSize < 4;
+    const step = decadeOnly ? 10 : 1;
+    const worldX0 = originX;
+    const worldY0 = originY;
+    const worldX1 = originX + w / cellSize;
+    const worldY1 = originY + h / cellSize;
+    const gx0 = Math.floor(worldX0 / step) * step;
+    const gy0 = Math.floor(worldY0 / step) * step;
+
+    ctx.target.fillStyle = this.line;
+    for (let gx = gx0; gx <= worldX1; gx += step) {
+      const sx = (gx - originX) * cellSize;
+      if (sx < -1 || sx > w + 1) continue;
+      const decade = ((gx % 10) + 10) % 10 === 0;
+      if (decadeOnly && !decade) continue;
+      const edge = Math.min(1, Math.abs(sx - cx) / maxR);
+      const a = (decade ? 0.14 : 0.045) * (1 - edge * 0.85);
+      if (a < 0.008) continue;
+      ctx.target.globalAlpha = a;
+      ctx.target.fillRect(sx, 0, 1, h);
+    }
+    for (let gy = gy0; gy <= worldY1; gy += step) {
+      const sy = (gy - originY) * cellSize;
+      if (sy < -1 || sy > h + 1) continue;
+      const decade = ((gy % 10) + 10) % 10 === 0;
+      if (decadeOnly && !decade) continue;
+      const edge = Math.min(1, Math.abs(sy - cy) / maxR);
+      const a = (decade ? 0.14 : 0.045) * (1 - edge * 0.85);
+      if (a < 0.008) continue;
+      ctx.target.globalAlpha = a;
+      ctx.target.fillRect(0, sy, w, 1);
+    }
+    ctx.target.globalAlpha = 1;
+  }
+}
+
 function lerpHex(a: string, b: string, t: number): string {
   const pa = parseHex(a);
   const pb = parseHex(b);

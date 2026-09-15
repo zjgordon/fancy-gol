@@ -68,6 +68,12 @@ export function parseColor(css: string): readonly [r: number, g: number, b: numb
   );
 }
 
+function displayAge(chunk: ChunkView, local: number): number {
+  const a = chunk.age?.(local) ?? 0;
+  if (a <= 0) return 0;
+  return a >= 15 ? 15 : a | 0;
+}
+
 function intersectRect(a: Rect, b: Rect): Rect | null {
   const x0 = Math.max(a.x, b.x);
   const y0 = Math.max(a.y, b.y);
@@ -80,13 +86,18 @@ function intersectRect(a: Rect, b: Rect): Rect | null {
 /** A row run, mutable — pooled and overwritten in place (see `Canvas2DRenderer.runPool`), never freshly allocated once the pool has grown to cover a frame's peak run count. */
 interface Run {
   state: StateId;
+  age: number;
   x0: number;
   x1: number;
   y: number;
 }
 
 /** Every cell within `clip` in one chunk, for the `ImageData` tile path — no run-batching needed since each cell is a raw pixel-buffer write, not a canvas call. */
-function forEachCellInClip(chunk: ChunkView, clip: Rect, fn: (x: number, y: number, state: StateId) => void): void {
+function forEachCellInClip(
+  chunk: ChunkView,
+  clip: Rect,
+  fn: (x: number, y: number, state: StateId, age: number) => void,
+): void {
   const [originX, originY] = chunkToWorld(chunk.cx, chunk.cy);
   const lx0 = Math.max(0, Math.floor(clip.x - originX));
   const lx1 = Math.min(CHUNK_SIZE, Math.ceil(clip.x + clip.width - originX));
@@ -94,8 +105,9 @@ function forEachCellInClip(chunk: ChunkView, clip: Rect, fn: (x: number, y: numb
   const ly1 = Math.min(CHUNK_SIZE, Math.ceil(clip.y + clip.height - originY));
   for (let ly = ly0; ly < ly1; ly++) {
     for (let lx = lx0; lx < lx1; lx++) {
-      const state = chunk.at(localIndex(lx, ly));
-      if (state !== DEAD) fn(originX + lx, originY + ly, state);
+      const li = localIndex(lx, ly);
+      const state = chunk.at(li);
+      if (state !== DEAD) fn(originX + lx, originY + ly, state, chunk.age?.(li) ?? 0);
     }
   }
 }
@@ -231,7 +243,7 @@ export class Canvas2DRenderer implements Renderer {
   /** The next reusable `Run` slot from the pool, growing it (once, permanently) only the first time a frame needs more than it currently holds. */
   private nextRun(): Run {
     if (this.runPoolCount >= this.runPool.length) {
-      this.runPool.push({ state: DEAD, x0: 0, x1: 0, y: 0 });
+      this.runPool.push({ state: DEAD, age: 0, x0: 0, x1: 0, y: 0 });
     }
     return this.runPool[this.runPoolCount++]!;
   }
@@ -247,13 +259,18 @@ export class Canvas2DRenderer implements Renderer {
 
     for (let ly = ly0; ly < ly1; ly++) {
       let runStart = lx0;
-      let runState: StateId = chunk.at(localIndex(lx0, ly));
+      const firstLi = localIndex(lx0, ly);
+      let runState: StateId = chunk.at(firstLi);
+      let runAge = displayAge(chunk, firstLi);
       for (let lx = lx0 + 1; lx <= lx1; lx++) {
-        const state = lx < lx1 ? chunk.at(localIndex(lx, ly)) : -1; // -1: sentinel, flush at row end
-        if (state !== runState) {
+        const li = lx < lx1 ? localIndex(lx, ly) : -1;
+        const state = lx < lx1 ? chunk.at(li) : -1;
+        const age = lx < lx1 ? displayAge(chunk, li) : -1;
+        if (state !== runState || age !== runAge) {
           if (runState !== DEAD) {
             const run = this.nextRun();
             run.state = runState;
+            run.age = runAge;
             run.x0 = originX + runStart;
             run.x1 = originX + lx;
             run.y = originY + ly;
@@ -261,6 +278,7 @@ export class Canvas2DRenderer implements Renderer {
           }
           runStart = lx;
           runState = state;
+          runAge = age;
         }
       }
     }
@@ -322,8 +340,13 @@ export class Canvas2DRenderer implements Renderer {
     for (let state = 0; state < 256; state++) {
       const bucket = this.stateBuckets[state]!;
       if (bucket.length === 0) continue;
-      ctx.fillStyle = theme.palette(state, 0);
+      let fill = '';
       for (const run of bucket) {
+        const css = theme.palette(run.state, run.age);
+        if (css !== fill) {
+          ctx.fillStyle = css;
+          fill = css;
+        }
         const px = (run.x0 - viewport.originX) * viewport.cellSize;
         const py = (run.y - viewport.originY) * viewport.cellSize;
         const pw = (run.x1 - run.x0) * viewport.cellSize;
@@ -362,8 +385,8 @@ export class Canvas2DRenderer implements Renderer {
     const cellPx = viewport.cellSize;
     cells.forEachChunkInRect(iterRect, (chunk) => {
       this.touchedChunks.add(`${chunk.cx},${chunk.cy}`);
-      forEachCellInClip(chunk, iterRect, (wx, wy, state) => {
-        const color = this.resolveColor(theme.palette(state, 0));
+      forEachCellInClip(chunk, iterRect, (wx, wy, state, age) => {
+        const color = this.resolveColor(theme.palette(state, age));
         const cellPx0 = (wx - viewport.originX) * viewport.cellSize - px0;
         const cellPy0 = (wy - viewport.originY) * viewport.cellSize - py0;
         const x0 = Math.max(0, Math.floor(cellPx0));

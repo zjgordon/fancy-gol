@@ -83,6 +83,7 @@ describe('effect library (P3-A-5)', () => {
         'deathParticles',
         'filmGrain',
         'gridGlow',
+        'hazeGrid',
         'hueShiftByAge',
         'parchmentTexture',
         'phosphorDecay',

@@ -62,8 +62,10 @@ describe('voices (P3-B-2)', () => {
       if (kind === 'pluck' || kind === 'pad' || kind === 'drone') {
         expect(voice.graph.filter).not.toBeNull();
         expect(source.connections).toContain(voice.graph.filter);
+      } else if (kind === 'blip' && voice.graph.filter) {
+        expect(source.connections).toContain(voice.graph.filter);
       } else {
-        // blip / sweep go straight into the envelope
+        // sweep (and unfiltered blip) go straight into the envelope
         expect(source.connections).toContain(voice.graph.envelope);
       }
     }

@@ -165,6 +165,11 @@ export interface ChunkView {
   readonly liveMaxY: number;
   /** Read a single cell by its local index within the chunk (`(y & 31) << 5 | (x & 31)`). */
   at(localIndex: number): StateId;
+  /**
+   * Ticks since this cell last changed (P3-A-2 / P3-C-2). Absent when the theme has not
+   * asked for age tracking — callers treat missing as age 0.
+   */
+  age?(localIndex: number): number;
 }
 
 /** Chunk sizing (ADR-010) and the pure coordinate maths — {@link chunkToWorld}, {@link localIndex} — that compute `ChunkView`'s own documented local-index scheme. `engine/` re-exports these unchanged from `grid/coords.ts`; `render/` (which may only import `shared/`, ADR-009) imports them directly to walk a `GridView` without any engine import. Boundary-aware maths (wrapping, world-limit clamping, the packed chunk-key scheme) stays engine-internal — a renderer only ever sees a `GridView`'s already-resolved chunks, never a raw simulation coordinate that might need it. */

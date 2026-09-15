@@ -290,14 +290,18 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 - [x] Fastest of the six themes at every quality level (bench-asserted). — `declaredCostAtQuality('default', q) === 0` and ≤ every other catalogue id at q ∈ {0,1,2,3}; hardware frame ranking is P3-D-4 once C-2…C-6 exist.
 - [x] The only theme that is fully functional at quality 0 with no visible loss. — empty pass stack; compositor draw-call counts match at quality 0 and 3; 4× inflated frame time stays under 16.67 ms.
 
-#### - [~] P3-C-2 · Chiba-City — @cursor, started 2026-09-15
+#### - [x] P3-C-2 · Chiba-City — @cursor, started 2026-09-15, finished 2026-09-15
 **Depends on:** P3-A-5, P3-B-3 · **Files:** `src/themes/chiba-city/*`
 **Brief:** *"Retro cyberpunk. Neon accents, scanline overlays, and high-contrast greens."*
 **Design direction** Near-black background with a faint cyan grid receding into haze. Cells ignite white-hot on birth and cool through cyan to deep green with age (age ramp). Passes: `scanlines` (subtle, dpr-aware so they never moiré), `bloom` on live cells, `chromaticAberration` at the viewport edges only, `filmGrain`. Chrome: thin neon borders, monospace UI, angular corners, a faint flicker on focus. Motion: fast, mechanical, with a 1-frame overshoot — like a terminal responding. Sound: filtered square-wave blips, a low modem-hum ambient bed, a satisfying mechanical click on tool change.
+**Done when**
+- README written first: a night market that never closed. Tokens are neon-cyan / angular / monospace (not Default greys). Palette: 16-step white-hot → cyan → green ramp, 24 states, CVD-spaced live hues. Motion: 70/120/200 ms with a 1-frame overshoot. Sound: square blips, modem-hum drone, mechanical tool click.
+- Passes: `hazeGrid` + `birthFlash` + bloom (threshold 72, live cells only) + dpr-pitched scanlines + edge chromatic aberration + film grain. Quality 0 is palette-only (`losslessAtQuality0: false`). Overlay selection/origin AA against bg and a busy haze line. Age buffer on when Chiba is active; Canvas2D consumes `ChunkView.age`.
+- Proven in `tests/unit/themes/chiba-city/{theme,palette,tokens,chiba-city-css}.spec.ts`. Scanline moiré, bloom confinement, and cellSize 0.5–64 readability are unit-tested. Per-theme screenshots remain P3-D-2 (this environment cannot install Playwright Chromium 1243).
 **Additional acceptance criteria**
-- [ ] Scanlines do not moiré at dpr 1, 1.5, 2 or 3 (visual test at each).
-- [ ] Bloom is confined to live cells and never washes out the L4 overlay.
-- [ ] Readable at zoom levels from `cellSize` 0.5 to 64.
+- [x] Scanlines do not moiré at dpr 1, 1.5, 2 or 3 (visual test at each). — `scanlinePitch(dpr)` is integer; row-luma period is `2 * pitch` at each dpr. Pixel screenshots are P3-D-2.
+- [x] Bloom is confined to live cells and never washes out the L4 overlay. — threshold 72; below-threshold bg texels unchanged; L4 is drawn after compositor.draw().
+- [x] Readable at zoom levels from `cellSize` 0.5 to 64. — live vs bg luma gap holds independently of zoom; haze grid drops minor lines below cellSize 4.
 
 #### - [ ] P3-C-3 · Flatline
 **Depends on:** P3-A-5, P3-B-3 · **Files:** `src/themes/flatline/*`

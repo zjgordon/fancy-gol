@@ -11,6 +11,7 @@ import {
   AGGREGATION_WINDOW_MS,
   TEXTURE_RATE_PER_SEC,
   type AudioContextLike,
+  type SoundCue,
   type SoundPack,
   type StereoPannerNodeLike,
   type UiCue,
@@ -85,6 +86,7 @@ export class EventMapper {
   private texture: VoiceHandle | null = null;
   private texturePanner: StereoPannerNodeLike | null = null;
   private textureGain = 0;
+  private ambient: VoiceHandle | null = null;
   private disposed = false;
 
   /** Sim voices scheduled (discrete ticks + texture starts). For AC metering. */
@@ -106,12 +108,15 @@ export class EventMapper {
     this.textureRate = options.textureRatePerSec ?? TEXTURE_RATE_PER_SEC;
     this.pack = options.pack;
     this.windowStartMs = this.clock.nowMs();
+    if (this.pack?.ambient) this.startAmbient(this.pack.ambient);
   }
 
   /** Hot-swap the active theme's pack. A UI-only pack silences sim voices on the next flush. */
   setPack(pack: SoundPack | undefined): void {
     this.pack = pack;
+    this.stopAmbient();
     if (pack && pack.sim === undefined) this.stopTexture();
+    if (pack?.ambient) this.startAmbient(pack.ambient);
   }
 
   /**
@@ -193,6 +198,7 @@ export class EventMapper {
     if (this.disposed) return;
     this.disposed = true;
     this.stopTexture();
+    this.stopAmbient();
     this.resetWindow(this.clock.nowMs());
   }
 
@@ -225,10 +231,12 @@ export class EventMapper {
     this.stopTexture();
     if (this.birthCount <= 0) return;
 
-    // Cap: at most one discrete voice per window ⇒ ≤ 1000/windowMs = 20/sec.
-    const pitch = 220 + Math.min(this.birthCount, 64) * 12;
-    const gain = Math.min(0.15 + Math.log2(1 + this.birthCount) * 0.05, 0.55);
-    const kind: VoiceKind = this.generationTicks === 1 && this.birthCount <= 8 ? 'blip' : 'click';
+    const cue = this.pack?.sim?.birth;
+    const kind: VoiceKind =
+      cue?.kind ?? (this.generationTicks === 1 && this.birthCount <= 8 ? 'blip' : 'click');
+
+    const pitch = cue?.params?.pitch ?? 220 + Math.min(this.birthCount, 64) * 12;
+    const gain = cue?.params?.gain ?? Math.min(0.15 + Math.log2(1 + this.birthCount) * 0.05, 0.55);
 
     this.scheduler.schedule({
       when: this.ctx.currentTime,
@@ -238,7 +246,9 @@ export class EventMapper {
       params: {
         pitch,
         gain,
-        duration: kind === 'blip' ? 0.06 : 0.04,
+        duration: cue?.params?.duration ?? (kind === 'blip' ? 0.06 : 0.04),
+        ...(cue?.params?.filter !== undefined ? { filter: cue.params.filter } : {}),
+        ...(cue?.params?.waveform !== undefined ? { waveform: cue.params.waveform } : {}),
       },
     });
     this.lastDiscreteKind = kind;
@@ -307,6 +317,39 @@ export class EventMapper {
     }
     this.texturePanner = null;
     this.textureGain = 0;
+  }
+
+  private startAmbient(cue: SoundCue): void {
+    if (this.policy.isFullySilent() || !this.policy.canPlayAmbient()) return;
+    this.stopAmbient();
+    const alloc = this.policy.allocateVoice(this.clock.nowMs());
+    if (alloc.stealId !== undefined) this.scheduler.stopVoice(alloc.stealId);
+    const params = cue.params;
+    this.ambient = spawnVoice({
+      context: this.ctx,
+      destination: this.mixer.bus('ambient'),
+      kind: cue.kind,
+      id: alloc.id,
+      when: this.ctx.currentTime,
+      params: {
+        loop: true,
+        duration: 30,
+        gain: 0.07,
+        ...(params ?? {}),
+      },
+    });
+  }
+
+  private stopAmbient(): void {
+    if (!this.ambient) return;
+    const id = this.ambient.id;
+    this.ambient.stop();
+    this.policy.releaseVoice(id);
+    this.ambient = null;
+  }
+
+  get ambientActive(): boolean {
+    return this.ambient !== null && !this.ambient.stopped;
   }
 
   private computePan(): number {

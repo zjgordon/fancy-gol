@@ -184,6 +184,7 @@ export class ChunkedGrid {
         if (ly > liveMaxY) liveMaxY = ly;
       }
     }
+    const ages = chunk.age;
     return {
       cx: unpackChunkX(key),
       cy: unpackChunkY(key),
@@ -193,6 +194,7 @@ export class ChunkedGrid {
       liveMaxX,
       liveMaxY,
       at: (i: number) => chunk.at(i),
+      ...(ages ? { age: (i: number) => ages[i] ?? 0 } : {}),
     };
   }
 

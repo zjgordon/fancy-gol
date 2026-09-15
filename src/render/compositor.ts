@@ -8,7 +8,7 @@
  * L4 overlay stays *above* this composite (never owned here).
  */
 import { Canvas2DRenderer } from './canvas2d';
-import { EMPTY_CHANGES, type ChangeSummary, type EffectQuality } from './effects/ctx';
+import { EMPTY_CHANGES, stagesForQuality, type ChangeSummary, type EffectQuality } from './effects/ctx';
 import type { EffectPass } from './effects/pass';
 import { EffectRegistry } from './effects/registry';
 import {
@@ -338,11 +338,19 @@ export class Compositor implements Renderer {
 
     post.ctx.setTransform(1, 0, 0, 1, 0, 0);
     post.ctx.clearRect(0, 0, post.canvas.width, post.canvas.height);
-    // Post samples the stack below. Framework hands the effects layer as `source`; bloom and
-    // friends that need a full pre-composite arrive in P3-A-5 with their own capture buffers.
+    // Post must sample the stack below (L0+L1+L2) so bloom/scanlines hit live cells,
+    // not an empty effects layer. L4 overlay is drawn after compositor.draw().
+    const postLive =
+      stagesForQuality(this.effects.getQuality()).includes('post') &&
+      this.effects.listStage('post').length > 0;
+    if (postLive) {
+      post.ctx.drawImage(this.layers.get('background').canvas, 0, 0);
+      post.ctx.drawImage(cells.canvas, 0, 0);
+      post.ctx.drawImage(effects.canvas, 0, 0);
+    }
     this.effects.renderStage('post', {
       target: post.ctx,
-      source: effects.canvas,
+      source: postLive ? post.canvas : effects.canvas,
       viewport,
       tick,
       frameTime,

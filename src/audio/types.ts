@@ -145,6 +145,8 @@ export interface VoiceParams {
   readonly pitchEnd?: number;
   /** Loop buffer sources (texture beds). */
   readonly loop?: boolean;
+  /** Oscillator waveform override (Chiba square-wave blips). */
+  readonly waveform?: OscillatorTypeName;
 }
 
 export interface AudioPrefs {

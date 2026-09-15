@@ -7,6 +7,7 @@ import { CONWAY, getBuiltin } from '@engine/rules/builtin';
 import { RuleValidationError } from '@engine/rules/errors';
 import { validateRuleSet } from '@engine/rules/validate';
 import { Compositor } from '@render/compositor';
+import { createChibaCityPassStack } from '@render/effects/library';
 import type { Viewport as RenderViewport } from '@render/types';
 import { decode as decodeRle } from '@shared/rle';
 import { CHUNK_AREA, type PaintOp, type RuleSet } from '@shared/types';
@@ -40,8 +41,10 @@ import type { FillTool } from '@ui/tools/fill';
 import type { Brush } from '@ui/tools/brush';
 import type { SelectTool } from '@ui/tools/select';
 import type { StampTool } from '@ui/tools/stamp';
-import { ThemeRegistry } from '@themes/registry';
+import { ThemeRegistry, compileTheme } from '@themes/registry';
 import { DEFAULT_DARK_THEME, DEFAULT_THEME } from '@themes/default/theme';
+import { CHIBA_CITY_THEME } from '@themes/chiba-city/theme';
+import type { ThemeModule } from '@themes/types';
 import { chartTokensFromSet } from '@ui/charts/chart';
 import { createStatisticsPanel } from '@ui/panels/statistics/panel';
 import { openExportDialog } from '@ui/export/dialog';
@@ -170,6 +173,17 @@ function main(): void {
 
   const themeRegistry = new ThemeRegistry();
   themeRegistry.register(DEFAULT_THEME);
+  themeRegistry.register(CHIBA_CITY_THEME);
+
+  function applyThemeVisuals(theme: ThemeModule): void {
+    const dataId = theme.id.startsWith('default') ? 'default' : theme.id;
+    document.documentElement.dataset['theme'] = dataId;
+    renderer.setTheme(compileTheme(theme));
+    const chiba = theme.id === 'chiba-city';
+    renderer.setEffectPasses(chiba ? createChibaCityPassStack() : []);
+    renderer.setBackgroundMode(chiba ? 'parallax' : 'static');
+    void client.send({ cmd: 'setAgeBuffer', enabled: chiba });
+  }
 
   function toRenderViewport(): RenderViewport {
     const dpr = window.devicePixelRatio || 1;
@@ -896,10 +910,10 @@ function main(): void {
     } catch {
       themeRegistry.activate('default');
     }
-    const compiled = themeRegistry.getCompiledTheme();
-    if (compiled) renderer.setTheme(compiled);
-    themeRegistry.subscribe(({ theme, compiled: next }) => {
-      renderer.setTheme(next);
+    const active = themeRegistry.getActive();
+    if (active) applyThemeVisuals(active);
+    themeRegistry.subscribe(({ theme }) => {
+      applyThemeVisuals(theme);
       statsPanel.setTokens(chartTokensFromSet(theme.tokens));
       statsPanel.setMotion(theme.motion);
       if (hasFrame) {

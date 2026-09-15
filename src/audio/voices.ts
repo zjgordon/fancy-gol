@@ -75,10 +75,19 @@ export function spawnVoice(options: SpawnVoiceOptions): VoiceHandle {
   switch (kind) {
     case 'blip': {
       const osc = ctx.createOscillator();
-      osc.type = 'sine';
+      osc.type = params.waveform ?? 'sine';
       osc.frequency.setValueAtTime(pitch, startAt);
       source = osc;
-      osc.connect(envelope);
+      if (params.filter !== undefined) {
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.setValueAtTime(filterHz, startAt);
+        filter = lp;
+        osc.connect(lp);
+        lp.connect(envelope);
+      } else {
+        osc.connect(envelope);
+      }
       osc.start(startAt);
       osc.stop(stopAt + env.release);
       break;
@@ -98,7 +107,7 @@ export function spawnVoice(options: SpawnVoiceOptions): VoiceHandle {
     }
     case 'sweep': {
       const osc = ctx.createOscillator();
-      osc.type = 'sine';
+      osc.type = params.waveform ?? 'sine';
       const end = positive(params.pitchEnd ?? pitch * 2, pitch * 2);
       osc.frequency.setValueAtTime(Math.max(pitch, 1), startAt);
       osc.frequency.exponentialRampToValueAtTime(Math.max(end, 1), stopAt);
@@ -155,7 +164,7 @@ export function spawnVoice(options: SpawnVoiceOptions): VoiceHandle {
     }
     case 'drone': {
       const osc = ctx.createOscillator();
-      osc.type = 'sawtooth';
+      osc.type = params.waveform ?? 'sawtooth';
       osc.frequency.setValueAtTime(pitch, startAt);
       source = osc;
       const lp = ctx.createBiquadFilter();

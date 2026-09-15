@@ -6,6 +6,7 @@
  * "most expensive theme" frame-budget check.
  */
 import {
+  createHazeGridPass,
   createParchmentTexturePass,
   createStarfieldPass,
   createSunGradientPass,
@@ -40,11 +41,14 @@ export {
 } from './post-passes';
 
 export {
+  createHazeGridPass,
   createStarfieldPass,
   createParchmentTexturePass,
   createSunGradientPass,
   createTextRainPass,
 } from './background-passes';
+
+export { scanlinePitch } from './post-passes';
 
 export {
   createPhosphorDecayPass,
@@ -83,6 +87,7 @@ export const EFFECT_LIBRARY: readonly LibraryEntry[] = [
   { id: 'crtCurvature', themes: ['flatline'], create: () => createCrtCurvaturePass() },
   { id: 'phosphorDecay', themes: ['flatline'], create: () => createPhosphorDecayPass() },
   { id: 'starfield', themes: ['void-walker'], create: () => createStarfieldPass({ seed: 42 }) },
+  { id: 'hazeGrid', themes: ['chiba-city'], create: () => createHazeGridPass() },
   {
     id: 'parchmentTexture',
     themes: ['sids-place'],
@@ -109,6 +114,21 @@ export const THEME_IDS: readonly ThemeId[] = [
 /** Build the pass stack a theme will use (default costs; themes may parameterise further). */
 export function createThemePassStack(theme: ThemeId): EffectPass[] {
   return EFFECT_LIBRARY.filter((e) => e.themes.includes(theme)).map((e) => e.create());
+}
+
+/** Bloom threshold: Chiba live-cell luma sits above this; haze/bg sit below. */
+export const CHIBA_BLOOM_THRESHOLD = 72;
+
+/** Chiba-City's tuned stack (ADR-009: lives in render/, not themes/). */
+export function createChibaCityPassStack(): EffectPass[] {
+  return [
+    createHazeGridPass({ bg: '#05090c', line: '#2ee6d6' }),
+    createBirthFlashPass({ color: '#ffffff' }),
+    createBloomPass({ threshold: CHIBA_BLOOM_THRESHOLD, strength: 0.38, radius: 2 }),
+    createScanlinesPass({ opacity: 0.11 }),
+    createChromaticAberrationPass({ amount: 2, edgeBias: 0.78 }),
+    createFilmGrainPass({ seed: 1, amount: 9 }),
+  ];
 }
 
 /** Declared-cost sum of passes still running at this quality. Disposes the stack. */

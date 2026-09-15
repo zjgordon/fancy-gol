@@ -78,6 +78,11 @@ class BloomPass extends TimedPass {
   }
 }
 
+/** Integer device-pixel pitch so scanlines never moiré at fractional dpr. */
+export function scanlinePitch(dpr: number): number {
+  return Math.max(1, Math.round(dpr));
+}
+
 export interface ScanlinesOptions {
   readonly opacity?: number;
 }
@@ -100,7 +105,7 @@ class ScanlinesPass extends TimedPass {
   protected renderTimed(ctx: EffectCtx): void {
     const w = ctx.viewport.widthPx | 0;
     const h = ctx.viewport.heightPx | 0;
-    const pitch = Math.max(1, Math.round(ctx.viewport.dpr));
+    const pitch = scanlinePitch(ctx.viewport.dpr);
     const src = readSourcePixels(ctx.source, w, h);
     const out = src.slice();
     const dark = 1 - this.opacity;
