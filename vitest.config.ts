@@ -13,6 +13,7 @@ export default defineConfig({
       '@render': alias('./src/render'),
       '@ui': alias('./src/ui'),
       '@themes': alias('./src/themes'),
+      '@audio': alias('./src/audio'),
       '@worker': alias('./src/worker'),
       '@server': alias('./src/server'),
       '@client': alias('./src/client'),
@@ -80,6 +81,8 @@ export default defineConfig({
         // P2-F-1: ratcheted 70/60/70 -> 75/65/75, a few points under measured actuals
         // (planning/README.md §3.5's ratchet rule), not the full 20+ points of slack.
         'src/themes/**': { statements: 75, branches: 65, functions: 75 },
+        // P3-B-1: audio layer gates at the engine bar from the commit that creates it.
+        'src/audio/**': { statements: 95, branches: 90, functions: 95 },
         'src/server/**': { statements: 85, branches: 75, functions: 85 },
         'src/client/**': { statements: 85, branches: 75, functions: 75 },
       },

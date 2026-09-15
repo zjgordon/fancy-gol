@@ -12,6 +12,7 @@ export default defineConfig({
       '@render': alias('./src/render'),
       '@ui': alias('./src/ui'),
       '@themes': alias('./src/themes'),
+      '@audio': alias('./src/audio'),
       '@worker': alias('./src/worker'),
     },
   },

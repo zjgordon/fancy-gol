@@ -223,15 +223,19 @@ src/audio/
 
 ### Workstream B — Audio
 
-#### - [~] P3-B-1 · Audio context, mixer, policy — @cursor, started 2026-09-15
+#### - [x] P3-B-1 · Audio context, mixer, policy — @cursor, started 2026-09-15, finished 2026-09-15
 **Depends on:** Phase 2 · **Files:** `src/audio/{context,mixer,policy}.ts`
 **Implementation notes** Lazy context creation; unlock on the first user gesture; suspend on `visibilitychange` and on simulation pause; a master limiter so no theme can be painfully loud; per-bus gain with smooth ramps (never a click). Persist mute and volume. **When creating `src/audio/**`, add coverage thresholds 95/90/95 to `vitest.config.ts` in the same commit** (`planning/README.md` §3.5) — do not leave the layer unmeasured.
+- `AudioRuntime` (`context.ts`) never constructs an `AudioContext` until `unlock()` / first gesture; suspends on tab hide and simulation pause; resumes only when both allow.
+- `Mixer` wires ambient + event → master → dynamics-compressor limiter → destination; mute uses a 12 ms linear ramp (`MUTE_RAMP_SEC`).
+- `AudioPolicy` starts muted by default, persists prefs under `gol.audio`, silences ambient under reduced motion, and exposes the 24-voice oldest-first allocator for P3-B-2.
+- Proven in `tests/unit/audio/audio-runtime.spec.ts` with injectable Web Audio doubles; `vitest.config.ts` gates `src/audio/**` at ≥ 95/90/95.
 **Acceptance criteria**
-- [ ] No `AudioContext` is created before a user gesture (no console warnings in any browser).
-- [ ] Muting is instantaneous and silent (ramped, no click).
-- [ ] Tab-hide suspends the context; unhide resumes without a glitch.
-- [ ] Zero audio files in `dist/`.
-- [ ] `vitest.config.ts` gates `src/audio/**` at ≥ 95/90/95 from the commit that creates the directory.
+- [x] No `AudioContext` is created before a user gesture (no console warnings in any browser).
+- [x] Muting is instantaneous and silent (ramped, no click).
+- [x] Tab-hide suspends the context; unhide resumes without a glitch.
+- [x] Zero audio files in `dist/`.
+- [x] `vitest.config.ts` gates `src/audio/**` at ≥ 95/90/95 from the commit that creates the directory.
 
 #### - [ ] P3-B-2 · Voice primitives & scheduler
 **Depends on:** P3-B-1 · **Files:** `src/audio/{voices,scheduler}.ts`

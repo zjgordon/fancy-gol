@@ -33,6 +33,7 @@
       "@render/*": ["src/render/*"],
       "@ui/*": ["src/ui/*"],
       "@themes/*": ["src/themes/*"],
+      "@audio/*": ["src/audio/*"],
       "@worker/*": ["src/worker/*"],
       "@server/*": ["src/server/*"],
       "@client/*": ["src/client/*"]
