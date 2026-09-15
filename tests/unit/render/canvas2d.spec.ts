@@ -41,6 +41,23 @@ class FakeContext {
     }
   }
 
+  clearRect(x: number, y: number, w: number, h: number): void {
+    this.calls.push('clearRect');
+    const x0 = Math.max(0, Math.floor(x));
+    const x1 = Math.min(this.canvasWidth, Math.ceil(x + w));
+    const y0 = Math.max(0, Math.floor(y));
+    const y1 = Math.min(this.canvasHeight, Math.ceil(y + h));
+    for (let yy = y0; yy < y1; yy++) {
+      for (let xx = x0; xx < x1; xx++) {
+        const idx = (yy * this.canvasWidth + xx) * 4;
+        this.pixels[idx] = 0;
+        this.pixels[idx + 1] = 0;
+        this.pixels[idx + 2] = 0;
+        this.pixels[idx + 3] = 0;
+      }
+    }
+  }
+
   createImageData(w: number, h: number): { width: number; height: number; data: Uint8ClampedArray } {
     return { width: w, height: h, data: new Uint8ClampedArray(w * h * 4) };
   }

@@ -129,7 +129,12 @@ export function tokenEntries(tokens: TokenSet): Entry[] {
  * comment already calls the eventual `themes/types.ts` an extension of this shape, not a
  * replacement — this is that promised projection, one call, no state. */
 export function compileTheme(theme: ThemeModule): CompiledTheme {
-  return { id: theme.id, palette: theme.palette, background: theme.tokens.color.bg };
+  return {
+    id: theme.id,
+    palette: theme.palette,
+    background: theme.cellLayerBackground ?? theme.tokens.color.bg,
+    ...(theme.tileShape ? { tileShape: theme.tileShape } : {}),
+  };
 }
 
 // ---------------------------------------------------------------------------------------------

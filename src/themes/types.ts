@@ -12,7 +12,7 @@
  * theme needs — hooks stay undefined because there is nothing to draw beyond the grid.
  */
 import type { SoundPack } from '@audio/types';
-import type { CellPalette, Viewport } from '@render/types';
+import type { CellPalette, CellTileShape, Viewport } from '@render/types';
 import type { StateId } from '@shared/types';
 import type { Choreography, TrailSpec } from './motion/choreography';
 
@@ -212,6 +212,13 @@ export interface ThemeModule {
    * passes, so dropping post/effects/background changes nothing visible.
    */
   readonly quality?: ThemeQualitySpec;
+  /**
+   * Colour used to clear dead cells on L1. Defaults to `tokens.color.bg`.
+   * Transparent so a baked L0 texture (Sids-Place parchment) shows through.
+   */
+  readonly cellLayerBackground?: string;
+  /** World-coordinate tile wobble — same cell, same shape, after any pan. */
+  readonly tileShape?: (x: number, y: number) => CellTileShape;
 }
 
 /** Governor ceiling and whether quality 0 is visually identical to quality 3. */

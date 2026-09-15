@@ -1,0 +1,68 @@
+/*
+ * Sids-Place token values (P3-C-4), the static twin of `tokens.ts`. Not linked
+ * from `client/index.html` — `ThemeRegistry.activate()` writes these at runtime.
+ * Drift against `SIDS_PLACE_TOKENS` fails `sids-place-css.spec.ts`.
+ */
+
+:root {
+  color-scheme: light;
+
+  --gol-color-bg: #e4d2ae;
+  --gol-color-surface: rgba(90, 48, 18, 0.1);
+  --gol-color-elevated: rgba(90, 48, 18, 0.16);
+  --gol-color-border: rgba(90, 48, 18, 0.32);
+  --gol-color-border-strong: rgba(122, 62, 18, 0.62);
+  --gol-color-text: #2c1810;
+  --gol-color-muted: #5a3824;
+  --gol-color-accent: #7a3e12;
+  --gol-color-accent-strong: #9a5520;
+  --gol-color-accent-pressed: #5c2e0c;
+  --gol-color-on-accent: #f4e6c8;
+  --gol-color-scrim: rgba(40, 24, 12, 0.52);
+  --gol-color-danger: #8b1e1e;
+  --gol-color-danger-strong: #a83838;
+  --gol-color-success: #2f4a28;
+  --gol-color-success-strong: #3d5c32;
+
+  --gol-font-family: Palatino Linotype, Palatino, "Iowan Old Style", "Times New Roman", Georgia, serif;
+  --gol-font-family-mono: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --gol-font-size-xs: 11px;
+  --gol-font-size-sm: 13px;
+  --gol-font-size-md: 15px;
+  --gol-font-size-lg: 18px;
+  --gol-font-size-xl: 22px;
+  --gol-font-size-xxl: 28px;
+  --gol-font-weight-regular: 400;
+  --gol-font-weight-medium: 600;
+  --gol-font-weight-bold: 700;
+  --gol-letter-spacing-normal: 0;
+  --gol-letter-spacing-wide: 0.06em;
+
+  --gol-space-1: 4px;
+  --gol-space-2: 8px;
+  --gol-space-3: 12px;
+  --gol-space-4: 16px;
+  --gol-space-5: 24px;
+  --gol-space-6: 32px;
+  --gol-space-7: 48px;
+
+  --gol-radius-sm: 2px;
+  --gol-radius-md: 4px;
+  --gol-radius-lg: 8px;
+
+  --gol-shadow-sm: 0 2px 6px rgba(60, 32, 12, 0.18);
+  --gol-shadow-md: 0 8px 20px rgba(60, 32, 12, 0.22);
+  --gol-shadow-lg: 0 16px 40px rgba(40, 20, 8, 0.28);
+
+  --gol-duration-instant: 0ms;
+  --gol-duration-fast: 140ms;
+  --gol-duration-slow: 320ms;
+  --gol-duration-slower: 520ms;
+  --gol-ease-linear: linear;
+  --gol-ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --gol-ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --gol-ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
+  --gol-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --gol-blur-chrome: blur(2px);
+}

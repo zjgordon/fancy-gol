@@ -147,6 +147,16 @@ export function createFlatlinePassStack(
   ];
 }
 
+/** Parchment bake must stay under this at activation (P3-C-4 AC). */
+export const SIDS_PARCHMENT_BUDGET_MS = 40;
+
+/** Sids-Place's tuned stack — parchment is generated once here, never again. */
+export function createSidsPlacePassStack(): EffectPass[] {
+  const parchment = createParchmentTexturePass({ seed: 7, width: 256, height: 256 });
+  parchment.generate();
+  return [parchment];
+}
+
 /** Declared-cost sum of passes still running at this quality. Disposes the stack. */
 export function declaredCostAtQuality(theme: ThemeId, quality: EffectQuality): number {
   const active = new Set(stagesForQuality(quality));

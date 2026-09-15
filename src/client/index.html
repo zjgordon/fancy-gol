@@ -431,6 +431,28 @@
         content: ' ─┐';
         color: var(--gol-color-accent);
       }
+
+      html[data-theme='sids-place'] {
+        --gol-shadow-chrome: var(--gol-shadow-md);
+      }
+      html[data-theme='sids-place'] .chrome-panel,
+      html[data-theme='sids-place'] .panel-host:not(.panel-host-collapsed),
+      html[data-theme='sids-place'] .dialog-surface {
+        border: 2px solid var(--gol-color-border-strong);
+        box-shadow:
+          inset 0 0 0 1px var(--gol-color-border),
+          var(--gol-shadow-md);
+      }
+      html[data-theme='sids-place'] .panel-host-title {
+        font-family: var(--gol-font-family);
+        letter-spacing: var(--gol-letter-spacing-wide);
+        text-transform: none;
+      }
+      html[data-theme='sids-place'] .panel-toggle,
+      html[data-theme='sids-place'] .pattern-toggle {
+        border-radius: var(--gol-radius-sm) var(--gol-radius-sm) 0 0;
+        border-bottom: none;
+      }
       .controls button:disabled {
         background: var(--gol-color-elevated);
         color: var(--gol-color-muted);

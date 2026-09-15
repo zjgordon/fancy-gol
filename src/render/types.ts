@@ -44,6 +44,18 @@ export interface CompiledTheme {
   readonly id: string;
   readonly palette: CellPalette;
   readonly background: string;
+  /**
+   * Optional per-cell wobble (Sids-Place hand-inked tiles). Fractions of one cell,
+   * hashed from world coordinates so a pan cannot shimmer.
+   */
+  readonly tileShape?: (x: number, y: number) => CellTileShape;
+}
+
+/** Deterministic inset / offset for one world cell, as a fraction of `cellSize`. */
+export interface CellTileShape {
+  readonly inset: number;
+  readonly ox: number;
+  readonly oy: number;
 }
 
 /** One frame's worth of state for a renderer to draw. */

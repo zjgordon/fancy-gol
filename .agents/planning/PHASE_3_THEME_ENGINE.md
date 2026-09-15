@@ -317,15 +317,19 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 - [x] Phosphor ghosts fully clear on grid clear (no permanent burn-in bug). — `EffectPass.reset()` / `Compositor.resetEffects()`; client clear paths call it; ghosts stored as `Float32Array` so fade actually decays.
 - [x] `textRain` costs < 1.5 ms/frame at 1080p. — warm median at 1920×1080 is under `FLATLINE_TEXT_RAIN_BUDGET_MS` (1.5); declaredCost 1.2.
 
-#### - [~] P3-C-4 · Sids-Place — @cursor, started 2026-09-15
+#### - [x] P3-C-4 · Sids-Place — @cursor, started 2026-09-15, finished 2026-09-15
 **Depends on:** P3-A-5, P3-B-3 · **Files:** `src/themes/sids-place/*`
 **Brief:** *"CivI look. Gritty textures, parchment-style borders, and medieval-inspired palettes."*
 **Design direction** Procedural parchment background (generated once at activation — no image assets), ink-and-ochre palette, serif display type with a modern sans for data. Cells render as slightly irregular hand-drawn tiles whose "wear" comes from the age buffer; multi-state rulesets read as terrain (this theme is the natural home for the "Highlands/Liquid" rule from ADR-001, and the theme README should say so). Chrome: illuminated-manuscript borders drawn procedurally, tabs as vellum tabs. Motion: weighty and slightly slow, with a settle — things have mass. Sound: paper rustle, a wooden clunk on tool change, a low woodwind ambient drone.
+**Done when**
+- README written first: a campaign map unfolded too many times; names Highlands/Liquid. Tokens are ink-on-parchment (serif chrome, sans data, AA on cream). Palette: 16-step wet-ink → worn fibre, 24 states, CVD-spaced live hues with liquid/highland first. Motion: 140/320/520 ms with a settle. Sound: paper rustle, wooden clunk, woodwind pad.
+- Pass: `parchmentTexture` baked once at stack construction (256², seed 7). Dead cells are transparent so L0 fibre shows through. `tileShape` hashes world coordinates. Quality 0 is palette-only (`losslessAtQuality0: false`). Overlay AA against parchment and a busy fibre texel. Age buffer on when Sids-Place is active.
+- Proven in `tests/unit/themes/sids-place/{theme,palette,tokens,sids-place-css}.spec.ts`. Per-theme screenshots remain P3-D-2.
 **Additional acceptance criteria**
-- [ ] Parchment texture is fully procedural, seeded and deterministic; zero image assets.
-- [ ] Texture generation costs < 40 ms at activation and never recurs during a session.
-- [ ] Cell irregularity is deterministic per world coordinate (panning away and back shows the identical pattern — a "shimmering terrain" bug here would be very visible).
-- [ ] Contrast of ink-on-parchment meets AA (this palette is the highest-risk of the six — verify early).
+- [x] Parchment texture is fully procedural, seeded and deterministic; zero image assets. — `Mulberry32` bake; same seed hashes equal; theme sources have no `url(` / image files.
+- [x] Texture generation costs < 40 ms at activation and never recurs during a session. — `generate()` at stack construction; second call does not re-time; `SIDS_PARCHMENT_BUDGET_MS` (40).
+- [x] Cell irregularity is deterministic per world coordinate (panning away and back shows the identical pattern — a "shimmering terrain" bug here would be very visible). — `sidsTileShape(x,y)` from integer world coords; same cell, same inset/offset.
+- [x] Contrast of ink-on-parchment meets AA (this palette is the highest-risk of the six — verify early). — every chrome text pairing ≥ 4.5:1 including muted on elevated.
 
 #### - [ ] P3-C-5 · Void-Walker
 **Depends on:** P3-A-5, P3-B-3 · **Files:** `src/themes/void-walker/*`

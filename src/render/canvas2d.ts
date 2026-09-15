@@ -142,6 +142,30 @@ export class Canvas2DRenderer implements Renderer {
     this.touchedChunks.add(`${chunk.cx},${chunk.cy}`);
     this.collectRuns(chunk, this.vectorClipRect);
   };
+  private shapeCtx: Canvas2DContext | null = null;
+  private shapeTheme: CompiledTheme | null = null;
+  private shapeViewport: Viewport | null = null;
+  private shapeCalls = 0;
+  private readonly paintShapedCell = (x: number, y: number, state: StateId, age: number): void => {
+    const theme = this.shapeTheme;
+    const ctx = this.shapeCtx;
+    const viewport = this.shapeViewport;
+    if (!theme || !ctx || !viewport || !theme.tileShape) return;
+    const shape = theme.tileShape(x, y);
+    const css = theme.palette(state, age);
+    ctx.fillStyle = css;
+    const size = viewport.cellSize;
+    const inset = shape.inset * size;
+    const px = (x + shape.ox - viewport.originX) * size + inset;
+    const py = (y + shape.oy - viewport.originY) * size + inset;
+    const side = Math.max(0.5, size - inset * 2);
+    ctx.fillRect(px, py, side, side);
+    this.shapeCalls += 1;
+  };
+  private readonly visitChunkForShaped = (chunk: ChunkView): void => {
+    this.touchedChunks.add(`${chunk.cx},${chunk.cy}`);
+    forEachCellInClip(chunk, this.vectorClipRect, this.paintShapedCell);
+  };
   // Reused across tile-path frames of the same CSS size. Zooming out to `cellSize` < 4 used to
   // `createImageData(1920, 1080)` every frame (~8 MB) and blow the P1-H-3 zoom min-fps budget
   // on allocation alone; grow-only reuse matches the run-pool discipline above.
@@ -328,13 +352,32 @@ export class Canvas2DRenderer implements Renderer {
     viewport: Viewport,
   ): number {
     let calls = 0;
-    ctx.fillStyle = theme.background;
-    ctx.fillRect(pixelRect.x, pixelRect.y, pixelRect.width, pixelRect.height);
+    const bg = this.resolveColor(theme.background);
+    if (bg[3] === 0) {
+      ctx.clearRect(pixelRect.x, pixelRect.y, pixelRect.width, pixelRect.height);
+    } else {
+      ctx.fillStyle = theme.background;
+      ctx.fillRect(pixelRect.x, pixelRect.y, pixelRect.width, pixelRect.height);
+    }
     calls++;
 
     const iterRect = this.integerWorldBounds(worldRect);
-    this.runPoolCount = 0;
     this.vectorClipRect = iterRect;
+
+    if (theme.tileShape) {
+      this.shapeCtx = ctx;
+      this.shapeTheme = theme;
+      this.shapeViewport = viewport;
+      this.shapeCalls = 0;
+      cells.forEachChunkInRect(iterRect, this.visitChunkForShaped);
+      calls += this.shapeCalls;
+      this.shapeCtx = null;
+      this.shapeTheme = null;
+      this.shapeViewport = null;
+      return calls;
+    }
+
+    this.runPoolCount = 0;
     cells.forEachChunkInRect(iterRect, this.visitChunkForVector);
 
     for (let state = 0; state < 256; state++) {
