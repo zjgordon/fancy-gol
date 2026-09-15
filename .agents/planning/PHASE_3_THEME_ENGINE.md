@@ -165,7 +165,7 @@ src/audio/
 - [x] Ages are exact after 10,000 generations (property test against a reference computation).
 - [x] Disabling the age buffer restores the exact Phase 2 benchmark numbers.
 
-#### - [ ] P3-A-3 · Effect pass framework & registry
+#### - [~] P3-A-3 · Effect pass framework & registry — @cursor, started 2026-09-15
 **Depends on:** P3-A-1 · **Files:** `src/render/effects/{pass,registry,ctx}.ts`
 **Acceptance criteria**
 - [ ] A no-op pass adds < 0.1 ms.
