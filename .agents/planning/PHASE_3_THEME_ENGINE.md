@@ -191,15 +191,20 @@ src/audio/
 - [x] The indicator explains *which* passes were dropped, in plain language.
 - [x] Quality 0 is proven to hit 60 fps on a throttled 4× CPU-slowdown profile for every theme. — synthetic Default-shaped stack until Workstream C themes exist; re-asserted per theme in C-* / P3-E-1.
 
-#### - [~] P3-A-5 · Effect library — @cursor, started 2026-09-15
+#### - [x] P3-A-5 · Effect library — @cursor, completed 2026-09-15
 **Depends on:** P3-A-3 · **Files:** `src/render/effects/*.ts`
 **Ship these reusable passes** (each parameterised, each used by ≥ 1 theme):
 `bloom` (downsample-blur-add), `scanlines`, `chromaticAberration`, `vignette`, `filmGrain`, `crtCurvature`, `phosphorDecay`, `starfield` (parallax, seeded), `parchmentTexture` (procedural, generated once), `gridGlow`, `birthFlash`, `deathParticles`, `trailFade`, `hueShiftByAge`, `sunGradient` (Synthwave horizon), `textRain` (Flatline).
 **Implementation notes** Blur via separable box-blur on a half-resolution buffer — a true Gaussian is not worth 4× the cost at this scale. Every procedural texture is generated once at theme activation into an offscreen canvas and reused. Particle systems use a preallocated pool with a hard cap and no per-particle allocation.
+**Done when**
+- Sixteen factories in `post-passes` / `background-passes` / `effects-passes`, catalogued by `EFFECT_LIBRARY` with theme tags (Workstream C wires them). Software canvas double keeps pixel hashes deterministic under jsdom (No Bloat — no native canvas).
+- Separable box-blur bloom; parchment bakes once (`generationMs` &lt; 40 ms); death/birth pools are typed-array capped with `bufferAllocations === 1` in steady state.
+- Each `TimedPass` declares a 1080p cost and EWMA-measures actual ms. Heaviest theme stack declared sum ≤ `1000/55` ms.
+- Proven in `tests/unit/render/effect-library.spec.ts`.
 **Acceptance criteria**
-- [ ] Every pass has a unit test asserting deterministic output from a seeded input (via the recorder / pixel hash).
-- [ ] Every pass declares and honours a measured cost; the sum for the most expensive theme fits the frame budget at quality 3 on a mid-range machine.
-- [ ] Particle systems are allocation-free in steady state and hard-capped.
+- [x] Every pass has a unit test asserting deterministic output from a seeded input (via the recorder / pixel hash).
+- [x] Every pass declares and honours a measured cost; the sum for the most expensive theme fits the frame budget at quality 3 on a mid-range machine.
+- [x] Particle systems are allocation-free in steady state and hard-capped.
 
 #### - [ ] P3-A-6 · Motion system
 **Depends on:** Phase 1 tokens · **Files:** `src/themes/motion/{easing,choreography,animate}.ts`
