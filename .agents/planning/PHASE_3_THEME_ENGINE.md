@@ -317,7 +317,7 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 - [x] Phosphor ghosts fully clear on grid clear (no permanent burn-in bug). — `EffectPass.reset()` / `Compositor.resetEffects()`; client clear paths call it; ghosts stored as `Float32Array` so fade actually decays.
 - [x] `textRain` costs < 1.5 ms/frame at 1080p. — warm median at 1920×1080 is under `FLATLINE_TEXT_RAIN_BUDGET_MS` (1.5); declaredCost 1.2.
 
-#### - [ ] P3-C-4 · Sids-Place
+#### - [~] P3-C-4 · Sids-Place — @cursor, started 2026-09-15
 **Depends on:** P3-A-5, P3-B-3 · **Files:** `src/themes/sids-place/*`
 **Brief:** *"CivI look. Gritty textures, parchment-style borders, and medieval-inspired palettes."*
 **Design direction** Procedural parchment background (generated once at activation — no image assets), ink-and-ochre palette, serif display type with a modern sans for data. Cells render as slightly irregular hand-drawn tiles whose "wear" comes from the age buffer; multi-state rulesets read as terrain (this theme is the natural home for the "Highlands/Liquid" rule from ADR-001, and the theme README should say so). Chrome: illuminated-manuscript borders drawn procedurally, tabs as vellum tabs. Motion: weighty and slightly slow, with a settle — things have mass. Sound: paper rustle, a wooden clunk on tool change, a low woodwind ambient drone.
