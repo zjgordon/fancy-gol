@@ -248,7 +248,7 @@ src/audio/
 - [x] 24-voice cap enforced with oldest-first stealing; a 1,000-events-per-second burst never exceeds it.
 - [x] Each voice has a unit test asserting the constructed node graph (no audio playback needed).
 
-#### - [ ] P3-B-3 · Event mapping & rate aggregation
+#### - [~] P3-B-3 · Event mapping & rate aggregation — @cursor, started 2026-09-15
 **Depends on:** P3-B-2 · **Files:** `src/audio/events.ts`
 **Intent:** The difference between "delightful" and "please make it stop."
 **Implementation notes** Map simulation and UI events to voices through an aggregator: within each 50 ms window, collapse N births into one voice whose pitch/amplitude encode the count and whose pan encodes the centroid's screen position. Above a rate threshold, cross-fade from discrete events into a continuous texture driven by the birth rate. UI events (tool select, panel open, error) always play discretely.
