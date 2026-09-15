@@ -345,7 +345,7 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 - [x] Death particles are pooled, hard-capped, and allocation-free in steady state. — fixed `Float32Array` pools; `bufferAllocations === 1`; `reset()` clears life without reallocating.
 - [x] The synthesised reverb impulse is generated at runtime — verify zero audio assets in the bundle. — `synthesizeReverbImpulse` + `createConvolver`; theme and `src/audio` ship no wav/mp3/ogg.
 
-#### - [ ] P3-C-6 · Synthwave
+#### - [~] P3-C-6 · Synthwave — @cursor, started 2026-09-15
 **Depends on:** P3-A-5, P3-B-3 · **Files:** `src/themes/synthwave/*`
 **Brief:** *"1980s aesthetic. Neon pinks, cyans, and a constant feeling of 'the future as imagined in 1984.'"*
 **Design direction** Magenta-to-cyan gradient sky with a `sunGradient` horizon and a perspective grid receding to a vanishing point behind the simulation (drawn in L0, parallaxing with the camera). Cells are neon with hard chromatic edges; the age ramp shifts hue along the magenta→cyan axis so a running simulation looks like a light show that still encodes real data. Passes: `sunGradient`, `gridGlow`, `bloom`, `chromaticAberration`, `scanlines` (very subtle). Chrome: chrome-gradient text, italic display type, pink glow on focus. Motion: snappy with a slight elastic overshoot. Sound: analog-style saw plucks with detune, a gated-reverb hit on major events, an arpeggiated ambient bed whose tempo tracks the simulation speed — a genuinely delightful detail worth building properly.
