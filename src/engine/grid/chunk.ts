@@ -1,6 +1,10 @@
 /**
  * `Chunk` — one 32x32 page of the grid (ADR-010). Owns its own summary counters so the grid,
  * the stats collector and the Phase 5 density LOD never recount by scanning.
+ *
+ * Optional per-cell age (P3-A-2): a lazily allocated `Uint16Array(1024)` of ticks-since-change,
+ * saturating at 65535. Only chunks that have ever been non-empty under age tracking carry one;
+ * themes that do not need ages leave tracking off and never allocate.
  */
 import { DEAD, type StateId } from '../types.js';
 import { CHUNK_AREA, CHUNK_SIZE } from './coords.js';
@@ -14,6 +18,9 @@ export const BORDER_NE = 1 << 4;
 export const BORDER_NW = 1 << 5;
 export const BORDER_SE = 1 << 6;
 export const BORDER_SW = 1 << 7;
+
+/** Saturating ceiling for per-cell age (Uint16). */
+export const AGE_SATURATION = 65535;
 
 const LAST = CHUNK_SIZE - 1;
 
@@ -29,6 +36,13 @@ export class Chunk {
   lastTick = 0;
   /** See the `BORDER_*` flags above. */
   borderMask = 0;
+  /**
+   * Ticks since each cell last changed. `null` until {@link ensureAge} — never allocated for
+   * chunks that stay empty under age tracking. Reset to 0 on every state change (`write`).
+   */
+  age: Uint16Array | null = null;
+  /** Simulation tick at which this chunk's ages were last updated (avoids a second full scan). */
+  ageTick = -1;
 
   private constructor() {
     this.reset();
@@ -43,6 +57,25 @@ export class Chunk {
   static release(chunk: Chunk): void {
     chunk.reset();
     pool.push(chunk);
+  }
+
+  /**
+   * Lazily allocate the age buffer. Idempotent. Call only when age tracking is enabled and this
+   * chunk has (or is about to have) live cells.
+   */
+  ensureAge(): Uint16Array {
+    if (!this.age) this.age = new Uint16Array(CHUNK_AREA);
+    return this.age;
+  }
+
+  /** Saturating +1 for every cell — used for allocated chunks that were not in this tick's work list. */
+  bumpAllAges(): void {
+    const ages = this.age;
+    if (!ages) return;
+    for (let i = 0; i < CHUNK_AREA; i++) {
+      const a = ages[i]!;
+      if (a < AGE_SATURATION) ages[i] = a + 1;
+    }
   }
 
   /** Write one cell, keeping `population`, `perState` and `borderMask` correct incrementally. */
@@ -71,6 +104,7 @@ export class Chunk {
 
     this.data[localIndex] = state;
     this.dirty = true;
+    if (this.age) this.age[localIndex] = 0;
     return true;
   }
 
@@ -94,6 +128,7 @@ export class Chunk {
   /**
    * Replace the whole page from a snapshot slice. Rebuilds population, per-state
    * counts and the border mask in one pass — restore must not walk cells through `set`.
+   * Ages (if present) are zeroed: a restored page has no trustworthy history.
    */
   load(bytes: Uint8Array): void {
     if (bytes.length !== CHUNK_AREA) {
@@ -108,6 +143,7 @@ export class Chunk {
       if (s !== DEAD) this.population += 1;
     }
     this.dirty = true;
+    if (this.age) this.age.fill(0);
     this.rebuildBorderMask();
   }
 
@@ -124,6 +160,10 @@ export class Chunk {
     this.dirty = false;
     this.lastTick = 0;
     this.borderMask = 0;
+    // Drop the age buffer on release so a pooled chunk that never goes live again
+    // under age tracking does not keep a 2 KB array forever.
+    this.age = null;
+    this.ageTick = -1;
   }
 
   private refreshBorder(lx: number, ly: number): void {

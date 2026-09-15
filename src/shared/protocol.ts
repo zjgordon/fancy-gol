@@ -33,10 +33,15 @@ export interface Viewport {
  * One `frame` event's grid payload: every touched chunk's packed key and its 1024-byte page,
  * concatenated in `keys` order (the same shape as `Snapshot`, scoped to the current viewport
  * instead of the whole world). Every array here is transferred, never copied.
+ *
+ * `ages` (P3-A-2) is optional: when the worker is tracking per-cell ticks-since-change, it is a
+ * concatenated `Uint16Array` in the same key order (1024 ages per chunk). Themes that do not
+ * need age ramps leave tracking off and never receive it.
  */
 export interface TransferredChunks {
   readonly keys: Int32Array;
   readonly data: Uint8Array;
+  readonly ages?: Uint16Array;
 }
 
 // main → worker
@@ -86,6 +91,12 @@ export type Command =
   | { readonly id: number; readonly cmd: 'snapshot' }
   | { readonly id: number; readonly cmd: 'restore'; readonly snapshot: Snapshot } // added P0-G-3 (ADR-006 amendment): snapshot's write counterpart, for recovering a killed-and-restarted worker
   | { readonly id: number; readonly cmd: 'setViewport'; readonly viewport: Viewport } // worker sends only visible chunks
+  | {
+      readonly id: number;
+      readonly cmd: 'setAgeBuffer';
+      /** When true, the worker maintains and transfers per-cell ages with each frame. */
+      readonly enabled: boolean;
+    }
   | { readonly id: number; readonly cmd: 'dispose' }
   | {
       readonly id: number;
@@ -265,6 +276,7 @@ const COMMAND_KINDS = [
   'snapshot',
   'restore',
   'setViewport',
+  'setAgeBuffer',
   'dispose',
   'statsWindow',
 ] as const;
@@ -376,6 +388,12 @@ export function parseCommand(raw: unknown): ParseResult<Command> {
       }
       return ok({ id, cmd, viewport: raw['viewport'] });
     }
+    case 'setAgeBuffer': {
+      if (typeof raw['enabled'] !== 'boolean') {
+        return fail('enabled', 'setAgeBuffer.enabled must be a boolean');
+      }
+      return ok({ id, cmd, enabled: raw['enabled'] });
+    }
     case 'dispose':
       return ok({ id, cmd });
     case 'statsWindow': {
@@ -443,6 +461,9 @@ export function parseEvent(raw: unknown): ParseResult<Event> {
         !(chunks['data'] instanceof Uint8Array)
       ) {
         return fail('chunks', 'frame.chunks must be a TransferredChunks object');
+      }
+      if (chunks['ages'] !== undefined && !(chunks['ages'] instanceof Uint16Array)) {
+        return fail('chunks.ages', 'frame.chunks.ages must be a Uint16Array when present');
       }
       if (!Array.isArray(raw['dirty']))
         return fail('dirty', 'frame.dirty must be an array of Rect');

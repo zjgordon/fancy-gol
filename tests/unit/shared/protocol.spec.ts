@@ -33,6 +33,7 @@ function kindOf(cmd: Command['cmd']): Command['cmd'] {
     case 'snapshot':
     case 'restore':
     case 'setViewport':
+    case 'setAgeBuffer':
     case 'dispose':
     case 'statsWindow':
       return cmd;
@@ -55,6 +56,7 @@ const ALL_KINDS: readonly Command['cmd'][] = [
   'snapshot',
   'restore',
   'setViewport',
+  'setAgeBuffer',
   'dispose',
   'statsWindow',
 ];
@@ -116,6 +118,7 @@ const VALID_COMMANDS: Record<Command['cmd'], Record<string, unknown>> = {
     cmd: 'setViewport',
     viewport: { rect: { x: 0, y: 0, width: 10, height: 10 }, scale: 1 },
   },
+  setAgeBuffer: { id: 16, cmd: 'setAgeBuffer', enabled: true },
   dispose: { id: 13, cmd: 'dispose' },
   statsWindow: { id: 15, cmd: 'statsWindow', fromTick: 0, toTick: 100, maxPoints: 800 },
 };

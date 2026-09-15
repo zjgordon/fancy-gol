@@ -8,6 +8,7 @@ import type { BenchCase } from './types.ts';
 
 const SOUP_512_STEPS = 60;
 const SOUP_4096_STEPS = 10;
+const AGE_OVERHEAD_STEPS = 40;
 
 let soup512: Simulation | undefined;
 let soup4096: Simulation | undefined;
@@ -26,6 +27,8 @@ let zobristLarge: Simulation | undefined;
 let zobristHasherSmall: ZobristHasher | undefined;
 let zobristHasherLarge: ZobristHasher | undefined;
 let zobristCs: ChangeSet | undefined;
+let ageBaseline: Simulation | undefined;
+let ageWith: Simulation | undefined;
 
 export const cases: BenchCase[] = [
   {
@@ -329,6 +332,49 @@ export const cases: BenchCase[] = [
       zobristHasherSmall = undefined;
       zobristHasherLarge = undefined;
       zobristCs = undefined;
+    },
+  },
+  {
+    id: 'age-buffer-overhead',
+    name: 'age buffer step throughput vs Phase 2 path (512² soup, same-process ratio)',
+    unit: 'ratio',
+    budget: 0.92,
+    higherIsBetter: true,
+    class: 'wall-clock',
+    selfCalibrated: true,
+    warmup: 2,
+    setup() {
+      ageBaseline = soup(512, 512, 0.5);
+      ageWith = new Simulation({
+        ruleset: toroidalConway(),
+        width: 512,
+        height: 512,
+        seed: 0x51e1d,
+        ageBuffer: true,
+      });
+      ageWith.seedRandom(0.5, 0x51e1d);
+      for (let i = 0; i < 40; i++) {
+        ageBaseline.step();
+        ageWith.step();
+      }
+    },
+    run() {
+      const base = ageBaseline!;
+      const withAge = ageWith!;
+      const t0 = performance.now();
+      for (let i = 0; i < AGE_OVERHEAD_STEPS; i++) base.step();
+      const baseMs = performance.now() - t0;
+      const t1 = performance.now();
+      for (let i = 0; i < AGE_OVERHEAD_STEPS; i++) withAge.step();
+      const ageMs = performance.now() - t1;
+      // Throughput ratio: age-on / age-off. ≤8% regression ⇒ ratio ≥ 0.92.
+      const baseRate = AGE_OVERHEAD_STEPS / Math.max(baseMs, 1e-9);
+      const ageRate = AGE_OVERHEAD_STEPS / Math.max(ageMs, 1e-9);
+      return ageRate / baseRate;
+    },
+    teardown() {
+      ageBaseline = undefined;
+      ageWith = undefined;
     },
   },
 ];

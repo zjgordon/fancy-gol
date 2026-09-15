@@ -109,7 +109,7 @@ function copyStats(s: Readonly<TickStats>): TickStats {
   };
 }
 
-/** Copies every dirty chunk's live page into one transferable payload. Missing (reclaimed-empty) chunks stay all-`DEAD`, which is correct — a reclaimed chunk has no live cells left. */
+/** Copies every dirty chunk's live page into one transferable payload. Missing (reclaimed-empty) chunks stay all-`DEAD`, which is correct — a reclaimed chunk has no live cells left. Optional ages (P3-A-2) ride along only when the simulation is tracking them. */
 function buildTransferredChunks(sim: Simulation, dirtyChunks: Int32Array): TransferredChunks {
   const keys = Int32Array.from(dirtyChunks);
   const data = new Uint8Array(keys.length * CHUNK_AREA);
@@ -121,7 +121,8 @@ function buildTransferredChunks(sim: Simulation, dirtyChunks: Int32Array): Trans
     const offset = i * CHUNK_AREA;
     for (let j = 0; j < CHUNK_AREA; j++) data[offset + j] = chunk.at(j);
   }
-  return { keys, data };
+  const ages = sim.collectAges(keys);
+  return ages ? { keys, data, ages } : { keys, data };
 }
 
 function buildDirtyRects(dirtyChunks: Int32Array): Rect[] {
@@ -172,10 +173,9 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
   function postFrame(active: Simulation, dirtyChunks: Int32Array): void {
     const chunks = buildTransferredChunks(active, dirtyChunks);
     const dirty = buildDirtyRects(dirtyChunks);
-    opts.post(
-      { type: 'frame', tick: active.tick, chunks, dirty, stats: copyStats(active.stats) },
-      [chunks.keys.buffer, chunks.data.buffer],
-    );
+    const transfer: Transferable[] = [chunks.keys.buffer, chunks.data.buffer];
+    if (chunks.ages) transfer.push(chunks.ages.buffer);
+    opts.post({ type: 'frame', tick: active.tick, chunks, dirty, stats: copyStats(active.stats) }, transfer);
   }
 
   function postFrameFromChangeSet(active: Simulation, cs: ChangeSet): void {
@@ -213,13 +213,15 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
   /** For mutations with no incremental `ChangeSet` (`clear`, `seedRandom`, `seek`, …): a full-world frame via `snapshot()`, honestly labelled as "everything changed" rather than approximated as a dirty-rect list. */
   function postFullFrame(active: Simulation): void {
     const snap = active.snapshot();
-    const chunks: TransferredChunks = { keys: snap.chunkKeys, data: snap.chunkData };
+    const ages = active.collectAges(snap.chunkKeys);
+    const chunks: TransferredChunks = ages
+      ? { keys: snap.chunkKeys, data: snap.chunkData, ages }
+      : { keys: snap.chunkKeys, data: snap.chunkData };
     const bounds = active.bounds();
     const dirty = bounds.width > 0 && bounds.height > 0 ? [bounds] : [];
-    opts.post(
-      { type: 'frame', tick: active.tick, chunks, dirty, stats: copyStats(active.stats) },
-      [chunks.keys.buffer, chunks.data.buffer],
-    );
+    const transfer: Transferable[] = [chunks.keys.buffer, chunks.data.buffer];
+    if (chunks.ages) transfer.push(chunks.ages.buffer);
+    opts.post({ type: 'frame', tick: active.tick, chunks, dirty, stats: copyStats(active.stats) }, transfer);
   }
 
   function dispatch(cmd: Command): void {
@@ -336,6 +338,11 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
         // density LOD (Phase 5) to filter frames for. Accepted and acknowledged now so the
         // full command set round-trips; a future phase that needs it stores it here.
         requireSim();
+        opts.post({ id: cmd.id, type: 'ok' });
+        return;
+      }
+      case 'setAgeBuffer': {
+        requireSim().setAgeBuffer(cmd.enabled);
         opts.post({ id: cmd.id, type: 'ok' });
         return;
       }

@@ -59,6 +59,11 @@ export interface SimulationOptions {
   readonly history?: false | true | HistoryJournalOptions;
   /** Injected clock for `TickStats.stepMicros`. Defaults to a zero-delta stub. */
   readonly clock?: Clock;
+  /**
+   * Per-cell ticks-since-change (P3-A-2). Default **off** so Phase 2 step benches stay
+   * byte-identical in cost; themes that need age ramps enable it explicitly.
+   */
+  readonly ageBuffer?: boolean;
 }
 
 const ZERO_CLOCK: Clock = { now: () => 0 };
@@ -113,6 +118,7 @@ export class Simulation {
   private neighbourScratch: Uint8Array;
   private readonly halo = new Uint8Array(34 * 34);
   private readonly touchedChunks = new Set<number>();
+  private ageBufferEnabled: boolean;
 
   constructor(opts: SimulationOptions) {
     this._ruleset = opts.ruleset;
@@ -133,6 +139,7 @@ export class Simulation {
     this.clock = opts.clock ?? ZERO_CLOCK;
     this.rng = new Mulberry32(opts.seed ?? DEFAULT_SEED);
     this.neighbourScratch = new Uint8Array(this.compiled.neighbourCount);
+    this.ageBufferEnabled = opts.ageBuffer === true;
     this.journal =
       opts.history === true
         ? new HistoryJournal()
@@ -140,6 +147,42 @@ export class Simulation {
           ? new HistoryJournal(opts.history)
           : null;
     this.journal?.resetTo(this.snapshot(), 0);
+  }
+
+  /** Whether per-cell age tracking is active (P3-A-2). Off by default. */
+  get ageBuffer(): boolean {
+    return this.ageBufferEnabled;
+  }
+
+  /**
+   * Enable or disable age tracking. Enabling does not backfill history — ages start at 0 for
+   * cells touched from this point. Disabling drops every chunk's age buffer so the hot path
+   * matches the Phase 2 step cost again.
+   */
+  setAgeBuffer(enabled: boolean): void {
+    if (enabled === this.ageBufferEnabled) return;
+    this.ageBufferEnabled = enabled;
+    if (!enabled) {
+      this.grid.forEachRawChunk((_key, chunk) => {
+        chunk.age = null;
+        chunk.ageTick = -1;
+      });
+    }
+  }
+
+  /**
+   * Age of cell `(x, y)`, or `0` when tracking is off / the chunk has no age buffer.
+   * Saturates at 65535.
+   */
+  ageAt(x: number, y: number): number {
+    if (!this.ageBufferEnabled) return 0;
+    const norm = normalize(x, y, this._ruleset.boundary, this.width, this.height);
+    if (norm === null) return 0;
+    const [nx, ny] = norm;
+    const [cx, cy] = worldToChunk(nx, ny);
+    const chunk = this.grid.rawChunk(packChunk(cx, cy));
+    if (!chunk?.age) return 0;
+    return chunk.age[localIndex(nx, ny)] ?? 0;
   }
 
   get ruleset(): RuleSet {
@@ -159,6 +202,16 @@ export class Simulation {
   }
 
   set(x: number, y: number, state: StateId): void {
+    if (this.ageBufferEnabled && state !== DEAD) {
+      const norm = normalize(x, y, this._ruleset.boundary, this.width, this.height);
+      if (norm) {
+        const [nx, ny] = norm;
+        const [cx, cy] = worldToChunk(nx, ny);
+        const key = packChunk(cx, cy);
+        const chunk = this.grid.ensureChunk(key);
+        chunk.ensureAge();
+      }
+    }
     this.grid.set(x, y, state);
   }
 
@@ -226,6 +279,7 @@ export class Simulation {
         if (state === DEAD) continue;
         chunk = this.grid.ensureChunk(key);
       }
+      if (this.ageBufferEnabled) chunk.ensureAge();
       chunk.write(idx, state);
       if (prev === DEAD) this.statsState.births += 1;
       else if (state === DEAD) this.statsState.deaths += 1;
@@ -282,6 +336,7 @@ export class Simulation {
         const key = packChunk(cx, cy);
         if (key !== currentKey) {
           chunk = this.grid.ensureChunk(key);
+          if (this.ageBufferEnabled) chunk.ensureAge();
           currentKey = key;
           this.touchedChunks.add(key);
         }
@@ -363,6 +418,15 @@ export class Simulation {
 
     for (let i = 0; i < this.workCount; i++) {
       this.applyChunk(this.workList[i]!, this.backs[i]!);
+    }
+
+    if (this.ageBufferEnabled) {
+      const tick = this._tick;
+      this.grid.forEachRawChunk((_key, chunk) => {
+        if (!chunk.age || chunk.ageTick === tick) return;
+        chunk.bumpAllAges();
+        chunk.ageTick = tick;
+      });
     }
 
     this._tick += 1;
@@ -489,6 +553,7 @@ export class Simulation {
       const key = s.chunkKeys[i]!;
       const chunk = this.grid.ensureChunk(key);
       chunk.load(s.chunkData.subarray(i * CHUNK_AREA, (i + 1) * CHUNK_AREA));
+      if (this.ageBufferEnabled && chunk.population > 0) chunk.ensureAge();
       this.grid.finishWrite(key, true);
     }
     this.refreshStats(0);
@@ -523,6 +588,7 @@ export class Simulation {
           );
         }
         if (next === prev) continue;
+        if (this.ageBufferEnabled) chunk.ensureAge();
         chunk.set(i, next);
         any = true;
       }
@@ -752,6 +818,16 @@ export class Simulation {
     const fits = chunkFitsWorld(ox, oy, this.ruleset.boundary, this.width, this.height);
     let any = false;
     let borderChanged = false;
+    const ageOn = this.ageBufferEnabled;
+    // Prefer one sequential bump over the whole page, then zero only changed cells —
+    // keeps the change loop branch-predictable and the age walk cache-friendly (P3-A-2 ≤8%).
+    let ages: Uint16Array | null = null;
+    if (ageOn && chunk && (chunk.population > 0 || chunk.age)) {
+      ages = chunk.ensureAge();
+      chunk.bumpAllAges();
+    }
+    const ageTick = this._tick;
+
     for (let i = 0; i < 1024; i++) {
       const lx = i & 31;
       const ly = i >> 5;
@@ -760,6 +836,7 @@ export class Simulation {
       if (!fits && !isCanonicalCell(x, y, this.ruleset.boundary, this.width, this.height)) {
         const leftover = chunk?.data[i] ?? DEAD;
         if (leftover !== DEAD && chunk) {
+          if (ageOn) ages = chunk.ensureAge();
           chunk.set(i, DEAD);
           any = true;
         }
@@ -772,16 +849,43 @@ export class Simulation {
         if (next === DEAD) continue;
         chunk = this.grid.ensureChunk(key);
       }
+      if (ageOn) {
+        if (!ages) {
+          ages = chunk.ensureAge();
+          // New buffer this tick: bump the rest of the page so peers match "one generation old"
+          // except the cell we are about to reset — cheaper than reconstructing history.
+          chunk.bumpAllAges();
+        }
+      }
       chunk.set(i, next);
       this.recordTransition(prev, next);
       this.pushChange(packCell(x, y), prev, next);
       any = true;
       if (lx === 0 || ly === 0 || lx === 31 || ly === 31) borderChanged = true;
     }
+    if (chunk && ageOn && (ages || chunk.population > 0)) {
+      if (!ages && chunk.population > 0) chunk.ensureAge();
+      chunk.ageTick = ageTick;
+    }
     if (any && chunk) {
       this.grid.finishWrite(key, borderChanged);
       this.pushDirty(key);
     }
+  }
+
+  /**
+   * Concatenated per-chunk age pages for `dirtyChunks` (same order as keys), or `undefined`
+   * when age tracking is off. Missing/reclaimed chunks contribute a zero page.
+   */
+  collectAges(dirtyChunks: Int32Array): Uint16Array | undefined {
+    if (!this.ageBufferEnabled) return undefined;
+    const ages = new Uint16Array(dirtyChunks.length * CHUNK_AREA);
+    for (let i = 0; i < dirtyChunks.length; i++) {
+      const chunk = this.grid.rawChunk(dirtyChunks[i]!);
+      if (!chunk?.age) continue;
+      ages.set(chunk.age, i * CHUNK_AREA);
+    }
+    return ages;
   }
 
   private recordTransition(prev: StateId, next: StateId): void {

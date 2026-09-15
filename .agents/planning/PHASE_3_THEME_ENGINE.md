@@ -154,13 +154,16 @@ src/audio/
 - [x] Dirty-rect draw-call counts from P0-H-3's recorder are unchanged for the cell layer.
 - [x] Offscreen canvases are reallocated only on resize, never per frame (allocation assertion).
 
-#### - [~] P3-A-2 · Age buffer — @cursor, started 2026-09-14
+#### - [x] P3-A-2 · Age buffer — @cursor, started 2026-09-14, finished 2026-09-14
 **Depends on:** P3-A-1 · **Files:** `src/engine/grid/chunk.ts`, `src/worker/handler.ts`, `src/render/types.ts`
 **Implementation notes** Per-chunk `Uint16Array(1024)`, incremented for unchanged cells and reset on change — do this inside the existing step loop, not as a second pass. Saturate rather than wrap. Allocate lazily: only chunks that have ever been non-empty carry one, and it is optional (themes that do not use it can request frames without it).
+- `Chunk.age` is lazy via `ensureAge()`; `write`/`set` zero a cell's age on change; `bumpAllAges` saturates at 65535. Off by default on `Simulation` so Phase 2 step benches stay unchanged; `setAgeBuffer(true)` / `ageBuffer: true` opts in.
+- Work-list chunks bump ages once then zero changed cells inside `applyChunk`; idle allocated chunks with an age page get a bulk bump the same tick. Worker transfers optional `TransferredChunks.ages` after `setAgeBuffer`.
+- Bench `age-buffer-overhead` (self-calibrated ratio, budget ≥ 0.92) gates the ≤8% step regression; property test covers 10,000 generations against a last-change-tick reference.
 **Acceptance criteria**
-- [ ] Step throughput regression ≤ 8% with the age buffer enabled (bench-gated).
-- [ ] Ages are exact after 10,000 generations (property test against a reference computation).
-- [ ] Disabling the age buffer restores the exact Phase 2 benchmark numbers.
+- [x] Step throughput regression ≤ 8% with the age buffer enabled (bench-gated).
+- [x] Ages are exact after 10,000 generations (property test against a reference computation).
+- [x] Disabling the age buffer restores the exact Phase 2 benchmark numbers.
 
 #### - [ ] P3-A-3 · Effect pass framework & registry
 **Depends on:** P3-A-1 · **Files:** `src/render/effects/{pass,registry,ctx}.ts`

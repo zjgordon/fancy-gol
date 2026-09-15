@@ -53,7 +53,12 @@ export interface RenderFrame {
   /** Regions that changed since the last draw, in world (cell) coordinates. `null` means "repaint everything" — a full redraw is honestly cheaper than describing every change. */
   readonly dirty: readonly Rect[] | null;
   readonly tick: number;
-  /** Ticks-since-change per cell, for decay/glow effects. Absent until a theme asks for it. */
+  /**
+   * Ticks-since-change per cell (P3-A-2), for decay/glow ramps. Absent when the theme has not
+   * asked for age tracking (`setAgeBuffer`) — Default and any low-cost path leave it off so the
+   * Phase 2 step cost is unchanged. When present, length and indexing match the transferred
+   * dirty-chunk concatenation (see `TransferredChunks.ages`), not a full-world flat buffer.
+   */
   readonly ageBuffer?: Uint16Array;
 }
 
