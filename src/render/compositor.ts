@@ -1,14 +1,16 @@
 /**
- * P3-A-1 — layered compositor (PHASE_3 §2.1, ADR-005/008).
+ * P3-A-1 / P3-A-3 — layered compositor (PHASE_3 §2.1, ADR-005/008).
  *
  * Owns the L0–L3 offscreen stack, drives Phase 0's `Canvas2DRenderer` into L1 without forcing
- * full cell-layer repaints, and blits layers onto the display canvas in one pass. With effects
- * disabled the composite is two `drawImage`s (L0 + L1) — nearly free next to cell painting.
+ * full cell-layer repaints, runs the effect-pass registry onto L0 / L2 / L3, and blits in one
+ * pass. With effects disabled the composite is two `drawImage`s (L0 + L1) — nearly free.
  *
- * L4 overlay stays *above* this composite (never owned here). Effect-pass plumbing lands in
- * P3-A-3; this module only reserves L2/L3 and skips them when `effectsEnabled` is false.
+ * L4 overlay stays *above* this composite (never owned here).
  */
 import { Canvas2DRenderer } from './canvas2d';
+import { EMPTY_CHANGES, type ChangeSummary, type EffectQuality } from './effects/ctx';
+import type { EffectPass } from './effects/pass';
+import { EffectRegistry } from './effects/registry';
 import {
   defaultCanvasFactory,
   LayerStack,
@@ -33,6 +35,8 @@ export interface CompositorOptions {
   readonly canvasFactory?: CanvasFactory;
   /** Cell-layer renderer. Defaults to a fresh `Canvas2DRenderer`. */
   readonly cellRenderer?: Renderer;
+  /** Effect-pass registry. Defaults to a fresh empty registry. */
+  readonly effects?: EffectRegistry;
 }
 
 type DisplayCanvas = HTMLCanvasElement | OffscreenCanvas;
@@ -54,6 +58,7 @@ export class Compositor implements Renderer {
 
   private readonly layers: LayerStack;
   private readonly cellRenderer: Renderer;
+  private readonly effects: EffectRegistry;
   private display: DisplayCanvas | null = null;
   private displayCtx: Canvas2DContext | null = null;
   private viewport: Viewport | null = null;
@@ -63,12 +68,15 @@ export class Compositor implements Renderer {
   private effectsEnabled = false;
   private l0Dirty = true;
   private lastCameraKey: string | null = null;
+  private frameTimeOrigin = 0;
+  private changes: ChangeSummary = EMPTY_CHANGES;
   private readonly stats = { frameMs: 0, drawCalls: 0, tilesRepainted: 0 };
   private compositeDrawCalls = 0;
 
   constructor(options: CompositorOptions = {}) {
     this.layers = new LayerStack(options.canvasFactory ?? defaultCanvasFactory);
     this.cellRenderer = options.cellRenderer ?? new Canvas2DRenderer();
+    this.effects = options.effects ?? new EffectRegistry();
   }
 
   /** Expose a layer surface for tests (e.g. attach `CanvasRecorder` to L1). */
@@ -76,14 +84,30 @@ export class Compositor implements Renderer {
     return this.layers.get(id);
   }
 
-  /** Canvas objects created for L0–L3. Stable across frames; grows only on first `init`. */
+  /** Canvas objects created for L0–L3. Stable across frames and theme pass swaps. */
   get layerAllocationCount(): number {
     return this.layers.allocationCount;
   }
 
+  /** The live effect-pass registry (hot-swapped on theme change). */
+  get effectRegistry(): EffectRegistry {
+    return this.effects;
+  }
+
   /**
-   * When false (default until P3-A-3 wires passes), L2/L3 are skipped in the composite and the
-   * frame cost must stay within 5% of a bare `Canvas2DRenderer` draw (P3-A-1).
+   * Hot-swap passes for a theme. Disposes the previous set; does **not** reallocate L0–L3.
+   * Marks L0 dirty so background-stage passes repaint without a flash of the old theme.
+   */
+  setEffectPasses(passes: readonly EffectPass[]): void {
+    this.effects.setPasses(passes);
+    this.l0Dirty = true;
+    // Enabling the pipeline when passes arrive keeps Default (empty registry) on the cheap path.
+    this.effectsEnabled = passes.length > 0;
+  }
+
+  /**
+   * When false, L2/L3 are skipped and no passes run — frame cost stays within 5% of bare
+   * Canvas2D (P3-A-1). `setEffectPasses` turns this on when the list is non-empty.
    */
   setEffectsEnabled(enabled: boolean): void {
     this.effectsEnabled = enabled;
@@ -93,8 +117,17 @@ export class Compositor implements Renderer {
     return this.effectsEnabled;
   }
 
+  setEffectQuality(q: EffectQuality): void {
+    this.effects.setQuality(q);
+  }
+
+  /** Births/deaths/transitions for reactive passes this frame (from the worker stats). */
+  setChangeSummary(changes: ChangeSummary): void {
+    this.changes = changes;
+  }
+
   /**
-   * `static` — L0 repaints only on theme / resize.
+   * `static` — L0 repaints only on theme / resize / pass swap.
    * `parallax` — L0 also repaints when the camera pans or zooms.
    */
   setBackgroundMode(mode: BackgroundMode): void {
@@ -115,6 +148,7 @@ export class Compositor implements Renderer {
       this.display = canvas;
       this.displayCtx = ctx;
       this.layers.init();
+      this.frameTimeOrigin = performance.now();
       const cells = this.layers.get('cells');
       return this.cellRenderer.init(cells.canvas).then(() => undefined);
     } catch (err) {
@@ -134,8 +168,8 @@ export class Compositor implements Renderer {
     const sizeChanged = this.layers.resize(widthPx, heightPx);
     if (sizeChanged) this.l0Dirty = true;
 
-    // Cell renderer keeps its own viewport width/height in sync; L1 canvas dims already set above.
     this.cellRenderer.resize(widthPx, heightPx, dpr);
+    this.effects.resize(widthPx, heightPx, dpr);
 
     this.viewport = {
       ...(this.viewport ?? { originX: 0, originY: 0, cellSize: 16 }),
@@ -167,11 +201,16 @@ export class Compositor implements Renderer {
     const viewport = this.requireViewport();
     const theme = this.requireTheme();
     const t0 = performance.now();
+    const frameTime = (t0 - this.frameTimeOrigin) / 1000;
 
-    this.paintBackgroundIfNeeded(theme, viewport, frame.tick);
+    this.paintBackgroundIfNeeded(theme, viewport, frame.tick, frameTime);
 
     // Dirty-rect behaviour is entirely the cell renderer's — never coerce to a full repaint.
     this.cellRenderer.draw(frame);
+
+    if (this.effectsEnabled) {
+      this.runEffectStages(viewport, frame.tick, frameTime);
+    }
 
     this.compositeDrawCalls = this.blitToDisplay(displayCtx);
     const cellStats = this.cellRenderer.readStats();
@@ -200,6 +239,7 @@ export class Compositor implements Renderer {
   }
 
   dispose(): void {
+    this.effects.dispose();
     this.cellRenderer.dispose();
     this.layers.dispose();
     this.display = null;
@@ -210,7 +250,12 @@ export class Compositor implements Renderer {
     this.lastCameraKey = null;
   }
 
-  private paintBackgroundIfNeeded(theme: CompiledTheme, viewport: Viewport, tick: number): void {
+  private paintBackgroundIfNeeded(
+    theme: CompiledTheme,
+    viewport: Viewport,
+    tick: number,
+    frameTime: number,
+  ): void {
     if (!this.l0Dirty) return;
     const { ctx, canvas } = this.layers.get('background');
     const w = canvas.width;
@@ -223,13 +268,52 @@ export class Compositor implements Renderer {
       ctx.fillStyle = theme.background;
       ctx.fillRect(0, 0, w, h);
     }
+    if (this.effectsEnabled) {
+      this.effects.renderStage('background', {
+        target: ctx,
+        source: canvas,
+        viewport,
+        tick,
+        frameTime,
+        changes: this.changes,
+      });
+    }
     this.l0Dirty = false;
+  }
+
+  private runEffectStages(viewport: Viewport, tick: number, frameTime: number): void {
+    const effects = this.layers.get('effects');
+    const post = this.layers.get('post');
+    const cells = this.layers.get('cells');
+
+    effects.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    effects.ctx.clearRect(0, 0, effects.canvas.width, effects.canvas.height);
+    this.effects.renderStage('effects', {
+      target: effects.ctx,
+      source: cells.canvas,
+      viewport,
+      tick,
+      frameTime,
+      changes: this.changes,
+    });
+
+    post.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    post.ctx.clearRect(0, 0, post.canvas.width, post.canvas.height);
+    // Post samples the stack below. Framework hands the effects layer as `source`; bloom and
+    // friends that need a full pre-composite arrive in P3-A-5 with their own capture buffers.
+    this.effects.renderStage('post', {
+      target: post.ctx,
+      source: effects.canvas,
+      viewport,
+      tick,
+      frameTime,
+      changes: this.changes,
+    });
   }
 
   private blitToDisplay(displayCtx: Canvas2DContext): number {
     const w = this.layers.width;
     const h = this.layers.height;
-    // Full replace — no accumulate from a previous frame's post-process.
     displayCtx.setTransform(1, 0, 0, 1, 0, 0);
     displayCtx.clearRect(0, 0, w, h);
 

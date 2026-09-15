@@ -165,12 +165,17 @@ src/audio/
 - [x] Ages are exact after 10,000 generations (property test against a reference computation).
 - [x] Disabling the age buffer restores the exact Phase 2 benchmark numbers.
 
-#### - [~] P3-A-3 · Effect pass framework & registry — @cursor, started 2026-09-15
+#### - [x] P3-A-3 · Effect pass framework & registry — @cursor, started 2026-09-15, finished 2026-09-15
 **Depends on:** P3-A-1 · **Files:** `src/render/effects/{pass,registry,ctx}.ts`
+**Implementation notes**
+- `EffectPass` / `EffectCtx` / `ChangeSummary` match PHASE_3 §2.3. Stages are `background` | `effects` | `post`.
+- `EffectRegistry.setPasses` hot-swaps: disposes the previous list, installs the next, forwards `resize` — compositor L0–L3 canvases are never touched. Quality 0 skips all renders (governor hook for P3-A-4).
+- `Compositor.setEffectPasses` wires the registry; effects/post clear L2/L3 each frame; background-stage passes run when L0 is dirty. `dispose()` tears down registry + layers.
+- Proven in `tests/unit/render/effects.spec.ts`: no-op overhead &lt; 0.1 ms; 100 theme switches release every offscreen + WebAudio stand-in; layer `allocationCount` stays at 4 across swaps.
 **Acceptance criteria**
-- [ ] A no-op pass adds < 0.1 ms.
-- [ ] Passes are hot-swappable on theme change with no canvas reallocation and no flicker.
-- [ ] `dispose()` is verified to release every offscreen canvas and every WebAudio node (leak test over 100 theme switches).
+- [x] A no-op pass adds < 0.1 ms.
+- [x] Passes are hot-swappable on theme change with no canvas reallocation and no flicker.
+- [x] `dispose()` is verified to release every offscreen canvas and every WebAudio node (leak test over 100 theme switches).
 
 #### - [ ] P3-A-4 · Degrade governor
 **Depends on:** P3-A-3 · **Files:** `src/render/quality-governor.ts`
