@@ -331,15 +331,19 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 - [x] Cell irregularity is deterministic per world coordinate (panning away and back shows the identical pattern — a "shimmering terrain" bug here would be very visible). — `sidsTileShape(x,y)` from integer world coords; same cell, same inset/offset.
 - [x] Contrast of ink-on-parchment meets AA (this palette is the highest-risk of the six — verify early). — every chrome text pairing ≥ 4.5:1 including muted on elevated.
 
-#### - [~] P3-C-5 · Void-Walker — @cursor, started 2026-09-15
+#### - [x] P3-C-5 · Void-Walker — @cursor, started 2026-09-15, finished 2026-09-15
 **Depends on:** P3-A-5, P3-B-3 · **Files:** `src/themes/void-walker/*`
 **Brief:** *"Deep space. Deep purples, starlight textures, and soft glowing edges for 'alive' cells."*
 **Design direction** Near-black violet gradient, parallax `starfield` (three seeded layers that drift with the camera — this is what sells the depth). Cells glow: a soft radial falloff whose intensity and hue are driven by age, newborn cells flaring bright white-violet then settling to a cool purple. Deaths emit a small, short-lived particle puff. Passes: `starfield`, `bloom` (the strongest of any theme), `vignette`, `deathParticles`. Chrome: translucent dark panels with soft light bleeding through the edges, wide letter-spaced type. Motion: slow, floating, ease-out-heavy — nothing snaps. Sound: bell-like plucks with long reverb tails (convolution from a synthesised impulse — still zero assets), a deep evolving pad ambient.
+**Done when**
+- README written first: the walk home after the last starship left. Tokens are near-black violet / translucent glass / wide-tracked type. Palette: 16-step white-violet flare → cool purple, 24 states, CVD-spaced live hues. Motion: 160/380/640 ms with ease-out bloom-in (no snap, no bounce). Sound: bell plucks with runtime convolution, deep pad ambient.
+- Passes: three-layer parallax `starfield` + pooled `deathParticles` + `trailFade` + strongest bloom (threshold 58, strength 0.72, radius 3) + vignette. Dead cells transparent so L0 starlight shows through. Quality 0 is palette-only (`losslessAtQuality0: false`). Overlay AA against bg and a busy star texel. Age buffer on when Void-Walker is active; background mode is parallax.
+- Proven in `tests/unit/themes/void-walker/{theme,palette,tokens,void-walker-css}.spec.ts`. Per-theme screenshots remain P3-D-2.
 **Additional acceptance criteria**
-- [ ] Starfield parallax is stable and deterministic under fast panning and extreme zoom (no popping, no drift accumulation).
-- [ ] Bloom does not obscure the L4 overlay or the selection marquee.
-- [ ] Death particles are pooled, hard-capped, and allocation-free in steady state.
-- [ ] The synthesised reverb impulse is generated at runtime — verify zero audio assets in the bundle.
+- [x] Starfield parallax is stable and deterministic under fast panning and extreme zoom (no popping, no drift accumulation). — world-fixed stars; `starOriginShift` wraps camera into one viewport period so huge origins cannot drift; pan-away-and-back hashes equal.
+- [x] Bloom does not obscure the L4 overlay or the selection marquee. — below-threshold bg texels unchanged; `COMPOSITOR_LAYER_IDS` has no overlay (L4 drawn after `compositor.draw()`).
+- [x] Death particles are pooled, hard-capped, and allocation-free in steady state. — fixed `Float32Array` pools; `bufferAllocations === 1`; `reset()` clears life without reallocating.
+- [x] The synthesised reverb impulse is generated at runtime — verify zero audio assets in the bundle. — `synthesizeReverbImpulse` + `createConvolver`; theme and `src/audio` ship no wav/mp3/ogg.
 
 #### - [ ] P3-C-6 · Synthwave
 **Depends on:** P3-A-5, P3-B-3 · **Files:** `src/themes/synthwave/*`

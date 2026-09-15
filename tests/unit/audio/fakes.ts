@@ -10,6 +10,7 @@ import type {
   AudioParamLike,
   BiquadFilterNodeLike,
   BiquadFilterTypeName,
+  ConvolverNodeLike,
   DynamicsCompressorNodeLike,
   GainNodeLike,
   OscillatorNodeLike,
@@ -134,6 +135,11 @@ export class FakeStereoPanner extends FakeNode implements StereoPannerNodeLike {
   readonly pan = new FakeParam(0);
 }
 
+export class FakeConvolver extends FakeNode implements ConvolverNodeLike {
+  buffer: AudioBufferLike | null = null;
+  normalize = true;
+}
+
 export class FakeAudioContext implements AudioContextLike {
   state: AudioContextState = 'suspended';
   currentTime = 0;
@@ -146,6 +152,7 @@ export class FakeAudioContext implements AudioContextLike {
   createBufferSourceCount = 0;
   createBiquadCount = 0;
   createPannerCount = 0;
+  createConvolverCount = 0;
   resumeCount = 0;
   suspendCount = 0;
   closeCount = 0;
@@ -153,6 +160,7 @@ export class FakeAudioContext implements AudioContextLike {
   readonly bufferSources: FakeBufferSource[] = [];
   readonly filters: FakeBiquad[] = [];
   readonly panners: FakeStereoPanner[] = [];
+  readonly convolvers: FakeConvolver[] = [];
 
   createGain(): GainNodeLike {
     this.createGainCount += 1;
@@ -195,6 +203,13 @@ export class FakeAudioContext implements AudioContextLike {
     const panner = new FakeStereoPanner();
     this.panners.push(panner);
     return panner;
+  }
+
+  createConvolver(): ConvolverNodeLike {
+    this.createConvolverCount += 1;
+    const conv = new FakeConvolver();
+    this.convolvers.push(conv);
+    return conv;
   }
 
   resume(): Promise<void> {

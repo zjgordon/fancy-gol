@@ -46,6 +46,9 @@ export {
   createParchmentTexturePass,
   createSunGradientPass,
   createTextRainPass,
+  starParallax,
+  starScreenPosition,
+  wrapCoord,
 } from './background-passes';
 
 export { scanlinePitch } from './post-passes';
@@ -155,6 +158,26 @@ export function createSidsPlacePassStack(): EffectPass[] {
   const parchment = createParchmentTexturePass({ seed: 7, width: 256, height: 256 });
   parchment.generate();
   return [parchment];
+}
+
+/** Void-Walker bloom — strongest of the six (higher strength/radius than Chiba). */
+export const VOID_BLOOM_THRESHOLD = 58;
+export const VOID_BLOOM_STRENGTH = 0.72;
+export const VOID_BLOOM_RADIUS = 3;
+
+/** Void-Walker's tuned stack (ADR-009: lives in render/, not themes/). */
+export function createVoidWalkerPassStack(): EffectPass[] {
+  return [
+    createStarfieldPass({ seed: 42, layers: 3, starsPerLayer: 80 }),
+    createDeathParticlesPass({ seed: 9, cap: 256 }),
+    createTrailFadePass({ fade: 0.88 }),
+    createBloomPass({
+      threshold: VOID_BLOOM_THRESHOLD,
+      strength: VOID_BLOOM_STRENGTH,
+      radius: VOID_BLOOM_RADIUS,
+    }),
+    createVignettePass({ strength: 0.62 }),
+  ];
 }
 
 /** Declared-cost sum of passes still running at this quality. Disposes the stack. */

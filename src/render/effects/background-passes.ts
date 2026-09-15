@@ -6,6 +6,51 @@ import type { EffectCtx } from './ctx';
 import { SoftwareSurface } from './software-surface';
 import { TimedPass } from './timed-pass';
 
+export const STARFIELD_PERIOD = 4096;
+
+/** Layer 0 is farthest; each layer drifts faster with the camera. */
+export function starParallax(layer: number): number {
+  return 0.15 + layer * 0.25;
+}
+
+export function wrapCoord(value: number, extent: number): number {
+  if (!(extent > 0)) return 0;
+  const r = value % extent;
+  return r < 0 ? r + extent : r;
+}
+
+/**
+ * Camera shift in pixels, wrapped into one viewport period so a huge origin
+ * cannot accumulate floating-point drift. Pure function of origin — pan away
+ * and back lands on the same coordinate.
+ */
+export function starOriginShift(
+  origin: number,
+  parallax: number,
+  cellSize: number,
+  extentPx: number,
+): number {
+  const denom = parallax * cellSize;
+  if (!(denom > 0) || !(extentPx > 0)) return 0;
+  const period = extentPx / denom;
+  const wrapped = origin - Math.floor(origin / period) * period;
+  return wrapped * denom;
+}
+
+export function starScreenPosition(
+  wx: number,
+  wy: number,
+  viewport: { originX: number; originY: number; cellSize: number; widthPx: number; heightPx: number },
+  parallax: number,
+): { x: number; y: number } {
+  const ox = starOriginShift(viewport.originX, parallax, viewport.cellSize, viewport.widthPx);
+  const oy = starOriginShift(viewport.originY, parallax, viewport.cellSize, viewport.heightPx);
+  return {
+    x: wrapCoord(wx - ox, viewport.widthPx),
+    y: wrapCoord(wy - oy, viewport.heightPx),
+  };
+}
+
 export interface StarfieldOptions {
   readonly seed?: number;
   readonly layers?: number;
@@ -39,8 +84,8 @@ class StarfieldPass extends TimedPass {
     this.stars = new Float32Array(n * 3);
     const rng = new Mulberry32(this.seed);
     for (let i = 0; i < n; i++) {
-      this.stars[i * 3] = rng.next() * 4096;
-      this.stars[i * 3 + 1] = rng.next() * 4096;
+      this.stars[i * 3] = rng.next() * STARFIELD_PERIOD;
+      this.stars[i * 3 + 1] = rng.next() * STARFIELD_PERIOD;
       this.stars[i * 3 + 2] = 0.35 + rng.next() * 0.65;
     }
   }
@@ -53,19 +98,23 @@ class StarfieldPass extends TimedPass {
     ctx.target.fillRect(0, 0, w, h);
     const stars = this.stars!;
     for (let layer = 0; layer < this.layerCount; layer++) {
-      const parallax = 0.15 + layer * 0.25;
+      const parallax = starParallax(layer);
       const size = 1 + (layer === this.layerCount - 1 ? 1 : 0);
       for (let s = 0; s < this.starsPerLayer; s++) {
         const i = (layer * this.starsPerLayer + s) * 3;
         const wx = stars[i]!;
         const wy = stars[i + 1]!;
         const br = stars[i + 2]!;
-        const sx = ((wx - originX * parallax * cellSize) % w + w) % w;
-        const sy = ((wy - originY * parallax * cellSize) % h + h) % h;
+        const pos = starScreenPosition(
+          wx,
+          wy,
+          { originX, originY, cellSize, widthPx: w, heightPx: h },
+          parallax,
+        );
         const a = ctx.reducedMotion ? br * 0.7 : br;
         ctx.target.globalAlpha = a;
         ctx.target.fillStyle = '#e8e0ff';
-        ctx.target.fillRect(sx, sy, size, size);
+        ctx.target.fillRect(pos.x, pos.y, size, size);
       }
     }
     ctx.target.globalAlpha = 1;

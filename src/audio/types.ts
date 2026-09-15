@@ -75,6 +75,11 @@ export interface StereoPannerNodeLike extends AudioNodeLike {
   readonly pan: AudioParamLike;
 }
 
+export interface ConvolverNodeLike extends AudioNodeLike {
+  buffer: AudioBufferLike | null;
+  normalize: boolean;
+}
+
 export interface AudioContextLike {
   readonly state: AudioContextState;
   readonly currentTime: number;
@@ -87,6 +92,7 @@ export interface AudioContextLike {
   createBufferSource(): AudioBufferSourceNodeLike;
   createBiquadFilter(): BiquadFilterNodeLike;
   createStereoPanner(): StereoPannerNodeLike;
+  createConvolver(): ConvolverNodeLike;
   resume(): Promise<void>;
   suspend(): Promise<void>;
   close(): Promise<void>;
@@ -147,6 +153,8 @@ export interface VoiceParams {
   readonly loop?: boolean;
   /** Oscillator waveform override (Chiba square-wave blips). */
   readonly waveform?: OscillatorTypeName;
+  /** Mix a runtime-synthesised convolution tail (Void-Walker plucks). */
+  readonly reverb?: boolean;
 }
 
 export interface AudioPrefs {

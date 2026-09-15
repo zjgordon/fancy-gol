@@ -10,6 +10,7 @@ import type {
   AudioNodeLike,
   AudioParamLike,
   BiquadFilterNodeLike,
+  ConvolverNodeLike,
   GainNodeLike,
   OscillatorNodeLike,
   AudioBufferSourceNodeLike,
@@ -17,6 +18,10 @@ import type {
   VoiceKind,
   VoiceParams,
 } from './types';
+import {
+  VOID_REVERB_IMPULSE_SEED,
+  synthesizeReverbImpulse,
+} from './impulse';
 
 export interface VoiceGraph {
   readonly kind: VoiceKind;
@@ -24,6 +29,7 @@ export interface VoiceGraph {
   readonly filter: BiquadFilterNodeLike | null;
   readonly envelope: GainNodeLike;
   readonly destination: AudioNodeLike;
+  readonly convolver: ConvolverNodeLike | null;
 }
 
 export interface VoiceHandle {
@@ -71,6 +77,18 @@ export function spawnVoice(options: SpawnVoiceOptions): VoiceHandle {
 
   let source: OscillatorNodeLike | AudioBufferSourceNodeLike;
   let filter: BiquadFilterNodeLike | null = null;
+  let convolver: ConvolverNodeLike | null = null;
+  if (params.reverb) {
+    const ir = getOrCreateImpulseBuffer(ctx);
+    convolver = ctx.createConvolver();
+    convolver.buffer = ir;
+    convolver.normalize = true;
+    const wet = ctx.createGain();
+    wet.gain.setValueAtTime(0.32, startAt);
+    envelope.connect(convolver);
+    convolver.connect(wet);
+    wet.connect(destination);
+  }
 
   switch (kind) {
     case 'blip': {
@@ -186,7 +204,7 @@ export function spawnVoice(options: SpawnVoiceOptions): VoiceHandle {
     kind,
     startTime: startAt,
     stopTime: endTime,
-    graph: { kind, source, filter, envelope, destination },
+    graph: { kind, source, filter, envelope, destination, convolver },
     get stopped() {
       return stopped;
     },
@@ -209,6 +227,7 @@ export function spawnVoice(options: SpawnVoiceOptions): VoiceHandle {
       try {
         source.disconnect();
         filter?.disconnect();
+        convolver?.disconnect();
         envelope.disconnect();
       } catch {
         /* already disconnected */
@@ -255,6 +274,18 @@ export function getOrCreateNoiseBuffer(
     data[i] = (state / 0x100000000) * 2 - 1;
   }
   byDur.set(ms, buffer);
+  return buffer;
+}
+
+const impulseCache = new WeakMap<AudioContextLike, AudioBufferLike>();
+
+function getOrCreateImpulseBuffer(ctx: AudioContextLike): AudioBufferLike {
+  const hit = impulseCache.get(ctx);
+  if (hit) return hit;
+  const ir = synthesizeReverbImpulse(ctx.sampleRate, { seed: VOID_REVERB_IMPULSE_SEED });
+  const buffer = ctx.createBuffer(1, ir.length, ctx.sampleRate);
+  buffer.getChannelData(0).set(ir);
+  impulseCache.set(ctx, buffer);
   return buffer;
 }
 

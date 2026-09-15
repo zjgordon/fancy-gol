@@ -228,6 +228,13 @@ class DeathParticlesPass extends TimedPass {
     this.life = new Float32Array(this.cap);
   }
 
+  override reset(): void {
+    this.life.fill(0);
+    this.active = 0;
+    this.cursor = 0;
+    this.rng = new Mulberry32(this.seed);
+  }
+
   get activeCount(): number {
     return this.active;
   }

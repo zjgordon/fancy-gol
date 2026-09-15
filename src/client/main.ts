@@ -7,7 +7,12 @@ import { CONWAY, getBuiltin } from '@engine/rules/builtin';
 import { RuleValidationError } from '@engine/rules/errors';
 import { validateRuleSet } from '@engine/rules/validate';
 import { Compositor } from '@render/compositor';
-import { createChibaCityPassStack, createFlatlinePassStack, createSidsPlacePassStack } from '@render/effects/library';
+import {
+  createChibaCityPassStack,
+  createFlatlinePassStack,
+  createSidsPlacePassStack,
+  createVoidWalkerPassStack,
+} from '@render/effects/library';
 import type { Viewport as RenderViewport } from '@render/types';
 import { decode as decodeRle } from '@shared/rle';
 import { CHUNK_AREA, type PaintOp, type RuleSet } from '@shared/types';
@@ -46,6 +51,7 @@ import { DEFAULT_DARK_THEME, DEFAULT_THEME } from '@themes/default/theme';
 import { CHIBA_CITY_THEME } from '@themes/chiba-city/theme';
 import { FLATLINE_THEME } from '@themes/flatline/theme';
 import { SIDS_PLACE_THEME } from '@themes/sids-place/theme';
+import { VOID_WALKER_THEME } from '@themes/void-walker/theme';
 import type { ThemeModule } from '@themes/types';
 import { chartTokensFromSet } from '@ui/charts/chart';
 import { createStatisticsPanel } from '@ui/panels/statistics/panel';
@@ -178,6 +184,7 @@ function main(): void {
   themeRegistry.register(CHIBA_CITY_THEME);
   themeRegistry.register(FLATLINE_THEME);
   themeRegistry.register(SIDS_PLACE_THEME);
+  themeRegistry.register(VOID_WALKER_THEME);
 
   function applyThemeVisuals(theme: ThemeModule): void {
     const dataId = theme.id.startsWith('default') ? 'default' : theme.id;
@@ -198,6 +205,12 @@ function main(): void {
     if (theme.id === 'sids-place') {
       renderer.setEffectPasses(createSidsPlacePassStack());
       renderer.setBackgroundMode('static');
+      void client.send({ cmd: 'setAgeBuffer', enabled: true });
+      return;
+    }
+    if (theme.id === 'void-walker') {
+      renderer.setEffectPasses(createVoidWalkerPassStack());
+      renderer.setBackgroundMode('parallax');
       void client.send({ cmd: 'setAgeBuffer', enabled: true });
       return;
     }

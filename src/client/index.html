@@ -453,6 +453,20 @@
         border-radius: var(--gol-radius-sm) var(--gol-radius-sm) 0 0;
         border-bottom: none;
       }
+
+      html[data-theme='void-walker'] {
+        --gol-shadow-chrome: var(--gol-shadow-lg);
+      }
+      html[data-theme='void-walker'] .chrome-panel,
+      html[data-theme='void-walker'] .panel-host:not(.panel-host-collapsed),
+      html[data-theme='void-walker'] .dialog-surface,
+      html[data-theme='void-walker'] .toast {
+        box-shadow: var(--gol-shadow-lg);
+      }
+      html[data-theme='void-walker'] .panel-host-title {
+        letter-spacing: var(--gol-letter-spacing-wide);
+        text-transform: uppercase;
+      }
       .controls button:disabled {
         background: var(--gol-color-elevated);
         color: var(--gol-color-muted);
