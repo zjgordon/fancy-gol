@@ -1,15 +1,8 @@
 /**
- * P1-D-5 — the shared toast primitive: `aria-live="polite"` announcements for things worth
- * telling the user about without blocking them (unlike `dialog.ts`'s confirmations). A flood
- * fill that hit its cap is the phase doc's own named example — the fill has *already happened*
- * by the time anyone could ask a yes/no question about it (`ui/tools/fill.ts`'s own doc comment:
- * "`capped` is readable after a fill either way"), so it's a notice, not a confirmation.
- *
- * One shared region (a portal, same reasoning as `dialog.ts`'s: `position: fixed` is contained
- * by any ancestor `transform`, and every `.chrome-region` sets one), created once and reused —
- * unlike a dialog, toasts can stack, so this is a container a caller pushes messages into rather
- * than a one-shot open/close pair.
+ * P1-D-5 / P3-A-6 — shared toast primitive. Enter/exit via the motion system; no CSS `transition`.
  */
+import { animateAsync } from '@themes/motion/animate';
+import { prefersReducedMotion } from '@themes/motion/runtime';
 
 const DEFAULT_DURATION_MS = 5000;
 
@@ -25,8 +18,7 @@ export interface ToastRegion {
   dispose(): void;
 }
 
-/** Creates the shared toast region, already appended to `document.body`. Call once per app — a
- * second call would just create a second, redundant `aria-live` region. */
+/** Creates the shared toast region, already appended to `document.body`. */
 export function createToastRegion(): ToastRegion {
   const root = document.createElement('div');
   root.className = 'toast-region';
@@ -52,13 +44,21 @@ export function createToastRegion(): ToastRegion {
 
     toast.append(text, dismiss);
     root.appendChild(toast);
+    void animateAsync(toast, 'enter', { reducedMotion: prefersReducedMotion() });
 
     let dismissed = false;
     const remove = (): void => {
       if (dismissed) return;
       dismissed = true;
       timers.delete(timer);
-      toast.remove();
+      const finish = (): void => {
+        toast.remove();
+      };
+      if (prefersReducedMotion()) {
+        finish();
+        return;
+      }
+      void animateAsync(toast, 'exit', { reducedMotion: false }).then(finish);
     };
     dismiss.addEventListener('click', remove);
     const timer = setTimeout(remove, options.durationMs ?? DEFAULT_DURATION_MS);

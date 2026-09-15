@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { defaultMotionSignature } from '@themes/motion/choreography';
 import type { ThemeModule, TokenSet } from '@themes/types';
 import {
   REAL_ROOT,
@@ -64,11 +65,7 @@ function makeTheme(overrides: Partial<ThemeModule> = {}): ThemeModule {
     name: 'Test',
     tokens: TEST_TOKENS,
     palette: (state) => (state === 0 ? '#000000' : '#ffffff'),
-    motion: {
-      durationMs: { instant: 0, fast: 150, slow: 600, slower: 900 },
-      easings: { linear: (t) => t, standard: (t) => t, decelerate: (t) => t, accelerate: (t) => t, bounce: (t) => t },
-      enter: { delayStepMs: 40 },
-    },
+    motion: defaultMotionSignature(),
     cost: 'low',
     ...overrides,
   };

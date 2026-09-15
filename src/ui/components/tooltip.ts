@@ -1,22 +1,75 @@
 /**
- * P1-D-5 — "tooltips that show the command's current keybinding." A pure lookup, not a custom
- * popup widget: every control in this app already shows its tooltip via the native `title`
- * attribute (accessible, keyboard-reachable via the browser's own affordance, zero extra DOM),
- * so what was actually missing wasn't a tooltip *mechanism* — it was reading the binding from
- * `Keymap`, the single live source of truth, instead of a hardcoded string baked in at the call
- * site (`transport.ts`'s original `BUTTONS` table did exactly that).
+ * P1-D-5 / P3-A-6 — tooltips.
  *
- * "Display the *user's current* binding, not the default, once Phase 4 adds remapping" (this
- * task's own acceptance criterion) is what this buys for free: `Keymap` is the same registry
- * Phase 4's remapping UI will mutate, so once that exists, every tooltip built through this
- * function updates with it automatically — no change needed here or at any call site.
+ * `bindingTooltip` still builds the native `title` string (a11y + Phase 4 remapping).
+ * `showTooltip` / `attachTooltip` add a motion-driven flyout so tooltips participate in the
+ * choreography system — never a CSS `transition`.
  */
 import type { Keymap } from '@ui/input/keymap';
+import { animateAsync } from '@themes/motion/animate';
+import { prefersReducedMotion } from '@themes/motion/runtime';
 
-/** `"${label} (${binding})"`, or just `label` if `commandId` has no registered binding (a
- * disabled/removed keybinding, or a command this build's `Keymap` never got — never throws, a
- * missing tooltip suffix is a cosmetic gap, not a broken control). */
+/** `"${label} (${binding})"`, or just `label` if `commandId` has no registered binding. */
 export function bindingTooltip(keymap: Keymap, commandId: string, label: string): string {
   const entry = keymap.list().find((e) => e.commandId === commandId);
   return entry ? `${label} (${entry.binding})` : label;
+}
+
+export interface TooltipHandle {
+  readonly root: HTMLElement;
+  dismiss(): void;
+}
+
+/** Show a portal tooltip near `anchor`, animated via enter/exit choreography. */
+export function showTooltip(anchor: HTMLElement, text: string): TooltipHandle {
+  const root = document.createElement('div');
+  root.className = 'tooltip-flyout chrome-panel';
+  root.setAttribute('role', 'tooltip');
+  root.textContent = text;
+  document.body.appendChild(root);
+
+  // Position without reading layout on the animated element itself — use anchor rect once.
+  const rect = anchor.getBoundingClientRect();
+  root.style.left = `${Math.round(rect.left + rect.width / 2)}px`;
+  root.style.top = `${Math.round(rect.bottom + 6)}px`;
+
+  void animateAsync(root, 'enter', { reducedMotion: prefersReducedMotion() });
+
+  let dismissed = false;
+  return {
+    root,
+    dismiss(): void {
+      if (dismissed) return;
+      dismissed = true;
+      const finish = (): void => {
+        root.remove();
+      };
+      if (prefersReducedMotion()) {
+        finish();
+        return;
+      }
+      void animateAsync(root, 'exit', { reducedMotion: false }).then(finish);
+    },
+  };
+}
+
+/** Pointer enter/leave wiring for a control that also keeps a native `title` for a11y. */
+export function attachTooltip(target: HTMLElement, text: string): () => void {
+  target.title = text;
+  let handle: TooltipHandle | null = null;
+  const onEnter = (): void => {
+    handle?.dismiss();
+    handle = showTooltip(target, text);
+  };
+  const onLeave = (): void => {
+    handle?.dismiss();
+    handle = null;
+  };
+  target.addEventListener('pointerenter', onEnter);
+  target.addEventListener('pointerleave', onLeave);
+  return () => {
+    target.removeEventListener('pointerenter', onEnter);
+    target.removeEventListener('pointerleave', onLeave);
+    handle?.dismiss();
+  };
 }

@@ -22,6 +22,7 @@
  * seam, a later one plugs into it" split `ui/tools/registry.ts`'s own doc comment already uses.
  */
 import type { CompiledTheme } from '@render/types';
+import { setMotionSignature } from './motion/runtime';
 import type {
   ColorTokens,
   DurationKey,
@@ -336,6 +337,7 @@ export class ThemeRegistry {
       this.root.setProperty(name, value);
     }
     this.activeTheme = theme;
+    setMotionSignature(theme.motion);
     const compiled = compileTheme(theme);
     for (const listener of this.listeners) listener({ theme, compiled });
     return theme;

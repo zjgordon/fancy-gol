@@ -1,11 +1,16 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import axe from 'axe-core';
 import { createToastRegion } from '@ui/components/toast';
+import { resetMotionRuntime, setReducedMotionQuery } from '@themes/motion/runtime';
 
 describe('createToastRegion', () => {
+  beforeEach(() => {
+    setReducedMotionQuery(() => true);
+  });
   afterEach(() => {
     document.body.innerHTML = '';
     vi.useRealTimers();
+    resetMotionRuntime();
   });
 
   it('creates an aria-live="polite" region, appended to document.body', () => {

@@ -114,7 +114,7 @@
         position: fixed;
         inset: 0;
         pointer-events: none;
-        transition: opacity var(--gol-duration-fast) var(--gol-ease-standard);
+        /* Visibility animated via themes/motion (P3-A-6) — no CSS transition. */
       }
 
       #chrome.chrome-hidden {
@@ -137,29 +137,11 @@
         font: var(--gol-font-weight-regular) var(--gol-font-size-sm) / 1.4 var(--gol-font-mono);
         color: var(--gol-color-text);
         opacity: 1;
-        transition:
-          opacity var(--gol-duration-slow) var(--gol-ease-standard),
-          transform var(--gol-duration-slow) var(--gol-ease-standard);
-        transition-delay: var(--gol-intro-delay);
+        /* Enter staggered via motion.animate — no CSS transition (P3-A-6). */
       }
 
       .chrome-region:empty {
         display: none;
-      }
-
-      #chrome.chrome-intro #chrome-toolbar,
-      #chrome.chrome-intro #chrome-transport,
-      #chrome.chrome-intro #chrome-status,
-      #chrome.chrome-intro #chrome-panel-dock {
-        opacity: 0;
-        transform: translateY(6px);
-      }
-      #chrome.chrome-intro:not(.chrome-hidden) #chrome-toolbar,
-      #chrome.chrome-intro:not(.chrome-hidden) #chrome-transport,
-      #chrome.chrome-intro:not(.chrome-hidden) #chrome-status,
-      #chrome.chrome-intro:not(.chrome-hidden) #chrome-panel-dock {
-        opacity: 1;
-        transform: translateY(0);
       }
 
       .chrome-panel {
@@ -186,12 +168,6 @@
       #chrome-toolbar {
         left: var(--gol-space-3);
         top: 50%;
-        transform: translateY(-50%);
-      }
-      #chrome.chrome-intro #chrome-toolbar {
-        transform: translateY(calc(-50% + 6px));
-      }
-      #chrome.chrome-intro:not(.chrome-hidden) #chrome-toolbar {
         transform: translateY(-50%);
       }
 
@@ -1560,6 +1536,17 @@
       .toast-dismiss:focus-visible {
         outline: 2px solid var(--gol-color-accent);
         outline-offset: 2px;
+      }
+
+      /* Motion-driven flyout (P3-A-6) — positioned in JS; never CSS-transitioned. */
+      .tooltip-flyout {
+        position: fixed;
+        z-index: 40;
+        transform: translateX(-50%);
+        pointer-events: none;
+        max-width: min(90vw, 280px);
+        font: var(--gol-font-weight-regular) var(--gol-font-size-xs) / 1.3 var(--gol-font-mono);
+        padding: var(--gol-space-1) var(--gol-space-2);
       }
 
       /*

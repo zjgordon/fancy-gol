@@ -1,20 +1,9 @@
 /**
- * P1-D-5 — the shared dialog primitive: "one shared, accessible primitive set" the phase doc
- * asks for, so every blocking prompt in this app (a destructive-action confirmation, the
- * ruleset picker's state-migration prompt, …) gets the same real focus trap and `Escape`-to-close
- * instead of each caller growing its own copy. P1-D-4's migration dialog built exactly that copy
- * ahead of this task existing, portal and all — `ruleset-picker.ts` now builds on this instead.
- *
- * A dialog is a portal (appended to `document.body`, not wherever the caller happens to live):
- * `position: fixed` is contained by *any* ancestor with a `transform`, and every `.chrome-region`
- * sets one for its own centring/intro choreography — found the hard way in a real browser while
- * building P1-D-4's own dialog, before this file existed to fix it once for everyone.
- *
- * One-shot lifecycle, not a toggle: `openDialog()` builds and shows immediately; `close()` tears
- * the whole thing down (not just hides it) and restores focus to whatever had it before the
- * dialog opened. A caller that needs a *reusable* popover (the ruleset picker's own listbox) still
- * owns that toggle itself — this primitive is for the transient, one-question-at-a-time case.
+ * P1-D-5 / P3-A-6 — shared dialog primitive. Enter/exit go through `themes/motion/animate`
+ * — never a CSS `transition` on `.dialog-*` (lint-enforced).
  */
+import { animateAsync } from '@themes/motion/animate';
+import { prefersReducedMotion } from '@themes/motion/runtime';
 
 let openCount = 0;
 
@@ -40,8 +29,7 @@ function focusableElements(panel: HTMLElement): HTMLElement[] {
   );
 }
 
-/** Opens a new, focus-trapped, `Escape`-closable dialog and returns its handle. See this file's
- * own module doc for why it's a portal and why the lifecycle is one-shot, not a toggle. */
+/** Opens a new, focus-trapped, `Escape`-closable dialog and returns its handle. */
 export function openDialog(options: DialogOptions): DialogHandle {
   const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
@@ -64,16 +52,23 @@ export function openDialog(options: DialogOptions): DialogHandle {
   root.appendChild(panel);
   document.body.appendChild(root);
 
+  void animateAsync(panel, 'enter', { reducedMotion: prefersReducedMotion() });
+
   let closed = false;
   function close(): void {
     if (closed) return;
     closed = true;
-    root.remove();
     document.removeEventListener('keydown', onKeyDown, true);
-    // The dialog's own contents are about to be gone; move focus back before anything else so a
-    // screen reader never announces "nothing focused" even for an instant.
-    previouslyFocused?.focus();
-    options.onClose?.();
+    const finish = (): void => {
+      root.remove();
+      previouslyFocused?.focus();
+      options.onClose?.();
+    };
+    if (prefersReducedMotion()) {
+      finish();
+      return;
+    }
+    void animateAsync(panel, 'exit', { reducedMotion: false }).then(finish);
   }
 
   function onKeyDown(e: KeyboardEvent): void {
@@ -99,14 +94,8 @@ export function openDialog(options: DialogOptions): DialogHandle {
       first.focus();
     }
   }
-  // Capture phase: a dialog must win over whatever else on the page might otherwise handle
-  // Escape/Tab first (e.g. a tool's own Escape-cancels-gesture handling).
   document.addEventListener('keydown', onKeyDown, true);
 
-  // Focuses the panel itself, not a piece of the caller's own content: at this point (before
-  // `openDialog` has even returned) nothing else exists to focus yet — a caller that wants a
-  // more specific initial focus target builds its content, appends it, then focuses it directly,
-  // exactly as `confirmDialog` below does for its Cancel button.
   panel.focus();
 
   return { root, panel, close };
@@ -121,12 +110,6 @@ export interface ConfirmDialogOptions {
   readonly destructive?: boolean;
 }
 
-/**
- * The "every destructive action routes through this" convenience (the phase doc's own phrase):
- * builds a title/message/Confirm-Cancel dialog on {@link openDialog} and resolves once the user
- * picks one — `true` for Confirm, `false` for Cancel *or* dismissing without choosing at all
- * (`Escape`, clicking outside — never treated as an implicit yes).
- */
 export function confirmDialog(options: ConfirmDialogOptions): Promise<boolean> {
   return new Promise((resolve) => {
     let resolved = false;
@@ -153,8 +136,6 @@ export function confirmDialog(options: ConfirmDialogOptions): Promise<boolean> {
 
     const handle = openDialog({ title: options.title, onClose: () => settle(false) });
     handle.panel.append(message, controls);
-    // Cancel, not Confirm: a destructive action's default keyboard-focus target should never be
-    // the button that does the damage.
     cancelButton.focus();
 
     cancelButton.addEventListener('click', () => {

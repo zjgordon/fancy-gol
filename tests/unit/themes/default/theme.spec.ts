@@ -18,12 +18,17 @@ describe('Default theme module shape', () => {
   it.each([
     ['dark', DEFAULT_DARK_THEME],
     ['light', DEFAULT_LIGHT_THEME],
-  ] as const)("%s variant's motion.easings are genuinely the identity function, not a guessed curve", (_name, theme) => {
-    for (const easing of Object.values(theme.motion.easings)) {
-      expect(easing(0)).toBe(0);
-      expect(easing(0.42)).toBe(0.42);
-      expect(easing(1)).toBe(1);
+  ] as const)("%s variant's motion.easings are real curves with correct endpoints (P3-A-6)", (_name, theme) => {
+    for (const [key, easing] of Object.entries(theme.motion.easings)) {
+      expect(easing(0), key).toBe(0);
+      expect(easing(1), key).toBe(1);
+      if (key !== 'linear') {
+        expect(easing(0.42), key).not.toBe(0.42);
+      }
     }
+    expect(theme.motion.enter.keyframes.length).toBeGreaterThan(0);
+    expect(theme.motion.exit.keyframes.length).toBeGreaterThan(0);
+    expect(theme.motion.emphasis.keyframes.length).toBeGreaterThan(0);
   });
 
   it('DEFAULT_THEME is an adaptive pair wrapping the two concrete variants', () => {

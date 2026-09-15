@@ -1,29 +1,9 @@
 /**
- * P1-D-1 — the layout shell: the floating translucent chrome (toolbar left, transport
- * bottom-centre, status bar bottom-right, panel dock right) that floats over the full-bleed
- * canvas, `Tab`-dismissible, plus the cold-start choreography that is this task's whole reason
- * for existing (see the phase doc's "wow on first paint" intent — *"When a user first opens the
- * app, they should be struck by the fact that it's a 'toy' that feels like a professional
- * tool."*). `index.html` owns the chrome's actual DOM structure and its token-driven CSS; this
- * module only owns behaviour — finding the four fixed regions, toggling visibility, and staging
- * the intro fade-in. Future D-workstream tasks (transport, status bar, ruleset picker,
- * toasts/dialogs) mount their own content into the regions this hands back; none of them need to
- * touch this file to do it.
- *
- * The four regions are fixed by the phase doc's own implementation note — this shell does not
- * grow a fifth without a doc amendment, the same discipline `ToolRegistry`'s "one new file, one
- * registry line" rule enforces for tools.
- *
- * `Tab` globally toggling chrome is a deliberate call from the phase doc ("Chrome is dismissible
- * with `Tab` for a pure-canvas view"), not this module's invention — it is in real tension with
- * ordinary focus navigation (a screen-reader or keyboard-only user tabbing through the toolbar's
- * eventual buttons would have `Tab` hijacked instead). Phase 1 ships no focusable chrome content
- * yet beyond the transport's plain buttons, so the tension is latent, not yet a live bug; guarded
- * here only against text-input targets (the same discipline `ui/input/keymap.ts`'s own Tab-
- * adjacent guards use), with the fuller resolution — Tab still toggling chrome but not eating
- * focus navigation while chrome content is genuinely focused — left for Phase 6's accessibility
- * audit (`P6-C-1`) once there is real focusable chrome content to test it against.
+ * P1-D-1 / P3-A-6 — layout shell. Intro and chrome visibility use `themes/motion/animate`
+ * (no CSS `transition`, no forced `offsetHeight` flush).
  */
+import { animate, animateAsync } from '@themes/motion/animate';
+import { getMotionSignature } from '@themes/motion/runtime';
 
 export interface ShellRegions {
   readonly toolbar: HTMLElement;
@@ -49,9 +29,7 @@ export type ReducedMotionQuery = () => boolean;
 export const SYSTEM_REDUCED_MOTION: ReducedMotionQuery = () =>
   typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/** Timer source for the intro's completion, injected the same way `ui/input/keymap.ts`'s chord
- * timeout is — so a test can drive it without real timers. Each module keeps its own copy rather
- * than sharing one; see this file's module doc. */
+/** Timer source for the intro's completion, injected so a test can drive it without real timers. */
 export interface Timers {
   setTimeout(fn: () => void, ms: number): number;
   clearTimeout(handle: number): void;
@@ -62,18 +40,14 @@ export const REAL_TIMERS: Timers = {
   clearTimeout: (handle) => clearTimeout(handle),
 };
 
-/** Per-region CSS fade-in duration. A provisional literal, like `ui/overlay/grid-lines.ts`'s
- * `FadeCurve` default — P1-E-1's real motion-duration token replaces it with no API change. */
+/** @deprecated Prefer theme `motion.durationMs.slow` — kept for call sites that pin intro length. */
 export const INTRO_FADE_MS = 600;
 /** Default per-region stagger — the phase doc's own "~40 ms" figure. */
 export const DEFAULT_STAGGER_MS = 40;
 
 export interface ShellOptions {
-  /** Where the four `.chrome-region` elements live — `document` in production. */
   readonly root: ParentNode;
-  /** Where `Tab` is observed. Defaults to `window`. */
   readonly keyTarget?: ShellKeySurface;
-  /** Where the intro's cancel-on-any-input listens. Defaults to `window`. */
   readonly inputTarget?: ShellInputSurface;
   readonly reducedMotion?: ReducedMotionQuery;
   readonly timers?: Timers;
@@ -87,13 +61,6 @@ export interface Shell extends ShellRegions {
   readonly chromeVisible: boolean;
   toggleChrome(): void;
   setChromeVisible(visible: boolean): void;
-  /**
-   * The cold-start choreography's chrome half: chrome starts hidden, then fades in staggered by
-   * `staggerMs` per region (toolbar, transport, status, panel dock, in that order). Resolves once
-   * every region has finished, or immediately under reduced motion (chrome simply appears, no
-   * fade). Any real `pointerdown`/`keydown`/`wheel` before it resolves cancels it instantly and
-   * jumps straight to the fully-visible end state — the intro must never delay interactivity.
-   */
   playIntro(options?: IntroOptions): Promise<void>;
   dispose(): void;
 }
@@ -110,8 +77,6 @@ function requireRegion(root: ParentNode, id: string): HTMLElement {
   return el;
 }
 
-/** A hand-written duplicate of `ui/input/keymap.ts`'s identically-behaved guard — kept
- * independent per this file's own module-boundary-duplication note. */
 function isTextInput(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.tagName === 'TEXTAREA') return true;
@@ -131,7 +96,6 @@ export function attachShell(options: ShellOptions): Shell {
     status: requireRegion(root, 'status'),
     panelDock: requireRegion(root, 'panel-dock'),
   };
-  // Fixed order — matches the phase doc's own chrome layout description.
   const orderedRegions: readonly HTMLElement[] = [
     regions.toolbar,
     regions.transport,
@@ -144,13 +108,21 @@ export function attachShell(options: ShellOptions): Shell {
   const inputTarget: ShellInputSurface | undefined =
     options.inputTarget ?? (typeof window !== 'undefined' ? window : undefined);
   const reducedMotion = options.reducedMotion ?? SYSTEM_REDUCED_MOTION;
-  const timers = options.timers ?? REAL_TIMERS;
 
   let chromeVisible = true;
+  let introAbort: AbortController | null = null;
 
   function setChromeVisible(visible: boolean): void {
     chromeVisible = visible;
-    chrome.classList.toggle('chrome-hidden', !visible);
+    if (visible) {
+      chrome.classList.remove('chrome-hidden');
+      void animateAsync(chrome, 'enter', { reducedMotion: reducedMotion() });
+    } else {
+      // Class flips immediately so Tab-toggle callers (and tests) see the contract; motion
+      // still runs the exit choreography when motion is enabled.
+      chrome.classList.add('chrome-hidden');
+      void animateAsync(chrome, 'exit', { reducedMotion: reducedMotion() });
+    }
   }
 
   function toggleChrome(): void {
@@ -166,57 +138,53 @@ export function attachShell(options: ShellOptions): Shell {
   keyTarget?.addEventListener('keydown', onKeyDown);
 
   function playIntro(introOptions: IntroOptions = {}): Promise<void> {
-    const staggerMs = introOptions.staggerMs ?? DEFAULT_STAGGER_MS;
+    const motion = getMotionSignature();
+    const staggerMs = introOptions.staggerMs ?? motion.enter.delayStepMs ?? DEFAULT_STAGGER_MS;
+
+    introAbort?.abort();
+    introAbort = new AbortController();
+    const { signal } = introAbort;
+
+    chrome.classList.remove('chrome-intro');
+    chrome.classList.remove('chrome-hidden');
+    chromeVisible = true;
 
     if (reducedMotion()) {
-      chrome.classList.remove('chrome-intro');
-      for (const el of orderedRegions) el.style.removeProperty('--gol-intro-delay');
-      setChromeVisible(true);
+      for (const el of orderedRegions) {
+        el.style.opacity = '1';
+        el.style.transform = '';
+      }
       return Promise.resolve();
     }
 
-    setChromeVisible(false);
-    chrome.classList.add('chrome-intro');
-    orderedRegions.forEach((el, i) => {
-      el.style.setProperty('--gol-intro-delay', `${i * staggerMs}ms`);
+    const handles = orderedRegions.map((el, i) => {
+      el.style.opacity = '0';
+      return animate(el, 'enter', {
+        delayMs: i * staggerMs,
+        reducedMotion: false,
+        signal,
+        motion,
+      });
     });
-    // Forces a synchronous style flush so the browser commits the "hidden" state as a real,
-    // rendered style before "visible" is applied below — without this, both class changes land
-    // in the same task and get coalesced into one style recalculation, so the transition never
-    // has a starting point to animate from (the classic "just-hidden element doesn't transition
-    // back in" pitfall). Reading a layout property is what forces the flush; the value itself is
-    // unused. jsdom (this module's test environment) has no real layout engine and always
-    // reports 0 here, which is harmless — the flush is a no-op there, not incorrect.
-    void chrome.offsetHeight;
-    setChromeVisible(true);
 
-    return new Promise<void>((resolve) => {
-      let settled = false;
-      let timerHandle: number | null = null;
+    const cancel = (): void => {
+      introAbort?.abort();
+      for (const el of orderedRegions) {
+        el.style.opacity = '1';
+        el.style.transform = '';
+      }
+    };
+    const cancelTargets: ReadonlyArray<readonly [ShellInputSurface, string]> = inputTarget
+      ? [
+          [inputTarget, 'pointerdown'],
+          [inputTarget, 'keydown'],
+          [inputTarget, 'wheel'],
+        ]
+      : [];
+    for (const [target, type] of cancelTargets) target.addEventListener(type, cancel, { once: true });
 
-      const finish = (): void => {
-        if (settled) return;
-        settled = true;
-        if (timerHandle !== null) timers.clearTimeout(timerHandle);
-        chrome.classList.remove('chrome-intro');
-        for (const el of orderedRegions) el.style.removeProperty('--gol-intro-delay');
-        setChromeVisible(true);
-        for (const [target, type] of cancelTargets) target.removeEventListener(type, cancel);
-        resolve();
-      };
-
-      const cancel = (): void => finish();
-      const cancelTargets: ReadonlyArray<readonly [ShellInputSurface, string]> = inputTarget
-        ? [
-            [inputTarget, 'pointerdown'],
-            [inputTarget, 'keydown'],
-            [inputTarget, 'wheel'],
-          ]
-        : [];
-      for (const [target, type] of cancelTargets) target.addEventListener(type, cancel, { once: true });
-
-      const totalMs = staggerMs * (orderedRegions.length - 1) + INTRO_FADE_MS;
-      timerHandle = timers.setTimeout(finish, totalMs);
+    return Promise.all(handles.map((h) => h.finished)).then(() => {
+      for (const [target, type] of cancelTargets) target.removeEventListener(type, cancel);
     });
   }
 
@@ -229,6 +197,7 @@ export function attachShell(options: ShellOptions): Shell {
     setChromeVisible,
     playIntro,
     dispose(): void {
+      introAbort?.abort();
       keyTarget?.removeEventListener('keydown', onKeyDown);
     },
   };

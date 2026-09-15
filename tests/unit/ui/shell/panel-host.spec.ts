@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import axe from 'axe-core';
 import { DEFAULT_PANEL_LAYOUT } from '@shared/session';
 import { attachPanelHost, clampPanelWidth } from '@ui/shell/panel-host';
+import { resetMotionRuntime, setReducedMotionQuery } from '@themes/motion/runtime';
 
 function pressKey(target: EventTarget, key: string, extra: Partial<KeyboardEventInit> = {}): void {
   target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...extra }));
@@ -28,8 +29,12 @@ describe('clampPanelWidth', () => {
 });
 
 describe('attachPanelHost', () => {
+  beforeEach(() => {
+    setReducedMotionQuery(() => true);
+  });
   afterEach(() => {
     document.body.innerHTML = '';
+    resetMotionRuntime();
   });
 
   function setup() {

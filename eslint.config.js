@@ -4,6 +4,7 @@ import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 import globals from 'globals';
 import { noLiteralDesignTokens } from './scripts/eslint-rules/no-literal-design-tokens.mjs';
+import { noCssTransitionOnChrome } from './scripts/eslint-rules/no-css-transition-on-chrome.mjs';
 
 const ENGINE_FORBIDDEN_GLOBALS = [
   'window',
@@ -69,9 +70,17 @@ export default tseslint.config(
   {
     files: ['src/ui/**/*.ts'],
     ignores: ['**/*.spec.ts'],
-    plugins: { local: { rules: { 'no-literal-design-tokens': noLiteralDesignTokens } } },
+    plugins: {
+      local: {
+        rules: {
+          'no-literal-design-tokens': noLiteralDesignTokens,
+          'no-css-transition-on-chrome': noCssTransitionOnChrome,
+        },
+      },
+    },
     rules: {
       'local/no-literal-design-tokens': 'error',
+      'local/no-css-transition-on-chrome': 'error',
     },
   },
   {

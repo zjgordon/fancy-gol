@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CellPalette } from '@render/types';
-import type { MotionSignature, ThemeModule, TokenSet } from '@themes/types';
+import { defaultMotionSignature } from '@themes/motion/choreography';
+import type { ThemeModule, TokenSet } from '@themes/types';
 
 const palette: CellPalette = (state) => (state === 0 ? '#000000' : '#ffffff');
 
@@ -46,17 +47,7 @@ const tokens: TokenSet = {
   effect: { blur: { chrome: 'blur(4px)' } },
 };
 
-const motion: MotionSignature = {
-  durationMs: { instant: 0, fast: 150, slow: 600, slower: 900 },
-  easings: {
-    linear: (t) => t,
-    standard: (t) => t,
-    decelerate: (t) => t,
-    accelerate: (t) => t,
-    bounce: (t) => t,
-  },
-  enter: { delayStepMs: 40 },
-};
+const motion = defaultMotionSignature();
 
 describe('themes/types.ts — the ThemeModule contract (P1-E-1)', () => {
   it('accepts a Phase-1-shaped Default theme (no render hooks, no sound)', () => {

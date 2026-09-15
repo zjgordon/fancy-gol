@@ -1,14 +1,20 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import axe from 'axe-core';
 import { confirmDialog, openDialog } from '@ui/components/dialog';
+import { setReducedMotionQuery, resetMotionRuntime } from '@themes/motion/runtime';
 
 function pressKey(target: EventTarget, key: string, extra: Partial<KeyboardEventInit> = {}): void {
   target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...extra }));
 }
 
 describe('openDialog', () => {
+  beforeEach(() => {
+    // Instant choreography so close()/Escape assertions stay synchronous.
+    setReducedMotionQuery(() => true);
+  });
   afterEach(() => {
     document.body.innerHTML = '';
+    resetMotionRuntime();
   });
 
   it('is a portal: appended to document.body, role=dialog, aria-modal, labelled by its title', () => {
@@ -128,6 +134,13 @@ describe('openDialog', () => {
 });
 
 describe('confirmDialog', () => {
+  beforeEach(() => {
+    setReducedMotionQuery(() => true);
+  });
+  afterEach(() => {
+    document.body.innerHTML = '';
+    resetMotionRuntime();
+  });
   afterEach(() => {
     document.body.innerHTML = '';
   });

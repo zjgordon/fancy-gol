@@ -10,6 +10,8 @@ import {
   type PanelDockSide,
   type SessionPanelLayout,
 } from '@shared/session';
+import { animateAsync } from '@themes/motion/animate';
+import { prefersReducedMotion } from '@themes/motion/runtime';
 
 export interface PanelSpec {
   readonly id: string;
@@ -226,15 +228,23 @@ export function attachPanelHost(options: PanelHostOptions): PanelHost {
     }
     sync();
     panel.focus();
+    void animateAsync(root, 'enter', { reducedMotion: prefersReducedMotion() });
     emit();
   }
 
   function close(): void {
-    unmountActive();
-    layout = { ...layout, activeId: null };
-    sync();
-    restoreFocus();
-    emit();
+    const finish = (): void => {
+      unmountActive();
+      layout = { ...layout, activeId: null };
+      sync();
+      restoreFocus();
+      emit();
+    };
+    if (prefersReducedMotion()) {
+      finish();
+      return;
+    }
+    void animateAsync(root, 'exit', { reducedMotion: false }).then(finish);
   }
 
   function setCollapsed(collapsed: boolean): void {

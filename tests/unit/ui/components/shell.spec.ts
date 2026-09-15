@@ -7,8 +7,8 @@ import {
   INTRO_FADE_MS,
   type ShellInputSurface,
   type ShellKeySurface,
-  type Timers,
 } from '@ui/components/shell';
+import { getMotionSignature, setMotionSignature, setReducedMotionQuery, resetMotionRuntime } from '@themes/motion/runtime';
 
 /** Same "functional double" discipline as `tests/unit/ui/gestures.spec.ts`'s `FakeSurface`. Two
  * declared overloads (rather than one general `string`/`EventListener` signature) so this
@@ -17,9 +17,6 @@ import {
 class FakeSurface implements ShellKeySurface, ShellInputSurface {
   private readonly handlers = new Map<string, Set<EventListener>>();
 
-  // The implementation signature's listener param must be able to accept whichever of the two
-  // overloads above a caller used; `never` is the one type every function type is (vacuously)
-  // assignable to, so it's what makes both overloads implementable without `any`.
   addEventListener(type: 'keydown', listener: (e: KeyboardEvent) => void): void;
   addEventListener(type: string, listener: EventListener, options?: AddEventListenerOptions): void;
   addEventListener(type: string, listener: (e: never) => void): void {
@@ -39,31 +36,6 @@ class FakeSurface implements ShellKeySurface, ShellInputSurface {
 
   listenerCount(type: string): number {
     return this.handlers.get(type)?.size ?? 0;
-  }
-}
-
-class FakeTimers implements Timers {
-  private readonly callbacks = new Map<number, () => void>();
-  private nextHandle = 1;
-
-  setTimeout(fn: () => void, _ms: number): number {
-    const handle = this.nextHandle++;
-    this.callbacks.set(handle, fn);
-    return handle;
-  }
-
-  clearTimeout(handle: number): void {
-    this.callbacks.delete(handle);
-  }
-
-  get pendingCount(): number {
-    return this.callbacks.size;
-  }
-
-  fireAll(): void {
-    const fns = [...this.callbacks.values()];
-    this.callbacks.clear();
-    for (const fn of fns) fn();
   }
 }
 
@@ -88,6 +60,7 @@ describe('attachShell', () => {
 
   afterEach(() => {
     document.body.innerHTML = '';
+    resetMotionRuntime();
   });
 
   it('throws a legible error when a required chrome region is missing', () => {
@@ -188,44 +161,44 @@ describe('attachShell', () => {
       const chrome = document.querySelector('#chrome')!;
       expect(shell.chromeVisible).toBe(true);
       expect(chrome.classList.contains('chrome-intro')).toBe(false);
+      expect(shell.toolbar.style.opacity).toBe('1');
     });
 
-    it('stages a staggered fade-in and resolves once the total duration elapses', async () => {
-      const timers = new FakeTimers();
-      const shell = attachShell({ root: document, reducedMotion: () => false, timers, inputTarget: new FakeSurface() });
+    it('stages a staggered motion enter and resolves when every region finishes', async () => {
+      const motion = {
+        ...getMotionSignature(),
+        durationMs: { instant: 0, fast: 10, slow: 10, slower: 10 },
+      };
+      setMotionSignature(motion);
+      setReducedMotionQuery(() => false);
+      const shell = attachShell({ root: document, reducedMotion: () => false, inputTarget: new FakeSurface() });
       const chrome = document.querySelector('#chrome')!;
 
-      const done = shell.playIntro({ staggerMs: 40 });
-      expect(chrome.classList.contains('chrome-intro')).toBe(true);
-      expect(shell.toolbar.style.getPropertyValue('--gol-intro-delay')).toBe('0ms');
-      expect(shell.transport.style.getPropertyValue('--gol-intro-delay')).toBe('40ms');
-      expect(shell.status.style.getPropertyValue('--gol-intro-delay')).toBe('80ms');
-      expect(shell.panelDock.style.getPropertyValue('--gol-intro-delay')).toBe('120ms');
-      expect(timers.pendingCount).toBe(1);
-
-      timers.fireAll();
+      const done = shell.playIntro({ staggerMs: 5 });
+      expect(chrome.classList.contains('chrome-hidden')).toBe(false);
+      expect(shell.toolbar.style.opacity).toBe('0');
       await done;
 
       expect(chrome.classList.contains('chrome-intro')).toBe(false);
       expect(shell.chromeVisible).toBe(true);
-      expect(shell.toolbar.style.getPropertyValue('--gol-intro-delay')).toBe('');
+      expect(shell.toolbar.style.opacity).toBe('1');
     });
 
     it('any real input before completion cancels it instantly, jumping to the visible end state', async () => {
-      const timers = new FakeTimers();
+      const motion = {
+        ...getMotionSignature(),
+        durationMs: { instant: 0, fast: 200, slow: 200, slower: 200 },
+      };
+      setMotionSignature(motion);
       const inputTarget = new FakeSurface();
-      const shell = attachShell({ root: document, reducedMotion: () => false, timers, inputTarget });
-      const chrome = document.querySelector('#chrome')!;
+      const shell = attachShell({ root: document, reducedMotion: () => false, inputTarget });
 
-      const done = shell.playIntro();
-      expect(chrome.classList.contains('chrome-intro')).toBe(true);
-
+      const done = shell.playIntro({ staggerMs: 40 });
       inputTarget.dispatch('pointerdown', {});
-      await done; // must resolve without the timer ever firing
+      await done;
 
       expect(shell.chromeVisible).toBe(true);
-      expect(chrome.classList.contains('chrome-intro')).toBe(false);
-      expect(timers.pendingCount).toBe(0); // the completion timer was cleared, not merely ignored
+      expect(shell.toolbar.style.opacity).toBe('1');
     });
 
     it('uses the documented default stagger and fade duration when none is given', () => {

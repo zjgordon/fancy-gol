@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   attachRulesetPicker,
   defaultMigration,
@@ -6,6 +6,7 @@ import {
   type RulesetSummary,
 } from '@ui/components/ruleset-picker';
 import type { StateDef, StateId } from '@shared/types';
+import { resetMotionRuntime, setReducedMotionQuery } from '@themes/motion/runtime';
 
 const CONWAY_STATES: readonly StateDef[] = [
   { id: 0, name: 'dead', kind: 'dead', countsAsAlive: false },
@@ -137,10 +138,14 @@ function pressKey(target: HTMLElement, key: string): void {
 
 describe('attachRulesetPicker', () => {
   let cleanup: (() => void) | null = null;
+  beforeEach(() => {
+    setReducedMotionQuery(() => true);
+  });
   afterEach(() => {
     cleanup?.();
     cleanup = null;
     document.body.innerHTML = '';
+    resetMotionRuntime();
   });
 
   it('creates one thumbnail canvas per entry and hands each to onThumbnailCreated', () => {

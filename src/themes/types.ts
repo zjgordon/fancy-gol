@@ -14,6 +14,9 @@
  */
 import type { CellPalette, Viewport } from '@render/types';
 import type { StateId } from '@shared/types';
+import type { Choreography, TrailSpec } from './motion/choreography';
+
+export type { Choreography, ChoreographyKind, MotionKeyframe, TrailSpec } from './motion/choreography';
 
 // ---------------------------------------------------------------------------------------------
 // Colour
@@ -138,13 +141,15 @@ export type Easing = (t: number) => number;
 /** The non-CSS twin of `TokenSet.motion`: code that animates a canvas, a camera move, or a
  * dash-offset (nothing a CSS transition can reach) needs the *durations as numbers* and the
  * *easings as functions*, not `var(--gol-*)` strings a `<canvas>` context can't resolve. Same
- * named keys as `TokenSet.motion` by design, so a theme author states one set of intentions and
- * both projections agree. `enter` is the staggered choreography `ui/components/shell.ts`'s
- * `playIntro` already needs (its `INTRO_STAGGER_MS` is exactly this, provisionally). */
+ * named keys as `TokenSet.motion` by design. Enter/exit/emphasis are full choreographies so
+ * Flatline can type panels in while Void-Walker blooms — zero component changes (P3-A-6). */
 export interface MotionSignature {
   readonly durationMs: Readonly<Record<DurationKey, number>>;
   readonly easings: Readonly<Record<EasingKey, Easing>>;
-  readonly enter: { readonly delayStepMs: number };
+  readonly enter: Choreography;
+  readonly exit: Choreography;
+  readonly emphasis: Choreography;
+  readonly cursorTrail?: TrailSpec;
 }
 
 // ---------------------------------------------------------------------------------------------
