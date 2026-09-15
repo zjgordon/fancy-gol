@@ -177,7 +177,7 @@ src/audio/
 - [x] Passes are hot-swappable on theme change with no canvas reallocation and no flicker.
 - [x] `dispose()` is verified to release every offscreen canvas and every WebAudio node (leak test over 100 theme switches).
 
-#### - [ ] P3-A-4 · Degrade governor
+#### - [~] P3-A-4 · Degrade governor — @cursor, started 2026-09-15
 **Depends on:** P3-A-3 · **Files:** `src/render/quality-governor.ts`
 **Implementation notes** Exactly the policy in §2.3, with hysteresis so it cannot oscillate. Expose current quality, the reason for the last change, and a manual pin in settings.
 **Acceptance criteria**
