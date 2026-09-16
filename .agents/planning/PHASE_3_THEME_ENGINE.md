@@ -362,7 +362,7 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 
 ### Workstream D — Integration & gates
 
-#### - [ ] P3-D-1 · Theme switching UX
+#### - [~] P3-D-1 · Theme switching UX — @cursor, started 2026-09-16
 **Depends on:** P3-C-1…C-6 · **Files:** `src/ui/panels/themes/*`
 **Implementation notes** A theme picker with **live previews** (each card renders a tiny real simulation with that theme's palette and passes — reusing the P1-D-4 thumbnail machinery). Switching cross-fades over 300 ms rather than cutting. `Mod+Shift+T` cycles. Every theme is a registered command so Phase 4's palette gets them free.
 **Acceptance criteria**
