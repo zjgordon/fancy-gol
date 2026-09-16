@@ -60,6 +60,7 @@ export {
   createDeathParticlesPass,
   createTrailFadePass,
   createHueShiftByAgePass,
+  vanishingPointX,
 } from './effects-passes';
 
 export type ThemeId =
@@ -177,6 +178,38 @@ export function createVoidWalkerPassStack(): EffectPass[] {
       radius: VOID_BLOOM_RADIUS,
     }),
     createVignettePass({ strength: 0.62 }),
+  ];
+}
+
+/** Synthwave bloom — bright neon, below Void-Walker's strength so the grid stays readable. */
+export const SYNTH_BLOOM_THRESHOLD = 55;
+export const SYNTH_BLOOM_STRENGTH = 0.48;
+export const SYNTH_BLOOM_RADIUS = 2;
+export const SYNTH_SUN_Y = 0.55;
+
+/** Synthwave's tuned stack (ADR-009: lives in render/, not themes/). */
+export function createSynthwavePassStack(): EffectPass[] {
+  return [
+    createSunGradientPass({
+      top: '#12001f',
+      bottom: '#ff2a6d',
+      sunColor: '#ffcc66',
+      sunY: SYNTH_SUN_Y,
+    }),
+    createGridGlowPass({
+      color: '#ff2bd6',
+      horizonY: SYNTH_SUN_Y,
+      parallax: 0.08,
+      maxAlpha: 0.26,
+    }),
+    createHueShiftByAgePass({ degrees: 120 }),
+    createBloomPass({
+      threshold: SYNTH_BLOOM_THRESHOLD,
+      strength: SYNTH_BLOOM_STRENGTH,
+      radius: SYNTH_BLOOM_RADIUS,
+    }),
+    createChromaticAberrationPass({ amount: 2.5, edgeBias: 0.55 }),
+    createScanlinesPass({ opacity: 0.07 }),
   ];
 }
 

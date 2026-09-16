@@ -11,6 +11,7 @@ import {
   createChibaCityPassStack,
   createFlatlinePassStack,
   createSidsPlacePassStack,
+  createSynthwavePassStack,
   createVoidWalkerPassStack,
 } from '@render/effects/library';
 import type { Viewport as RenderViewport } from '@render/types';
@@ -52,6 +53,7 @@ import { CHIBA_CITY_THEME } from '@themes/chiba-city/theme';
 import { FLATLINE_THEME } from '@themes/flatline/theme';
 import { SIDS_PLACE_THEME } from '@themes/sids-place/theme';
 import { VOID_WALKER_THEME } from '@themes/void-walker/theme';
+import { SYNTHWAVE_THEME } from '@themes/synthwave/theme';
 import type { ThemeModule } from '@themes/types';
 import { chartTokensFromSet } from '@ui/charts/chart';
 import { createStatisticsPanel } from '@ui/panels/statistics/panel';
@@ -185,6 +187,7 @@ function main(): void {
   themeRegistry.register(FLATLINE_THEME);
   themeRegistry.register(SIDS_PLACE_THEME);
   themeRegistry.register(VOID_WALKER_THEME);
+  themeRegistry.register(SYNTHWAVE_THEME);
 
   function applyThemeVisuals(theme: ThemeModule): void {
     const dataId = theme.id.startsWith('default') ? 'default' : theme.id;
@@ -210,6 +213,12 @@ function main(): void {
     }
     if (theme.id === 'void-walker') {
       renderer.setEffectPasses(createVoidWalkerPassStack());
+      renderer.setBackgroundMode('parallax');
+      void client.send({ cmd: 'setAgeBuffer', enabled: true });
+      return;
+    }
+    if (theme.id === 'synthwave') {
+      renderer.setEffectPasses(createSynthwavePassStack());
       renderer.setBackgroundMode('parallax');
       void client.send({ cmd: 'setAgeBuffer', enabled: true });
       return;

@@ -467,6 +467,32 @@
         letter-spacing: var(--gol-letter-spacing-wide);
         text-transform: uppercase;
       }
+
+      html[data-theme='synthwave'] {
+        --gol-shadow-chrome: var(--gol-shadow-md);
+      }
+      html[data-theme='synthwave'] .chrome-panel,
+      html[data-theme='synthwave'] .panel-host:not(.panel-host-collapsed),
+      html[data-theme='synthwave'] .dialog-surface,
+      html[data-theme='synthwave'] .toast {
+        box-shadow: var(--gol-shadow-md);
+      }
+      html[data-theme='synthwave'] .panel-host-title {
+        font-style: italic;
+        letter-spacing: var(--gol-letter-spacing-wide);
+        background-image: linear-gradient(
+          90deg,
+          var(--gol-color-accent),
+          var(--gol-color-success)
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      html[data-theme='synthwave'] :focus-visible {
+        outline-color: var(--gol-color-accent);
+        box-shadow: var(--gol-shadow-sm);
+      }
       .controls button:disabled {
         background: var(--gol-color-elevated);
         color: var(--gol-color-muted);

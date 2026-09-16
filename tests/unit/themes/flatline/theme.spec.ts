@@ -308,7 +308,8 @@ describe('Flatline textRain costs < 1.5 ms/frame at 1080p', () => {
       viewport: { ...VIEWPORT, widthPx: w, heightPx: h },
       frameTime: 0.5,
     });
-    pass.render(ctx);
+    // Discard cold-start / JIT frames so the EWMA and median both reflect warm cost.
+    for (let i = 0; i < 4; i++) pass.render(ctx);
     const samples: number[] = [];
     for (let i = 0; i < 12; i++) {
       const t0 = performance.now();

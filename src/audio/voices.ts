@@ -151,8 +151,11 @@ export function spawnVoice(options: SpawnVoiceOptions): VoiceHandle {
     }
     case 'pluck': {
       const osc = ctx.createOscillator();
-      osc.type = 'triangle';
+      osc.type = params.waveform ?? 'triangle';
       osc.frequency.setValueAtTime(pitch, startAt);
+      if (params.detune !== undefined) {
+        osc.detune.setValueAtTime(params.detune, startAt);
+      }
       source = osc;
       const lp = ctx.createBiquadFilter();
       lp.type = 'lowpass';

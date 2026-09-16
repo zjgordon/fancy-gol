@@ -345,14 +345,18 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 - [x] Death particles are pooled, hard-capped, and allocation-free in steady state. — fixed `Float32Array` pools; `bufferAllocations === 1`; `reset()` clears life without reallocating.
 - [x] The synthesised reverb impulse is generated at runtime — verify zero audio assets in the bundle. — `synthesizeReverbImpulse` + `createConvolver`; theme and `src/audio` ship no wav/mp3/ogg.
 
-#### - [~] P3-C-6 · Synthwave — @cursor, started 2026-09-15
+#### - [x] P3-C-6 · Synthwave — @cursor, started 2026-09-15, finished 2026-09-15
 **Depends on:** P3-A-5, P3-B-3 · **Files:** `src/themes/synthwave/*`
 **Brief:** *"1980s aesthetic. Neon pinks, cyans, and a constant feeling of 'the future as imagined in 1984.'"*
 **Design direction** Magenta-to-cyan gradient sky with a `sunGradient` horizon and a perspective grid receding to a vanishing point behind the simulation (drawn in L0, parallaxing with the camera). Cells are neon with hard chromatic edges; the age ramp shifts hue along the magenta→cyan axis so a running simulation looks like a light show that still encodes real data. Passes: `sunGradient`, `gridGlow`, `bloom`, `chromaticAberration`, `scanlines` (very subtle). Chrome: chrome-gradient text, italic display type, pink glow on focus. Motion: snappy with a slight elastic overshoot. Sound: analog-style saw plucks with detune, a gated-reverb hit on major events, an arpeggiated ambient bed whose tempo tracks the simulation speed — a genuinely delightful detail worth building properly.
+**Done when**
+- README written first: the future as imagined in 1984. Tokens are magenta/cyan neon, italic display, pink glow. Palette: 16-step magenta-ward birth → CVD-safe steady, 24 states. Motion: 60/110/180 ms with bounce overshoot. Sound: saw plucks with detune, gated reverb on major cues, TPS-tracking arpeggio bed.
+- Passes: `sunGradient` + perspective `gridGlow` (vanishing point tracks pan) + `hueShiftByAge` + bloom + edge chromatic aberration + subtle scanlines. Dead cells transparent so the L0 sky shows through. Quality 0 is palette-only (`losslessAtQuality0: false`). Overlay AA against bg and a busy neon line. Age buffer on; background mode is parallax.
+- Proven in `tests/unit/themes/synthwave/{theme,palette,tokens,synthwave-css}.spec.ts`. Per-theme screenshots remain P3-D-2.
 **Additional acceptance criteria**
-- [ ] The horizon grid's vanishing point tracks camera pan believably and does not fight the simulation for attention.
-- [ ] Arpeggio tempo tracks TPS smoothly with no audible discontinuity when the speed slider moves.
-- [ ] Neon palette still distinguishes 8 states (this is the theme most at risk of "everything is pink" — verify with the multi-state rulesets).
+- [x] The horizon grid's vanishing point tracks camera pan believably and does not fight the simulation for attention. — `vanishingPointX` soft parallax + clamp; pan-away-and-back hashes equal; `maxAlpha` 0.26.
+- [x] Arpeggio tempo tracks TPS smoothly with no audible discontinuity when the speed slider moves. — `ArpeggioBed.setTps` changes interval for the next note only; already-armed notes keep their times; `EventMapper.setTps` forwards.
+- [x] Neon palette still distinguishes 8 states (this is the theme most at risk of "everything is pink" — verify with the multi-state rulesets). — Default dark CVD eight as steadies; protanopia/deuteranopia min distance ≥ 50; hue span check.
 
 ---
 

@@ -2,6 +2,7 @@
  * P3-A-5 — effects-stage passes (L2): phosphor, particles, trails, hue, grid glow.
  */
 import { Mulberry32 } from '@shared/rng';
+import type { Canvas2DContext } from '../layers';
 import type { EffectCtx } from './ctx';
 import { readSourcePixels, writeTargetPixels } from './software-surface';
 import { TimedPass } from './timed-pass';
@@ -71,7 +72,29 @@ class PhosphorDecayPass extends TimedPass {
 
 export interface GridGlowOptions {
   readonly color?: string;
-  readonly spacing?: number;
+  /** Horizon as a fraction of viewport height (aligns with sunGradient.sunY). */
+  readonly horizonY?: number;
+  /** How strongly camera pan shifts the vanishing point (screen px per world-px·cell). */
+  readonly parallax?: number;
+  /** Max ray opacity — keep the floor quiet so it never steals the simulation. */
+  readonly maxAlpha?: number;
+}
+
+/**
+ * Vanishing-point X for the Synthwave floor grid. Parallax is soft so a pan
+ * feels like depth without yanking the horizon across the sim.
+ */
+export function vanishingPointX(
+  originX: number,
+  widthPx: number,
+  cellSize: number,
+  parallax = 0.08,
+): number {
+  const shift = originX * cellSize * parallax;
+  // Soft clamp: VP may drift off-centre but stays within ~35% of the frame.
+  const maxShift = widthPx * 0.35;
+  const clamped = Math.max(-maxShift, Math.min(maxShift, shift));
+  return widthPx * 0.5 + clamped;
 }
 
 export function createGridGlowPass(opts: GridGlowOptions = {}): TimedPass {
@@ -83,35 +106,57 @@ class GridGlowPass extends TimedPass {
   readonly stage = 'effects' as const;
   readonly declaredCost = 1.0;
   private readonly color: string;
-  private readonly spacing: number;
+  private readonly horizonY: number;
+  private readonly parallax: number;
+  private readonly maxAlpha: number;
 
   constructor(opts: GridGlowOptions) {
     super();
     this.color = opts.color ?? '#ff2bd6';
-    this.spacing = opts.spacing ?? 32;
+    this.horizonY = opts.horizonY ?? 0.55;
+    this.parallax = opts.parallax ?? 0.08;
+    this.maxAlpha = opts.maxAlpha ?? 0.28;
   }
 
   protected renderTimed(ctx: EffectCtx): void {
     const w = ctx.viewport.widthPx;
     const h = ctx.viewport.heightPx;
-    const { originX, originY, cellSize } = ctx.viewport;
+    const { originX, cellSize } = ctx.viewport;
     ctx.target.clearRect(0, 0, w, h);
-    ctx.target.globalAlpha = 0.35;
     ctx.target.fillStyle = this.color;
-    const step = this.spacing;
-    const ox = ((-originX * cellSize) % step + step) % step;
-    const oy = ((-originY * cellSize) % step + step) % step;
-    // Perspective-ish: lines denser toward the bottom (Synthwave floor).
-    for (let x = ox; x < w; x += step) {
-      ctx.target.fillRect(x, 0, 1, h);
+
+    const vpx = vanishingPointX(originX, w, cellSize, this.parallax);
+    const vpy = h * this.horizonY;
+
+    // Perspective rays from the vanishing point down to the bottom edge.
+    const rays = 14;
+    for (let i = 0; i < rays; i++) {
+      const t = i / (rays - 1);
+      const bottomX = t * w;
+      const alpha = this.maxAlpha * (0.25 + 0.75 * Math.abs(t - 0.5) * 2);
+      ctx.target.globalAlpha = alpha;
+      strokeLine(ctx.target, vpx, vpy, bottomX, h);
     }
-    for (let i = 0; i < 24; i++) {
-      const t = i / 23;
-      const y = oy + t * t * h;
-      ctx.target.globalAlpha = 0.15 + t * 0.35;
+
+    // Horizontal floor lines denser toward the bottom (perspective foreshortening).
+    for (let i = 0; i < 18; i++) {
+      const t = i / 17;
+      const y = vpy + t * t * (h - vpy);
+      ctx.target.globalAlpha = this.maxAlpha * (0.2 + t * 0.8);
       ctx.target.fillRect(0, y, w, 1);
     }
     ctx.target.globalAlpha = 1;
+  }
+}
+
+/** 1px line via stepping — software canvas path API is unreliable in tests. */
+function strokeLine(target: Canvas2DContext, x0: number, y0: number, x1: number, y1: number): void {
+  const dx = x1 - x0;
+  const dy = y1 - y0;
+  const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy)));
+  for (let s = 0; s <= steps; s++) {
+    const t = s / steps;
+    target.fillRect(x0 + dx * t, y0 + dy * t, 1, 1);
   }
 }
 

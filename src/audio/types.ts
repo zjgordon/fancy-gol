@@ -124,6 +124,7 @@ export interface SoundCue {
  * A theme's synthesised sound pack (ADR-008, P3-C-*). Zero audio assets — every cue is a
  * `VoiceKind`. `ambient: null` is an explicit "no bed" (Default), not an omitted field.
  * `sim` omitted means the pack is UI-only; EventMapper then skips birth ticks / texture.
+ * `arpeggio` (Synthwave) replaces a continuous ambient with a TPS-tempo note bed.
  */
 export interface SoundPack {
   readonly ambient: SoundCue | null;
@@ -132,6 +133,20 @@ export interface SoundPack {
     readonly birth?: SoundCue;
     readonly generation?: SoundCue;
   };
+  /** When set, EventMapper drives an {@link ArpeggioBed} instead of a looping ambient. */
+  readonly arpeggio?: ArpeggioSpec;
+}
+
+/** Synthwave ambient: a looping pitch sequence whose rate tracks simulation TPS. */
+export interface ArpeggioSpec {
+  readonly notes: readonly number[];
+  /** Notes per second when the simulation runs at 60 TPS. */
+  readonly notesPerSecAt60: number;
+  readonly waveform?: OscillatorTypeName;
+  readonly gain?: number;
+  readonly filter?: number;
+  /** Detune in cents applied to each note (analog width). */
+  readonly detune?: number;
 }
 
 export interface VoiceEnvelope {
@@ -155,6 +170,8 @@ export interface VoiceParams {
   readonly waveform?: OscillatorTypeName;
   /** Mix a runtime-synthesised convolution tail (Void-Walker plucks). */
   readonly reverb?: boolean;
+  /** Detune in cents (Synthwave analog saw plucks). */
+  readonly detune?: number;
 }
 
 export interface AudioPrefs {

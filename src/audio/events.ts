@@ -7,6 +7,7 @@
  */
 import type { AudioPolicy } from './policy';
 import type { Scheduler } from './scheduler';
+import { ArpeggioBed } from './arpeggio';
 import {
   AGGREGATION_WINDOW_MS,
   TEXTURE_RATE_PER_SEC,
@@ -87,6 +88,7 @@ export class EventMapper {
   private texturePanner: StereoPannerNodeLike | null = null;
   private textureGain = 0;
   private ambient: VoiceHandle | null = null;
+  private arpeggio: ArpeggioBed | null = null;
   private disposed = false;
 
   /** Sim voices scheduled (discrete ticks + texture starts). For AC metering. */
@@ -108,15 +110,33 @@ export class EventMapper {
     this.textureRate = options.textureRatePerSec ?? TEXTURE_RATE_PER_SEC;
     this.pack = options.pack;
     this.windowStartMs = this.clock.nowMs();
-    if (this.pack?.ambient) this.startAmbient(this.pack.ambient);
+    this.startPackBeds(this.pack);
   }
 
   /** Hot-swap the active theme's pack. A UI-only pack silences sim voices on the next flush. */
   setPack(pack: SoundPack | undefined): void {
     this.pack = pack;
     this.stopAmbient();
+    this.stopArpeggio();
     if (pack && pack.sim === undefined) this.stopTexture();
-    if (pack?.ambient) this.startAmbient(pack.ambient);
+    this.startPackBeds(pack);
+  }
+
+  /**
+   * Drive the Synthwave arpeggio tempo from the simulation speed slider.
+   * No-op when the active pack has no arpeggio. Interval changes apply to the
+   * next note only — no audible restart.
+   */
+  setTps(tps: number): void {
+    this.arpeggio?.setTps(tps);
+  }
+
+  get arpeggioActive(): boolean {
+    return this.arpeggio !== null;
+  }
+
+  get arpeggioBed(): ArpeggioBed | null {
+    return this.arpeggio;
   }
 
   /**
@@ -177,6 +197,7 @@ export class EventMapper {
       return;
     }
     this.rollWindow(atMs, true);
+    this.arpeggio?.pump();
   }
 
   /** Voices scheduled for sim in the last `durationMs` wall-clock window. */
@@ -199,6 +220,7 @@ export class EventMapper {
     this.disposed = true;
     this.stopTexture();
     this.stopAmbient();
+    this.stopArpeggio();
     this.resetWindow(this.clock.nowMs());
   }
 
@@ -249,6 +271,8 @@ export class EventMapper {
         duration: cue?.params?.duration ?? (kind === 'blip' ? 0.06 : 0.04),
         ...(cue?.params?.filter !== undefined ? { filter: cue.params.filter } : {}),
         ...(cue?.params?.waveform !== undefined ? { waveform: cue.params.waveform } : {}),
+        ...(cue?.params?.detune !== undefined ? { detune: cue.params.detune } : {}),
+        ...(cue?.params?.reverb !== undefined ? { reverb: cue.params.reverb } : {}),
       },
     });
     this.lastDiscreteKind = kind;
@@ -319,6 +343,21 @@ export class EventMapper {
     this.textureGain = 0;
   }
 
+  private startPackBeds(pack: SoundPack | undefined): void {
+    if (!pack) return;
+    if (pack.arpeggio) {
+      this.arpeggio = new ArpeggioBed({
+        context: this.ctx,
+        scheduler: this.scheduler,
+        policy: this.policy,
+        spec: pack.arpeggio,
+      });
+      this.arpeggio.pump();
+      return;
+    }
+    if (pack.ambient) this.startAmbient(pack.ambient);
+  }
+
   private startAmbient(cue: SoundCue): void {
     if (this.policy.isFullySilent() || !this.policy.canPlayAmbient()) return;
     this.stopAmbient();
@@ -348,8 +387,13 @@ export class EventMapper {
     this.ambient = null;
   }
 
+  private stopArpeggio(): void {
+    this.arpeggio?.dispose();
+    this.arpeggio = null;
+  }
+
   get ambientActive(): boolean {
-    return this.ambient !== null && !this.ambient.stopped;
+    return (this.ambient !== null && !this.ambient.stopped) || this.arpeggio !== null;
   }
 
   private computePan(): number {
