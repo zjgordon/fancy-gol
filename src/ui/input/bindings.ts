@@ -48,6 +48,8 @@ export const PHASE_1_BINDINGS: readonly KeymapEntry[] = [
   { binding: 'M', commandId: 'tool.select.stamp' },
   ...Array.from({ length: 9 }, (_, i) => ({ binding: String(i + 1), commandId: 'brush.setSize', arg: i + 1 })),
   { binding: '?', commandId: 'help.cheatsheet' },
+  /** P3-D-1 — cycles the registered theme set without a reload. */
+  { binding: 'Mod+Shift+T', commandId: 'theme.cycle' },
 ];
 
 /**

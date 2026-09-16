@@ -279,6 +279,18 @@ export class ThemeRegistry {
     return [...this.entries.values()].map(summarize);
   }
 
+  /**
+   * Resolve a registration to its concrete `ThemeModule` without activating or persisting.
+   * Theme-picker previews use this so they can compile a palette without thrashing tokens.
+   */
+  resolve(id: string): ThemeModule {
+    const registration = this.entries.get(id);
+    if (!registration) {
+      throw new RangeError(`no theme registered with id "${id}"`);
+    }
+    return resolve(registration, this.prefersDark());
+  }
+
   /** The id last passed to `activate()`, restored from storage across reloads if nothing has
    * been activated yet this session. Read-only lookup — does not itself activate anything. */
   getPersistedId(): string | null {

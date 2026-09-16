@@ -28,8 +28,10 @@ import { attachDefaultBindings, PHASE_1_BINDINGS } from '@ui/input/bindings';
 import { attachKeymap, Keymap } from '@ui/input/keymap';
 import { CommandBus } from '@ui/commands/bus';
 import { EditStack } from '@ui/commands/edit-stack';
-import type { AppContext, SimControl } from '@ui/commands/registry';
+import type { AppContext, SimControl, ThemeControl } from '@ui/commands/registry';
 import { SIM_COMMANDS } from '@ui/commands/builtin/sim';
+import { buildThemeCommands } from '@ui/commands/builtin/themes';
+import { createThemesPanel, THEMES_PANEL_ID } from '@ui/panels/themes/panel';
 import { attachShell } from '@ui/components/shell';
 import { attachPanelHost } from '@ui/shell/panel-host';
 import { createTransportControls } from '@ui/components/transport';
@@ -87,6 +89,8 @@ import {
 } from './pattern-catalog';
 import { builtinRulesetSummaries, userRulesetSummary } from './ruleset-summaries';
 import { RulesetThumbnailLoop } from './ruleset-thumbnails';
+import { ThemePreviewLoop } from './theme-previews';
+import { crossfadeThemeSwitch } from './theme-switch';
 import { resolveBootSession } from './boot-session';
 import {
   buildRulesetShareLink,
@@ -377,6 +381,7 @@ function main(): void {
     },
   });
   for (const cmd of SIM_COMMANDS) registry.register(cmd);
+  for (const cmd of buildThemeCommands(themeRegistry.list())) registry.register(cmd);
 
   const tpsMeter = new TpsMeter();
   let simRunning = !testMode;
@@ -436,7 +441,90 @@ function main(): void {
       syncSimUI();
     },
   };
-  const context: AppContext = { ...toolContext, sim: simControl };
+
+  let themeSwitching = false;
+  let themeSwitchQueued: string | null = null;
+  let lastThemeApplyMs = 0;
+  const appRoot = requireElement<HTMLElement>('#app');
+
+  const themePreviews = new ThemePreviewLoop({
+    themeFor: (id) => {
+      try {
+        return compileTheme(themeRegistry.resolve(id));
+      } catch {
+        return undefined;
+      }
+    },
+  });
+
+  let themesPanel: ReturnType<typeof createThemesPanel> | null = null;
+
+  const themeControl: ThemeControl = {
+    get activeId() {
+      return themeRegistry.getPersistedId() ?? 'default';
+    },
+    list() {
+      return themeRegistry.list();
+    },
+    async activate(id) {
+      if (id === this.activeId && themeSwitchQueued === null) return;
+      if (themeSwitching) {
+        themeSwitchQueued = id;
+        return;
+      }
+      themeSwitching = true;
+      try {
+        await crossfadeThemeSwitch({
+          target: appRoot,
+          reducedMotion: motionReduced(),
+          apply: () => {
+            themeRegistry.activate(id);
+            themesPanel?.setActive(id);
+            autosave.scheduleSave();
+          },
+          onApplyMs: (ms) => {
+            lastThemeApplyMs = ms;
+          },
+        });
+      } finally {
+        themeSwitching = false;
+        if (themeSwitchQueued !== null) {
+          const next = themeSwitchQueued;
+          themeSwitchQueued = null;
+          await this.activate(next);
+        }
+      }
+    },
+    async cycle() {
+      const ids = this.list().map((t) => t.id);
+      if (ids.length === 0) return;
+      const idx = Math.max(0, ids.indexOf(this.activeId));
+      const next = ids[(idx + 1) % ids.length]!;
+      await this.activate(next);
+    },
+  };
+
+  themesPanel = createThemesPanel({
+    themes: themeRegistry.list(),
+    activeId: themeControl.activeId,
+    onSelect: (id) => {
+      void themeControl.activate(id);
+    },
+    onPreviewCreated: (id, canvas) => themePreviews.register(id, canvas),
+    onOpen: () => themePreviews.start(),
+    onClose: () => themePreviews.stop(),
+  });
+  panelHost.register(themesPanel.spec);
+
+  const themesToggle = document.createElement('button');
+  themesToggle.type = 'button';
+  themesToggle.className = 'pattern-toggle';
+  themesToggle.setAttribute('aria-label', 'Open themes');
+  themesToggle.textContent = 'Themes';
+  themesToggle.addEventListener('click', () => panelHost.open(THEMES_PANEL_ID));
+  shell.toolbar.appendChild(themesToggle);
+
+  const context: AppContext = { ...toolContext, sim: simControl, themes: themeControl };
 
   const gestures = attachGestures(camera, canvas, { reducedMotion: () => motionReduced() });
   attachInputRouter(camera, canvas, gateToolHandlers(gestures, context.toolRegistry.handlers));
@@ -924,6 +1012,8 @@ function main(): void {
       liveState: () => liveState,
       liveMessageCount: () => liveMessageCount,
       lastShareUrl: () => lastShareUrl,
+      lastThemeApplyMs: () => lastThemeApplyMs,
+      themePreviewsRunning: () => themePreviews.running,
       getCell: (x, y) => mirror.view().get(x, y),
       worldToScreen: (x, y) => camera.worldToScreen(x, y),
       screenToWorld: (px, py) => camera.screenToWorld(px, py),
@@ -965,6 +1055,7 @@ function main(): void {
       applyThemeVisuals(theme);
       statsPanel.setTokens(chartTokensFromSet(theme.tokens));
       statsPanel.setMotion(theme.motion);
+      themesPanel?.setActive(themeRegistry.getPersistedId() ?? 'default');
       if (hasFrame) {
         renderer.setViewport(toRenderViewport());
         renderer.draw({ cells: mirror.view(), dirty: null, tick: lastTick });

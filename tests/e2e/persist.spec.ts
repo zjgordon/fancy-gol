@@ -7,13 +7,16 @@ test.describe('theme persistence and share-link round trip', () => {
     const themeId = await page.evaluate(() => window.__fancyGol?.themeId);
     expect(themeId).toBe('default');
 
-    const stored = await page.evaluate(() => localStorage.getItem('gol.theme'));
-    expect(stored).toBe('default');
+    await runCommand(page, 'theme.select.chiba-city');
+    await page.waitForFunction(() => window.__fancyGol?.themeId === 'chiba-city', null, {
+      timeout: 5_000,
+    });
+    expect(await page.evaluate(() => localStorage.getItem('gol.theme'))).toBe('chiba-city');
 
     await page.reload();
     await waitForHarness(page);
-    expect(await page.evaluate(() => window.__fancyGol?.themeId)).toBe('default');
-    expect(await page.evaluate(() => localStorage.getItem('gol.theme'))).toBe('default');
+    expect(await page.evaluate(() => window.__fancyGol?.themeId)).toBe('chiba-city');
+    expect(await page.evaluate(() => localStorage.getItem('gol.theme'))).toBe('chiba-city');
   });
 
   test('a share link restores the painted grid on a fresh page', async ({ page, context }) => {

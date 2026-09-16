@@ -31,6 +31,10 @@ export interface FancyGolHarness {
   readonly liveState: string | null;
   readonly liveMessageCount: number;
   readonly lastShareUrl: string | null;
+  /** Wall ms spent in the last theme `apply` (P3-D-1 30 fps budget). */
+  readonly lastThemeApplyMs: number;
+  /** Whether the themes-panel preview loop is stepping (stops when the panel closes). */
+  readonly themePreviewsRunning: boolean;
   getCell(x: number, y: number): number;
   worldToScreen(x: number, y: number): { px: number; py: number };
   screenToWorld(px: number, py: number): { x: number; y: number };
@@ -61,6 +65,8 @@ export interface HarnessSources {
   readonly liveState: () => string | null;
   readonly liveMessageCount: () => number;
   readonly lastShareUrl: () => string | null;
+  readonly lastThemeApplyMs: () => number;
+  readonly themePreviewsRunning: () => boolean;
   readonly getCell: (x: number, y: number) => number;
   readonly worldToScreen: (x: number, y: number) => { px: number; py: number };
   readonly screenToWorld: (px: number, py: number) => { x: number; y: number };
@@ -130,6 +136,12 @@ export function createHarness(src: HarnessSources): FancyGolHarness {
     },
     get lastShareUrl() {
       return src.lastShareUrl();
+    },
+    get lastThemeApplyMs() {
+      return src.lastThemeApplyMs();
+    },
+    get themePreviewsRunning() {
+      return src.themePreviewsRunning();
     },
     getCell: src.getCell,
     worldToScreen: src.worldToScreen,

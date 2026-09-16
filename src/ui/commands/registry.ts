@@ -43,6 +43,17 @@ export interface SimControl {
   setSpeed(tps: number): void;
 }
 
+/**
+ * Theme picker / cycle control (P3-D-1). `activeId` is the registration id a picker lists
+ * (`default`, `chiba-city`, …), not a light/dark variant id.
+ */
+export interface ThemeControl {
+  readonly activeId: string;
+  list(): readonly { readonly id: string; readonly name: string; readonly cost: 'low' | 'medium' | 'high' }[];
+  activate(id: string): void | Promise<void>;
+  cycle(): void | Promise<void>;
+}
+
 export interface AppContext {
   readonly toolRegistry: ToolRegistry;
   /**
@@ -53,6 +64,8 @@ export interface AppContext {
    * `AppCommand` uses to turn a missing one into a legible error instead of a silent no-op.
    */
   readonly sim?: SimControl;
+  /** Absent until the composition root wires `ThemeRegistry` (P3-D-1). */
+  readonly themes?: ThemeControl;
 }
 
 export interface AppCommand<A = void> {

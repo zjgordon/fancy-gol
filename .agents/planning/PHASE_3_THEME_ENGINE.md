@@ -362,14 +362,14 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 
 ### Workstream D — Integration & gates
 
-#### - [~] P3-D-1 · Theme switching UX — @cursor, started 2026-09-16
+#### - [x] P3-D-1 · Theme switching UX
 **Depends on:** P3-C-1…C-6 · **Files:** `src/ui/panels/themes/*`
 **Implementation notes** A theme picker with **live previews** (each card renders a tiny real simulation with that theme's palette and passes — reusing the P1-D-4 thumbnail machinery). Switching cross-fades over 300 ms rather than cutting. `Mod+Shift+T` cycles. Every theme is a registered command so Phase 4's palette gets them free.
 **Acceptance criteria**
-- [ ] Switching themes never drops below 30 fps and never reloads.
-- [ ] 100 consecutive switches leak no memory (heap and WebAudio node count both flat).
-- [ ] Preview cards cost < 3 ms/frame combined and stop rendering when the panel closes.
-- [ ] The active theme survives reload and is encoded in share URLs.
+- [x] Switching themes never drops below 30 fps and never reloads.
+- [x] 100 consecutive switches leak no memory (heap and WebAudio node count both flat).
+- [x] Preview cards cost < 3 ms/frame combined and stop rendering when the panel closes.
+- [x] The active theme survives reload and is encoded in share URLs.
 
 #### - [ ] P3-D-2 · Per-theme visual regression
 **Depends on:** P3-D-1, P1-H-2, P2-F-3 · **Files:** `tests/visual/themes/*`
