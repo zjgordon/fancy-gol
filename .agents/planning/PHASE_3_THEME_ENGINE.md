@@ -371,7 +371,7 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 - [x] Preview cards cost < 3 ms/frame combined and stop rendering when the panel closes.
 - [x] The active theme survives reload and is encoded in share URLs.
 
-#### - [ ] P3-D-2 · Per-theme visual regression
+#### - [~] P3-D-2 · Per-theme visual regression — @cursor, started 2026-09-23
 **Depends on:** P3-D-1, P1-H-2, P2-F-3 · **Files:** `tests/visual/themes/*`
 **Implementation notes** For each of 6 themes × {shell, library panel, statistics panel, dialog, grid at 3 zooms} — 48 baselines. Animations frozen via the test flag, tick pinned, PRNG seeded. Mask fps/ms readouts. Stability across consecutive CI runs is a **gate-history** criterion: `gate-history: visual-nonflake ≥ 3 green` (`docs/gate-history/`, `planning/README.md` §3.10). Tick that criterion only when `node scripts/gate-history.mjs cite visual-nonflake 3` is green. Until three official `main` samples exist, leave the honest interim note — do not treat a single PR as a streak.
 **Acceptance criteria**
