@@ -25,6 +25,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Void-Walker is a finished theme: parallax starlight, white-violet birth flares, the strongest bloom, pooled death puffs, and bell plucks through a runtime-synthesised reverb. (P3-C-5)
 - Synthwave is a finished theme: magenta–cyan horizon, a pan-tracking floor grid, neon cells, and an arpeggio bed whose tempo follows the speed slider. (P3-C-6)
 - Theme switching: a Themes panel with live previews, 300 ms cross-fade, `Mod+Shift+T` cycle, and one command per theme — no reload, flat over 100 switches. (P3-D-1)
+- Per-theme visual regression: 48 Playwright baselines (six themes × shell, library, statistics, themes panel, dialog, grid at three zooms). (P3-D-2)
 
 ## [0.3.0] — 2026-09-14
 

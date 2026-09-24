@@ -4,9 +4,13 @@
 **Repo:** `fancy-gol`. Branch at writing: `phase/3-theme-engine`.
 **Date:** 2026-09-15.
 **Recorded by:** agent session on host `56d384aae06f` (user `abc`, uid 1000).
+**Status (2026-09-23):** **cleared for agent installs.** `PLAYWRIGHT_BROWSERS_PATH` now points at a
+uid-1000 cache under `/tmp/cursor-sandbox-cache/.../playwright`. `npx playwright install chromium`
+installs revision **1243** there; P3-D-2's 48 baselines were captured against that binary.
+`/opt/ms-playwright` remains root-owned with 1237 only — do not point the env var back at it.
 **Related:** `.agents/artifacts/SANDBOX-FEEDBACK-01.md` §6 (Node skew, `npm_config_devdir`);
 Phase 2 already papered over a *revision* mismatch (`chromium-1237` vs suite `1243`) in
-`scripts/capture-phase2-demo.mjs`. This note is the *permission* failure that blocked
+`scripts/capture-phase2-demo.mjs`. This note was the *permission* failure that blocked
 installing 1243 at all.
 
 P3-C-1 (Default theme upgrade) needed new Playwright visual baselines for panels/charts.

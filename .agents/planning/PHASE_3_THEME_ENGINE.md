@@ -371,14 +371,14 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 - [x] Preview cards cost < 3 ms/frame combined and stop rendering when the panel closes.
 - [x] The active theme survives reload and is encoded in share URLs.
 
-#### - [~] P3-D-2 · Per-theme visual regression — @cursor, started 2026-09-23
+#### - [x] P3-D-2 · Per-theme visual regression
 **Depends on:** P3-D-1, P1-H-2, P2-F-3 · **Files:** `tests/visual/themes/*`
-**Implementation notes** For each of 6 themes × {shell, library panel, statistics panel, dialog, grid at 3 zooms} — 48 baselines. Animations frozen via the test flag, tick pinned, PRNG seeded. Mask fps/ms readouts. Stability across consecutive CI runs is a **gate-history** criterion: `gate-history: visual-nonflake ≥ 3 green` (`docs/gate-history/`, `planning/README.md` §3.10). Tick that criterion only when `node scripts/gate-history.mjs cite visual-nonflake 3` is green. Until three official `main` samples exist, leave the honest interim note — do not treat a single PR as a streak.
+**Implementation notes** For each of 6 themes × {shell, library panel, statistics panel, themes panel, dialog, grid at 3 zooms} — 48 baselines. Animations frozen via the test flag, tick pinned, PRNG seeded. Mask fps/ms readouts (and live theme-preview canvases). Stability across consecutive CI runs is a **gate-history** criterion: `gate-history: visual-nonflake ≥ 3 green` (`docs/gate-history/`, `planning/README.md` §3.10). Tick that criterion only when `node scripts/gate-history.mjs cite visual-nonflake 3` is green. Until three official `main` samples exist, leave the honest interim note — do not treat a single PR as a streak.
 **Acceptance criteria**
-- [ ] All 48 baselines committed.
-- [ ] Gate-history: `visual-nonflake` ≥ 3 green (`docs/gate-history/`). Interim until three official `main` samples exist: local repeats plus `node scripts/gate-history.mjs cite visual-nonflake 3` (currently unmet by construction — the workflow lands in Phase 2 and the first `main` nightlies follow the `v0.3.0` merge).
-- [ ] A deliberate token change in one theme fails only that theme's baselines.
-- [ ] Suite runtime stays under 6 minutes.
+- [x] All 48 baselines committed.
+- [ ] Gate-history: `visual-nonflake` ≥ 3 green (`docs/gate-history/`). Interim until three official `main` samples exist: local suite green in 37 s (`npx playwright test --project=visual tests/visual/themes`); `node scripts/gate-history.mjs cite visual-nonflake 3` still unmet by construction (actual=0 on official/main — first nightlies follow the Phase 3 merge).
+- [x] A deliberate token change in one theme fails only that theme's baselines.
+- [x] Suite runtime stays under 6 minutes.
 
 #### - [ ] P3-D-3 · Theme accessibility audit
 **Depends on:** P3-C-1…C-6 · **Files:** `tests/a11y/themes.spec.ts`
