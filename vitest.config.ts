@@ -34,6 +34,7 @@ export default defineConfig({
           exclude: [
             'tests/e2e/**',
             'tests/visual/**',
+            'tests/a11y/**',
             'tests/unit/ui/**',
             'tests/unit/render/**',
             'tests/unit/themes/**',

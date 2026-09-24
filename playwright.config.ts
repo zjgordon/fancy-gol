@@ -59,6 +59,12 @@ export default defineConfig({
       use: { ...devices['Desktop Safari'] },
     },
     {
+      name: 'a11y',
+      testMatch: 'a11y/**/*.spec.ts',
+      timeout: 60_000,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
       name: 'visual',
       testMatch: 'visual/**/*.spec.ts',
       timeout: 45_000,

@@ -18,6 +18,7 @@
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "e2e": "playwright test",
+    "a11y": "playwright test --project=a11y",
     "bench": "node --expose-gc --import tsx scripts/bench.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",

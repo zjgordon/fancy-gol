@@ -380,13 +380,13 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 - [x] A deliberate token change in one theme fails only that theme's baselines.
 - [x] Suite runtime stays under 6 minutes.
 
-#### - [~] P3-D-3 · Theme accessibility audit — @cursor, started 2026-09-24
+#### - [x] P3-D-3 · Theme accessibility audit
 **Depends on:** P3-C-1…C-6 · **Files:** `tests/a11y/themes.spec.ts`
 **Implementation notes** Automated contrast checking of every token pair actually used together (derive the pairs from the token contract, do not hand-list them), plus axe-core on the shell in each theme, plus a scripted colour-blindness simulation over the cell palettes.
 **Acceptance criteria**
-- [ ] Zero AA contrast failures in any theme.
-- [ ] Zero axe-core violations in any theme.
-- [ ] Every ruleset's state palette is distinguishable under both simulated deficiencies in every theme, or the theme provides a documented high-contrast palette variant.
+- [x] Zero AA contrast failures in any theme.
+- [x] Zero axe-core violations in any theme.
+- [x] Every ruleset's state palette is distinguishable under both simulated deficiencies in every theme, or the theme provides a documented high-contrast palette variant.
 
 #### - [ ] P3-D-4 · Performance certification across themes
 **Depends on:** P3-A-4 · **Files:** `tests/bench/themes.bench.ts`
