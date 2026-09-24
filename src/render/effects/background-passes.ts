@@ -3,7 +3,7 @@
  */
 import { Mulberry32 } from '@shared/rng';
 import type { EffectCtx } from './ctx';
-import { SoftwareSurface } from './software-surface';
+import { SoftwareSurface, writeTargetPixels } from './software-surface';
 import { TimedPass } from './timed-pass';
 
 export const STARFIELD_PERIOD = 4096;
@@ -187,22 +187,29 @@ class ParchmentTexturePass extends TimedPass {
 
   protected renderTimed(ctx: EffectCtx): void {
     if (!this.generated) this.generate();
-    const w = ctx.viewport.widthPx;
-    const h = ctx.viewport.heightPx;
+    const w = ctx.viewport.widthPx | 0;
+    const h = ctx.viewport.heightPx | 0;
     ctx.target.clearRect(0, 0, w, h);
-    if (this.texture) {
-      ctx.target.drawImage(
-        this.texture.canvas as unknown as CanvasImageSource,
-        0,
-        0,
-        this.texW,
-        this.texH,
-        0,
-        0,
-        w,
-        h,
-      );
+    if (!this.texture) return;
+    // SoftwareSurface is not a CanvasImageSource OffscreenCanvas accepts — nearest-neighbour
+    // scale into a pixel buffer and putImageData instead of drawImage.
+    const src = this.texture.pixels;
+    const tw = this.texW;
+    const th = this.texH;
+    const out = new Uint8ClampedArray(w * h * 4);
+    for (let y = 0; y < h; y++) {
+      const sy = Math.min(th - 1, ((y * th) / h) | 0);
+      for (let x = 0; x < w; x++) {
+        const sx = Math.min(tw - 1, ((x * tw) / w) | 0);
+        const si = (sy * tw + sx) * 4;
+        const di = (y * w + x) * 4;
+        out[di] = src[si]!;
+        out[di + 1] = src[si + 1]!;
+        out[di + 2] = src[si + 2]!;
+        out[di + 3] = src[si + 3]!;
+      }
     }
+    writeTargetPixels(ctx.target, out, w, h);
   }
 
   protected override onDispose(): void {

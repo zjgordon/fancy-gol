@@ -140,6 +140,8 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
   let collector: StatsCollector | null = null;
   let runHandle: number | null = null;
   let disposed = false;
+  /** Theme may ask for age tracking before `init` — apply once the sim exists. */
+  let pendingAgeBuffer: boolean | null = null;
   const recordStats = opts.recordStats !== false;
 
   function requireSim(): Simulation {
@@ -238,6 +240,10 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
         });
         collector = recordStats ? new StatsCollector() : null;
         if (collector) collector.reset(sim.view(), sim.tick);
+        if (pendingAgeBuffer !== null) {
+          sim.setAgeBuffer(pendingAgeBuffer);
+          pendingAgeBuffer = null;
+        }
         opts.post({ id: cmd.id, type: 'ready', capabilities: opts.capabilities });
         return;
       }
@@ -342,7 +348,12 @@ export function createHandler(opts: HandlerOptions): WorkerHandler {
         return;
       }
       case 'setAgeBuffer': {
-        requireSim().setAgeBuffer(cmd.enabled);
+        if (!sim) {
+          pendingAgeBuffer = cmd.enabled;
+          opts.post({ id: cmd.id, type: 'ok' });
+          return;
+        }
+        sim.setAgeBuffer(cmd.enabled);
         opts.post({ id: cmd.id, type: 'ok' });
         return;
       }
