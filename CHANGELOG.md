@@ -31,6 +31,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - The vignette post pass renders 2.4× faster (29.1 ms → 12.0 ms per 1080p frame) for pixel-identical output. (P3-D-4)
+- Effects now degrade automatically when a machine cannot keep up — dropping post-processing, then particles, then the animated background — and the first drop is announced by name ("dropped post-processing: bloom") instead of happening silently. (P3-D-4)
 
 ## [0.3.0] — 2026-09-14
 

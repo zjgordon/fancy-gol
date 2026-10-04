@@ -27,11 +27,14 @@ describe('createHarness', () => {
       lastShareUrl: () => null,
       lastThemeApplyMs: () => 0,
       themePreviewsRunning: () => false,
+      effectQuality: () => 3,
+      qualityIndicator: () => '',
       getCell: () => 1,
       worldToScreen: () => ({ px: 0, py: 0 }),
       screenToWorld: () => ({ x: 0, y: 0 }),
       setCamera: () => {},
       runCommand: () => {},
+      pinQuality: () => {},
     });
     expect(harness.ready).toBe(true);
     expect(harness.tick).toBe(4);
@@ -58,7 +61,11 @@ describe('createHarness', () => {
     expect(harness.getCell(0, 0)).toBe(1);
     expect(harness.worldToScreen(0, 0)).toEqual({ px: 0, py: 0 });
     expect(harness.screenToWorld(0, 0)).toEqual({ x: 0, y: 0 });
+    expect(harness.effectQuality).toBe(3);
+    expect(harness.qualityIndicator).toBe('');
     harness.setCamera({});
     void harness.runCommand('sim.step');
+    harness.pinQuality(0);
+    harness.pinQuality(null);
   });
 });

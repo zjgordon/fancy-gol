@@ -91,6 +91,13 @@ import { builtinRulesetSummaries, userRulesetSummary } from './ruleset-summaries
 import { RulesetThumbnailLoop } from './ruleset-thumbnails';
 import { ThemePreviewLoop } from './theme-previews';
 import { crossfadeThemeSwitch } from './theme-switch';
+import {
+  attachDegradeGovernor,
+  createDegradeNotifier,
+  pinQuality,
+  qualityIndicatorText,
+  unpinQuality,
+} from './quality';
 import { resolveBootSession } from './boot-session';
 import {
   buildRulesetShareLink,
@@ -134,6 +141,13 @@ function reducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+/** Harness-side quality pin, clamped to the ladder (P3-D-4). */
+function clampQuality(level: number): 0 | 1 | 2 | 3 {
+  if (level <= 0) return 0;
+  if (level >= 3) return 3;
+  return level as 1 | 2;
+}
+
 function main(): void {
   const testMode = isTestMode();
   const canvas = requireElement<HTMLCanvasElement>('#scene');
@@ -146,6 +160,15 @@ function main(): void {
   // P3-A-1: layered compositor owns L0–L3; effects stay off until P3-A-3 wires passes.
   const renderer = new Compositor();
   renderer.setEffectsEnabled(false);
+  // P3-D-4: PHASE_3 §2.3's degrade governor, actually hosted. Until this task nothing in
+  // client/ constructed one, so every theme ran at quality 3 with nothing to intervene —
+  // and P3-D-4 measured quality 3 at 37.6–127.9 ms of CPU effect time per 1080p frame.
+  // `?test=1` pins it at the ceiling so the 48 committed visual baselines stay
+  // machine-independent (a slow runner downgrading mid-snapshot would flake them).
+  const quality = attachDegradeGovernor(renderer, {
+    registry: renderer.effectRegistry,
+    ...(testMode ? { testMode: true } : {}),
+  });
   const mirror = new FrameGridMirror();
   const client = new WorkerClient({
     spawn: () => toWorkerLike(new Worker(new URL('../worker/sim.worker.ts', import.meta.url), { type: 'module' })),
@@ -197,6 +220,11 @@ function main(): void {
     const dataId = theme.id.startsWith('default') ? 'default' : theme.id;
     document.documentElement.dataset['theme'] = dataId;
     renderer.setTheme(compileTheme(theme));
+    // A new theme is a new pass stack with its own ceiling: hand the governor that ceiling and
+    // let it re-measure from the top, rather than inheriting the previous theme's verdict.
+    // (P3-D-4. Pinned in `?test=1`, where the ceiling is already pinned and this is a no-op.)
+    quality.setMaxQuality(theme.quality?.max ?? 3);
+    degradeNotifier.reset();
     if (theme.id === 'chiba-city') {
       renderer.setEffectPasses(createChibaCityPassStack());
       renderer.setBackgroundMode('parallax');
@@ -307,6 +335,10 @@ function main(): void {
   }
 
   const toasts = createToastRegion();
+  // P3-D-4: degradation is announced once per theme, in plain language ("which passes were
+  // dropped"), never silently and never every 100 ms. Reset on theme change so a new theme's
+  // first downgrade is also announced.
+  const degradeNotifier = createDegradeNotifier(renderer, (message) => toasts.show(message));
   const autosave = createAutosave({
     buildDoc: snapshotDoc,
     notify: (message) => toasts.show(message),
@@ -636,6 +668,7 @@ function main(): void {
       renderMs: renderer.readStats().frameMs,
       memoryBytes: mirror.pageCount * CHUNK_AREA,
     });
+    degradeNotifier.check();
   }
 
   const userStorage = realUserRulesetStorage();
@@ -1014,6 +1047,8 @@ function main(): void {
       lastShareUrl: () => lastShareUrl,
       lastThemeApplyMs: () => lastThemeApplyMs,
       themePreviewsRunning: () => themePreviews.running,
+      effectQuality: () => quality.getQuality(),
+      qualityIndicator: () => qualityIndicatorText(renderer),
       getCell: (x, y) => mirror.view().get(x, y),
       worldToScreen: (x, y) => camera.worldToScreen(x, y),
       screenToWorld: (px, py) => camera.screenToWorld(px, py),
@@ -1023,6 +1058,10 @@ function main(): void {
         if (pose.cellSize !== undefined) camera.cellSize = pose.cellSize;
       },
       runCommand: (id) => bus.run(id),
+      pinQuality: (level) => {
+        if (level === null) unpinQuality(quality);
+        else pinQuality(quality, clampQuality(level));
+      },
     });
   }
 

@@ -35,6 +35,10 @@ export interface FancyGolHarness {
   readonly lastThemeApplyMs: number;
   /** Whether the themes-panel preview loop is stepping (stops when the panel closes). */
   readonly themePreviewsRunning: boolean;
+  /** Degrade-governor quality level currently applied (P3-D-4), 0–3. */
+  readonly effectQuality: number;
+  /** Plain-language degradation status, or `''` at full quality (PHASE_3 §2.3). */
+  readonly qualityIndicator: string;
   getCell(x: number, y: number): number;
   worldToScreen(x: number, y: number): { px: number; py: number };
   screenToWorld(px: number, py: number): { x: number; y: number };
@@ -42,6 +46,8 @@ export interface FancyGolHarness {
   setCamera(pose: { originX?: number; originY?: number; cellSize?: number }): void;
   /** Run a registered command by id (avoids browser-reserved shortcuts like Mod+S on WebKit). */
   runCommand(id: string): Promise<void> | void;
+  /** Pin/unpin the degrade governor (P3-D-4). `null` releases the pin. */
+  pinQuality(quality: number | null): void;
 }
 
 export interface HarnessSources {
@@ -67,11 +73,14 @@ export interface HarnessSources {
   readonly lastShareUrl: () => string | null;
   readonly lastThemeApplyMs: () => number;
   readonly themePreviewsRunning: () => boolean;
+  readonly effectQuality: () => number;
+  readonly qualityIndicator: () => string;
   readonly getCell: (x: number, y: number) => number;
   readonly worldToScreen: (x: number, y: number) => { px: number; py: number };
   readonly screenToWorld: (px: number, py: number) => { x: number; y: number };
   readonly setCamera: (pose: { originX?: number; originY?: number; cellSize?: number }) => void;
   readonly runCommand: (id: string) => Promise<void> | void;
+  readonly pinQuality: (quality: number | null) => void;
 }
 
 /** Build the inspect object Playwright reads. Getters stay live against the composition root. */
@@ -143,10 +152,17 @@ export function createHarness(src: HarnessSources): FancyGolHarness {
     get themePreviewsRunning() {
       return src.themePreviewsRunning();
     },
+    get effectQuality() {
+      return src.effectQuality();
+    },
+    get qualityIndicator() {
+      return src.qualityIndicator();
+    },
     getCell: src.getCell,
     worldToScreen: src.worldToScreen,
     screenToWorld: src.screenToWorld,
     setCamera: src.setCamera,
     runCommand: src.runCommand,
+    pinQuality: src.pinQuality,
   };
 }
