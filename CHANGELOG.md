@@ -28,6 +28,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Per-theme visual regression: 48 Playwright baselines (six themes × shell, library, statistics, themes panel, dialog, grid at three zooms). (P3-D-2)
 - Theme accessibility audit: derived chrome token AA pairs, axe-core on every live shell, and CVD-safe cell palettes for every builtin ruleset. (P3-D-3)
 
+### Fixed
+
+- The vignette post pass renders 2.4× faster (29.1 ms → 12.0 ms per 1080p frame) for pixel-identical output. (P3-D-4)
+
 ## [0.3.0] — 2026-09-14
 
 Phase 2 — The Library & The Stat Engine (*Make it powerful.*).

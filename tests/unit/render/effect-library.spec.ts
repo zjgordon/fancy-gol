@@ -14,6 +14,7 @@ import {
   createBirthFlashPass,
   createDeathParticlesPass,
   createParchmentTexturePass,
+  createVignettePass,
 } from '@render/effects/library';
 import { createSoftwareCanvas, asSoftware } from '@render/effects/software-surface';
 import type { EffectCtx } from '@render/effects/ctx';
@@ -69,6 +70,57 @@ function runHash(pass: EffectPass, tick = 7, changes = EMPTY_CHANGES, quality: 0
   pass.render(ctx);
   const soft = asSoftware(target)!;
   return hashPixels(soft.pixels);
+}
+
+/** Large enough that a rounding drift cannot hide in a corner — P3-D-4's byte-identity gate. */
+const VIGNETTE_VIEWPORT: Viewport = {
+  originX: 0,
+  originY: 0,
+  cellSize: 4.55,
+  widthPx: 640,
+  heightPx: 360,
+  dpr: 1,
+};
+
+/**
+ * The pre-P3-D-4 vignette formulation: `Math.hypot` per texel, no hoisted row term. Kept
+ * verbatim as the oracle for the sqrt optimisation — the 48 committed per-theme visual
+ * baselines (P3-D-2) make byte-identity a hard requirement, not a nicety.
+ */
+function vignetteHypotReference(
+  src: Uint8ClampedArray,
+  w: number,
+  h: number,
+  strength: number,
+): Uint8ClampedArray {
+  const out = src.slice();
+  const cx = (w - 1) * 0.5;
+  const cy = (h - 1) * 0.5;
+  const maxR = Math.hypot(cx, cy) || 1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const d = Math.hypot(x - cx, y - cy) / maxR;
+      const shade = 1 - strength * d * d;
+      const i = (y * w + x) * 4;
+      out[i] = (src[i]! * shade) | 0;
+      out[i + 1] = (src[i + 1]! * shade) | 0;
+      out[i + 2] = (src[i + 2]! * shade) | 0;
+    }
+  }
+  return out;
+}
+
+/** Deterministic gradient-ish source so the oracle sees a spread of input values, not flats. */
+function vignetteSource(w: number, h: number): Uint8ClampedArray {
+  const canvas = createSoftwareCanvas(w, h);
+  const pixels = asSoftware(canvas)!.pixels;
+  for (let i = 0; i < pixels.length; i += 4) {
+    pixels[i] = (i * 7) & 255;
+    pixels[i + 1] = (i * 13) & 255;
+    pixels[i + 2] = (i * 29) & 255;
+    pixels[i + 3] = 255;
+  }
+  return pixels;
 }
 
 describe('effect library (P3-A-5)', () => {
@@ -183,6 +235,52 @@ describe('effect library (P3-A-5)', () => {
     pass.generate();
     expect(pass.generationMs).toBe(ms);
     pass.dispose();
+  });
+
+  it('vignette is byte-identical to the Math.hypot reference for every shipped strength', () => {
+    // P3-D-4 replaced a per-texel `Math.hypot` with a hoisted row term + `Math.sqrt`: 29.1 ms →
+    // ~12 ms per frame at 1080p, for identical bytes. If a future edit drifts by one ulp where
+    // `| 0` truncates, this fails here rather than in 48 committed screenshots.
+    const strengths = [0.62, 0.55, 0.5]; // Void-Walker, library default, Chiba-City-era tuning
+    for (const strength of strengths) {
+      const w = VIGNETTE_VIEWPORT.widthPx;
+      const h = VIGNETTE_VIEWPORT.heightPx;
+      const source = vignetteSource(w, h);
+      const target = createSoftwareCanvas(w, h);
+      const ctx: EffectCtx = {
+        target: target.getContext('2d') as unknown as CanvasRenderingContext2D,
+        source: createSoftwareCanvas(w, h) as unknown as CanvasImageSource,
+        viewport: VIGNETTE_VIEWPORT,
+        tick: 3,
+        frameTime: 3 / 60,
+        changes: EMPTY_CHANGES,
+        quality: 3,
+        reducedMotion: false,
+      };
+      const pixels = asSoftware(ctx.source)!.pixels;
+      pixels.set(source);
+
+      const pass = createVignettePass({ strength });
+      pass.resize?.(w, h, 1);
+      pass.render(ctx);
+
+      const expected = vignetteHypotReference(source, w, h, strength);
+      const actual = asSoftware(target)!.pixels;
+      expect(actual.length, `strength ${strength}`).toBe(expected.length);
+      let differing = 0;
+      let firstDiffering = -1;
+      for (let i = 0; i < expected.length; i++) {
+        if (actual[i] !== expected[i]) {
+          differing += 1;
+          if (firstDiffering < 0) firstDiffering = i;
+        }
+      }
+      expect(
+        differing,
+        `strength ${strength} shifted ${differing} byte(s), first at ${firstDiffering}`,
+      ).toBe(0);
+      pass.dispose();
+    }
   });
 
   it('filmGrain changes with tick but is stable for a fixed tick', () => {
