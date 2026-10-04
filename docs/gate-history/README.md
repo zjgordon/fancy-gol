@@ -46,11 +46,20 @@ official streak is met. `--all-branches` is the debug view.
 | id | Suite | Consumers |
 |---|---|---|
 | `e2e-nonflake` | Playwright functional (`chromium` + `firefox` + `webkit`) | P1-H-1 follow-up, any later "N consecutive e2e" criterion |
-| `visual-nonflake` | Playwright visual (`--project=visual`) | **P3-D-2**, browser-class benches (absolute budget still gates in CI) |
+| `visual-nonflake` | Playwright visual (`--project=visual`) | **P3-D-2** (absolute budget for visual baselines still gates in CI) |
+| `browser-bench` | Playwright per-theme frame rate (`--project=browser-bench`, 1080p, CDP 4× CPU throttle) | **P3-D-4** AC1/AC2 — the frame-rate criteria no Node harness can certify (ADR-011) |
 
-A dedicated `browser-bench` id can be added when a nightly bench job exists.
-Until then, browser-class cases keep their absolute budget in `npm run bench`
-and inherit flake history from `visual-nonflake`.
+Browser-class cases keep their absolute budget in `npm run bench`; `browser-bench` exists
+because a *frame rate* cannot be measured there at all. Its samples are evidence, not a
+gate: the quality-3 rows are red until post-processing moves to the GPU in Phase 5, and
+the record is where that shows up nightly rather than being quietly dropped.
+
+Run just that suite locally:
+
+```
+node scripts/gate-history.mjs sample --suites browser-bench --repeats 1 --event push --branch <name> --sha <hex>
+node scripts/gate-history.mjs cite browser-bench 3
+```
 
 ## How to cite from a task
 

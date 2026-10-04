@@ -213,6 +213,17 @@ calibrator makes a faster runner look like a regression — observed 2026-09-14 
 7.22 ms). Those cases still use the noise-aware wall-clock band, on `1/median`; they still have
 to meet their absolute budgets (5% and 1.5). This is not a `baselineGate: false` opt-out.
 
+**Costs are measured, never declared (P3-D-4 / ADR-011):** a case whose subject is a theme's effect
+stack measures `EffectRegistry.totalDeclaredCost()` — the EWMA the degrade governor itself feeds on —
+rather than summing `EffectPass.cost` declarations. The declarations turned out to be optimistic by
+5–70×, and a gate built on them certified nothing.
+
+**Budgets may not be lowered to go green.** `theme-*-q3-stack-cost` and `theme-*-q0-throttled-frame`
+carry their acceptance budgets and fail them until Phase 5; the CI `bench` job is
+`continue-on-error` for exactly that reason. `scripts/bench.mjs` also refuses to write a
+`bench-baseline.json` row for any case that missed its budget — so a red row's number lives in the
+phase document and in the run output, never in a file that looks like an approval.
+
 **Transcribed / non-timed cases:** `cold-load-recorded` is renamed `cold-load-transcribed` and
 carries `transcribed: true`, which the runner's table marks with a `*` and a footnote — visible in
 the output itself, not just this file's comment. It does not pretend to be a live wall-clock
@@ -347,9 +358,16 @@ consecutive CI runs"). Those are a **gate-history** class:
   streak is met).
 - **Official** streak: samples on `main` whose `event` is `schedule`, `push`, or
   `workflow_dispatch`. Phase-branch dispatch samples prove the mechanism and are in the log;
-  they do not increment the cite. Phase 3's **P3-D-2** and browser-class benches consume this
-  (browser cases still hold their absolute budget in `npm run bench`; a dedicated `browser-bench`
-  id can join when a nightly bench job exists).
+  they do not increment the cite. Phase 3's **P3-D-2** consumes `visual-nonflake`; browser-class
+  benches still hold their absolute budget in `npm run bench`.
+- **`browser-bench` (added by P3-D-4, 2026-10-04).** `tests/perf/themes-fps.spec.ts` — per-theme
+  frame rate at 1080p with ~100k visible cells, quality 3 and quality 0 under a CDP 4× CPU
+  throttle — runs on the nightly as its own Playwright project and appends under this id. It exists
+  because no Node harness can certify a frame rate: a software-raster harness overstates the cell
+  layer and the compositor's blits by ~6×, and the `CanvasRecorder` path cannot feed the
+  post-process passes real pixels (ADR-011). Its samples are **evidence, not a gate** — the
+  quality-3 rows stay red until post-processing moves to the GPU in Phase 5, and that red is the
+  signal Phase 5 clears. It is deliberately outside the blocking CI jobs.
 
 Until three official `main` samples exist, criteria that need gate-history keep an honest
 interim note naming the current official streak — never a silent tick.

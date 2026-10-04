@@ -485,3 +485,61 @@ Each chunk carries a cheap summary: `population`, `perStateCounts`, `dirty`, `la
 - `bounded` and `toroidal` boundary modes are enforced at coordinate normalisation, not in the inner loop.
 - "Infinite" is really ±1,048,576 cells per axis (2²¹ addressable ≈ 4.4 × 10¹² cells). This is
   documented as such — we do not claim what we do not do.
+
+---
+
+## ADR-011 — Post-processing is main-thread CPU work until Phase 5 puts it on the GPU
+
+**Status:** ACCEPTED (recorded by **P3-D-4**, 2026-10-04) · **Affects:** Phase 3, Phase 5
+**Supersedes nothing.** Amends ADR-005's cost assumption and ADR-008's "auto-degrades" guard rail,
+both of which were written before anything had been measured.
+
+### Decision
+
+**A theme's effect passes cost main-thread milliseconds, not GPU time, and this is the single most
+important performance fact Phase 3 discovered.** On Canvas2D, a post-process pass is
+`getImageData` → a JS loop over every texel → `putImageData`. A browser runs that loop on the main
+thread, exactly as Node does, so the Node measurement *is* the browser cost. What the GPU absorbs is
+the cell layer, the compositor's four blits and fill-based passes (`starfield`, `sunGradient`, haze,
+particles) — which is why a software-raster harness overstates those by ~6× and why no Node harness
+can certify a frame rate here.
+
+Three consequences, all binding:
+
+1. **`EffectPass.cost` is a declaration, never evidence.** P3-A-5's declared costs were optimistic by
+   5–70× (vignette declared 0.4 ms, measured 29.1 ms at 1080p), so the "heaviest stack ≤ 1000/55 ms"
+   gate passed on an assumption. Measured cost is the only cost: a theme's budget is
+   `EffectRegistry.totalDeclaredCost()` (the EWMA the governor already uses), recorded by
+   `tests/bench/themes.bench.ts`. Declarations may only be used before the first sample.
+2. **The degrade governor is not optional infrastructure — it is the only thing between a beautiful
+   theme and a slideshow.** It was implemented and unit-tested in P3-A-4 but never hosted by
+   `client/` until P3-D-4, which meant every theme ran at quality 3 forever. Quality is now hosted
+   (`src/client/quality.ts`), announced, and per-theme.
+3. **Quality 3 at 1080p is not affordable for five of the six themes on Canvas2D.** Measured
+   2026-10-04 against the 18.18 ms budget: default 0.0, Sids-Place 15.2, Flatline 36.0,
+   Void-Walker 66.7, Synthwave 97.9, Chiba-City 122.6 ms. GPU post-processing (ADR-005's Phase 5
+   WebGL2 renderer, with the `EffectCtx` WebGL2 variant §2.3 already anticipated) is the fix, not a
+   smaller effect list.
+
+### Rationale
+- The Phase 3 risk table predicted exactly this ("Effects blow the frame budget on real hardware") and
+  named the mitigation as "every pass declares and measures its cost". The declarations were trusted
+  for four phases; P3-D-4 is the task that finally compared them to a measurement, and the gap is not
+  marginal — it is an order of magnitude.
+- Post at *half resolution* with fused passes is a legitimate interim optimisation and is **not**
+  rejected here; it is deferred because it changes pixels, and the 48 committed per-theme baselines
+  (P3-D-2) can only be re-captured on a machine with a Playwright browser. The one pixel-identical
+  win available without a browser was taken (vignette: 29.1 ms → 12.0 ms, byte-identical, gated by an
+  oracle test).
+- Frame rates are therefore certified in a browser (`tests/perf/themes-fps.spec.ts`, Playwright project
+  `browser-bench`) and accumulate as `gate-history: browser-bench` — the use §3.10 reserved that id
+  for. In Node we record cost, which is honest, and we do not pretend it is a frame rate.
+
+### Consequences
+- `npm run bench` carries `theme-*-q3-stack-cost` and `theme-*-q0-throttled-frame` at their real
+  budgets and **fails them** until Phase 5. The CI `bench` job is `continue-on-error` with that written
+  on it; lowering those budgets to go green is forbidden.
+- Phase 5's WebGL2 renderer is now a Phase 3 acceptance criterion, not only a performance project.
+- Any future pass must be budgeted by measurement at 1080p before it ships in a theme's quality-3
+  stack, and every theme's quality-3 stack must fit the frame budget *or* the theme declares a lower
+  `quality.max`. There is no third option where a declaration stands in for a measurement.
