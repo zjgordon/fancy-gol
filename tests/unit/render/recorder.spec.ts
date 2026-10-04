@@ -23,6 +23,19 @@ describe('CanvasRecorder', () => {
     expect(rec.pixelAt(0, 0)).toEqual([0, 255, 0, 255]);
   });
 
+  it('clearRect zeroes pixels, clips, and stays out of the call log (P3-D-4)', () => {
+    const rec = new CanvasRecorder(4, 4);
+    rec.fillStyle = '#ffffff';
+    rec.fillRect(0, 0, 4, 4);
+    rec.resetLog();
+
+    rec.clearRect(-1, -1, 2, 2); // half off the top-left edge
+    expect(rec.pixelAt(0, 0)).toEqual([0, 0, 0, 0]);
+    expect(rec.pixelAt(3, 3)).toEqual([255, 255, 255, 255]);
+    // Unlogged on purpose: `RecordedCall` is a P0-H-3/P2-F-2 digest contract.
+    expect(rec.calls).toEqual([]);
+  });
+
   it('createImageData counts a buffer allocation, logs the call, and returns a writable buffer', () => {
     const rec = new CanvasRecorder(8, 8);
     const image = rec.createImageData(2, 2);

@@ -46,6 +46,32 @@ export class CanvasRecorder {
     this.paint(x, y, w, h, parseColor(this._fillStyle));
   }
 
+  /**
+   * Zero a rectangle of the backing buffer.
+   *
+   * Deliberately **not** logged: `RecordedCall` is a P0-H-3 snapshot contract (37 000 recorded
+   * lines, summarised into an 881-line digest by P2-F-2) and `Canvas2DRenderer` counts its own
+   * draw calls, so a new entry here would fork that digest for no added coverage. `clearRect`
+   * only appears on the transparent-background path (a theme whose cell layer is see-through so
+   * L0 shows through), where the pixels must actually go to zero for the recorder to be a
+   * faithful double at all — P3-D-4's quality-0 benches render four of the six themes this way.
+   */
+  clearRect(x: number, y: number, w: number, h: number): void {
+    const x0 = Math.max(0, Math.floor(x));
+    const x1 = Math.min(this.width, Math.ceil(x + w));
+    const y0 = Math.max(0, Math.floor(y));
+    const y1 = Math.min(this.height, Math.ceil(y + h));
+    for (let yy = y0; yy < y1; yy++) {
+      for (let xx = x0; xx < x1; xx++) {
+        const idx = (yy * this.width + xx) * 4;
+        this.pixels[idx] = 0;
+        this.pixels[idx + 1] = 0;
+        this.pixels[idx + 2] = 0;
+        this.pixels[idx + 3] = 0;
+      }
+    }
+  }
+
   createImageData(w: number, h: number): { width: number; height: number; data: Uint8ClampedArray } {
     this.bufferAllocations += 1;
     this.calls.push({ method: 'createImageData', args: [w, h] });

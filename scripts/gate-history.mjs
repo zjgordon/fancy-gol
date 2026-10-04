@@ -26,11 +26,15 @@ export const RECORD_DIR = join(ROOT, 'docs/gate-history');
 export const DEFAULT_RECORDS = join(RECORD_DIR, 'records.jsonl');
 export const DEFAULT_INDEX = join(RECORD_DIR, 'INDEX.md');
 
-/** Record ids agents cite. The nightly workflow owns these two; a dedicated
- *  `browser-bench` id can join later without renaming anything. */
+/**
+ * Record ids agents cite. The nightly workflow owns these three. `browser-bench` (P3-D-4) is
+ * the per-theme frame-rate suite: it runs against a real browser on a shared runner, so it
+ * accumulates evidence rather than gating a pull request.
+ */
 export const RECORD_IDS = {
   e2e: 'e2e-nonflake',
   visual: 'visual-nonflake',
+  'browser-bench': 'browser-bench',
 };
 
 /** Events that count toward the official (main-branch) streak. */
@@ -249,13 +253,14 @@ Commands:
   summarize [--file records.jsonl] [--index INDEX.md]
   cite <record-id> <n> [--file records.jsonl] [--all-branches]
   append --id e2e-nonflake --ok|--fail --event schedule --branch main --sha <hex> --suite e2e
-  sample --suites e2e,visual --repeats 1 --branch <name> --sha <hex> --event schedule
+  sample --suites e2e,visual,browser-bench --repeats 1 --branch <name> --sha <hex> --event schedule
 `);
 }
 
 const SUITE_ARGS = {
   e2e: ['playwright', 'test', '--project=chromium', '--project=firefox', '--project=webkit'],
   visual: ['playwright', 'test', '--project=visual'],
+  'browser-bench': ['playwright', 'test', '--project=browser-bench'],
 };
 
 /**
@@ -264,7 +269,7 @@ const SUITE_ARGS = {
  */
 export function runSuite(suite, opts = {}) {
   const args = SUITE_ARGS[suite];
-  if (!args) throw new Error(`unknown suite "${suite}" (want e2e or visual)`);
+  if (!args) throw new Error(`unknown suite "${suite}" (want e2e, visual or browser-bench)`);
   const spawn = opts.spawn ?? spawnSync;
   const t0 = Date.now();
   const r = spawn('npx', args, {

@@ -4,6 +4,10 @@ name: Gate history
 # (planning/README.md §3.10). Each run appends one sample per suite to
 # docs/gate-history/records.jsonl and regenerates INDEX.md.
 #
+# P3-D-4 added the `browser-bench` suite: per-theme frame rate at 1080p in a real browser.
+# Its samples are evidence, not a gate — the step fails honestly on the quality-3 budget until
+# post-processing moves to the GPU (ADR-011), and that red is the signal Phase 5 clears.
+#
 # GitHub only fires `schedule` on the default branch. `workflow_dispatch` is
 # how a phase branch seeds the log before merge. Official cites count `main`
 # samples only; phase-branch dispatch proves the mechanism.
@@ -19,9 +23,9 @@ on:
         required: false
         default: '1'
       suites:
-        description: Comma-separated suites (e2e, visual)
+        description: Comma-separated suites (e2e, visual, browser-bench)
         required: false
-        default: 'e2e,visual'
+        default: 'e2e,visual,browser-bench'
 
 permissions:
   contents: write
@@ -64,7 +68,7 @@ jobs:
           CI: 'true'
         run: |
           node scripts/gate-history.mjs sample \
-            --suites "${{ github.event.inputs.suites || 'e2e,visual' }}" \
+            --suites "${{ github.event.inputs.suites || 'e2e,visual,browser-bench' }}" \
             --repeats "${{ github.event.inputs.repeats || '1' }}" \
             --event "${{ github.event_name }}" \
             --branch "${{ github.ref_name }}" \

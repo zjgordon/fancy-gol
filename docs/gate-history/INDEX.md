@@ -1,6 +1,6 @@
 # Gate history
 
-Generated 2026-09-14 by `scripts/gate-history.mjs`. Do not hand-edit.
+Generated 2026-10-04 by `scripts/gate-history.mjs`. Do not hand-edit.
 Source of truth: [`records.jsonl`](./records.jsonl). Policy: `planning/README.md` §3.10.
 
 A task cites this file instead of pretending to run N CI jobs in-process:
@@ -16,6 +16,7 @@ Phase-branch dispatch samples prove the mechanism; they do not count toward the 
 
 | record-id | official (main) | all-branches | last official |
 |---|---:|---:|---|
+| `browser-bench` | 0 | 0 | — |
 | `e2e-nonflake` | 0 | 1 | — |
 | `visual-nonflake` | 0 | 1 | — |
 

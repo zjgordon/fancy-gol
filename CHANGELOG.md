@@ -33,6 +33,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The vignette post pass renders 2.4× faster (29.1 ms → 12.0 ms per 1080p frame) for pixel-identical output. (P3-D-4)
 - Effects now degrade automatically when a machine cannot keep up — dropping post-processing, then particles, then the animated background — and the first drop is announced by name ("dropped post-processing: bloom") instead of happening silently. (P3-D-4)
 
+### Changed
+
+- `npm run bench` now records every theme's measured CPU effect cost at 1080p, plus audio's per-frame main-thread cost in both the discrete-voice and aggregated-texture regimes, against the acceptance budgets rather than the estimated ones. (P3-D-4)
+
 ## [0.3.0] — 2026-09-14
 
 Phase 2 — The Library & The Stat Engine (*Make it powerful.*).

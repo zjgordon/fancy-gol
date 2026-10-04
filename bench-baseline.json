@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "recorded": "2026-09-15",
-  "node": "v24.20.0",
+  "recorded": "2026-10-04",
+  "node": "v24.21.0",
   "platform": "linux x64",
   "note": "Real machine run. Medians of N after per-case warmup. Updating this file is a reviewed commit, never a reflex.",
   "tolerances": {
@@ -145,6 +145,34 @@
       "higherIsBetter": true,
       "ratio": 0.9386268050543295,
       "selfCalibrated": true
+    },
+    "audio-main-thread-frame": {
+      "median": 0.0021999999999593456,
+      "unit": "ms",
+      "class": "browser",
+      "budget": 0.5,
+      "higherIsBetter": false
+    },
+    "audio-main-thread-texture-frame": {
+      "median": 0.0003770000000145046,
+      "unit": "ms",
+      "class": "browser",
+      "budget": 0.5,
+      "higherIsBetter": false
+    },
+    "theme-default-q3-stack-cost": {
+      "median": 0,
+      "unit": "ms",
+      "class": "browser",
+      "budget": 18.181818181818183,
+      "higherIsBetter": false
+    },
+    "theme-sids-place-q3-stack-cost": {
+      "median": 12.835576000000401,
+      "unit": "ms",
+      "class": "browser",
+      "budget": 18.181818181818183,
+      "higherIsBetter": false
     }
   }
 }

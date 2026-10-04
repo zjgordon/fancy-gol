@@ -74,5 +74,19 @@ export default defineConfig({
         deviceScaleFactor: 1,
       },
     },
+    {
+      // P3-D-4 — per-theme frame rate in a real browser at 1080p. Chromium only (the 4× CPU
+      // throttle is CDP), deliberately outside the blocking CI jobs: a headless runner is not the
+      // "reference machine" the acceptance criterion names, so this accumulates in
+      // docs/gate-history/ as `browser-bench` instead of gating every pull request.
+      name: 'browser-bench',
+      testMatch: 'perf/**/*.spec.ts',
+      timeout: 120_000,
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
+        deviceScaleFactor: 1,
+      },
+    },
   ],
 });

@@ -35,6 +35,9 @@ export default defineConfig({
             'tests/e2e/**',
             'tests/visual/**',
             'tests/a11y/**',
+            // Playwright-only (P3-D-4's `browser-bench` project): importing @playwright/test
+            // under vitest collects nothing and fails the file.
+            'tests/perf/**',
             'tests/unit/ui/**',
             'tests/unit/render/**',
             'tests/unit/themes/**',
