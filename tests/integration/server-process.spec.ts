@@ -10,11 +10,13 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const SERVER_ENTRY = fileURLToPath(new URL('../../src/server/index.ts', import.meta.url));
-const TSX_BIN = fileURLToPath(new URL('../../node_modules/.bin/tsx', import.meta.url));
 
 describe('server process (real spawn)', () => {
   it('SIGTERM closes the listener and exits 0 within 5s', async () => {
-    const child = spawn(TSX_BIN, [SERVER_ENTRY], {
+    // `node --import tsx`, not the `tsx` launcher: the launcher is a wrapper process, and a SIGTERM
+    // that reaches it relays to the server and exits 143 itself when the relay races (seen on CI,
+    // Node 20). The signal must hit the real server process for the AC to be about the server.
+    const child = spawn(process.execPath, ['--import', 'tsx', SERVER_ENTRY], {
       env: { ...process.env, PORT: '0' },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
