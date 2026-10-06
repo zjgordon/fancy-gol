@@ -16,16 +16,18 @@ test.describe('draw a glider and verify it moves', () => {
     await confirmClear(page);
     await page.keyboard.press('b');
 
-    const canvas = page.locator('#scene');
-    const box = await canvas.boundingBox();
+    // The test is about the glider, not the wheel: Firefox on CI intermittently never delivered the
+    // Ctrl+wheel zoom (10 s timeout on both retries). Zoom is covered by the camera specs.
+    const box = await page.locator('#scene').boundingBox();
     if (!box) throw new Error('canvas has no box');
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.keyboard.down('Control');
-    for (let i = 0; i < 12; i++) await page.mouse.wheel(0, -120);
-    await page.keyboard.up('Control');
+    await page.evaluate(() => window.__fancyGol?.setCamera({ cellSize: 12 }));
     await page.waitForFunction(() => (window.__fancyGol?.cellSize ?? 0) >= 8);
 
-    const origin = await viewportCenterCell(page);
+    // Draw above the bottom-centre control cluster, which sits over the middle of the screen and
+    // would intercept the clicks.
+    const centre = await viewportCenterCell(page);
+    const origin = { x: centre.x, y: centre.y - 12 };
 
     for (const [dx, dy] of GLIDER) {
       await clickWorld(page, origin.x + dx, origin.y + dy);
