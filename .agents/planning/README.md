@@ -261,10 +261,16 @@ loosened to go green.
 **What the bundle floor measures (decision D4, 2026-10-06).** The §3.6 floor is "Client JS bundle
 (gzip, **excl. themes**)", but before P3-E-7, `client-js-gzip` summed every emitted JS asset. Its
 135.7 kB "failure" therefore measured a different quantity. From P3-E-7, each non-Default theme is
-a dynamically imported chunk. `client-js-gzip` sums every chunk except theme chunks, so it matches
-the floor as written. A new deterministic case, `theme-chunk-gzip-max`, gates the largest theme
-chunk (budget set by P3-E-7 from measurement, ≤ 3% regression band). This aligns a measurement
-with its stated definition and adds a gate. It does not loosen one.
+a dynamically imported chunk, named `theme-<id>` (and `theme-effects` for the passes they share) by
+`vite.config.ts`. `client-js-gzip` sums every chunk except `theme-*`, so it matches the floor as
+written. A new deterministic case, `theme-chunk-gzip-max`, gates the largest theme chunk (12 KiB
+against 7.36 measured, ≤ 3% regression band). This aligns a measurement with its stated definition
+and adds a gate. It does not loosen one.
+
+*Status (P3-E-7, 2026-10-06):* measured as defined, the floor reads **127.45 KiB against 120**. Moving
+the themes out recovered 10.2 KiB; the remaining 7.45 is Phase 3's non-theme infrastructure and needs
+a separate decision (lazy-load heavy panels, raise the floor, or define it as initial-load JS). The
+budget is unchanged and the CI `bench` job stays non-blocking until it is settled.
 
 **Transcribed / non-timed cases:** `cold-load-recorded` is renamed `cold-load-transcribed` and
 carries `transcribed: true`, which the runner's table marks with a `*` and a footnote — visible in

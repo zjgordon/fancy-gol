@@ -33,6 +33,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The vignette post pass renders 2.4× faster (29.1 ms → 12.0 ms per 1080p frame) for pixel-identical output. (P3-D-4)
 - Pinning the quality level now repaints the background straight away, instead of leaving the previous level's pixels on screen. (P3-E-1)
 - Chiba-City, Flatline, Void-Walker and Synthwave now actually draw their post effects — bloom, scanlines, vignette and film grain were silently rendering nothing — and cost a fraction of before: Chiba-City's frame drops from about 117 ms to 17 ms at 1080p. (P3-E-2)
+- The five atmosphere themes now load on demand instead of with the page, so the first load carries about 10% less JavaScript. Hover a theme card, or press `Mod+Shift+T`, and the next theme starts downloading early. If a theme cannot load, the current one stays and a message says to reload. (P3-E-7)
 - The edge colour fringe (Chiba-City, Synthwave) and the CRT corners (Flatline) are Canvas2D stand-ins, not the exact effects; each is labelled as an approximation in its theme README and the quality indicator. The exact versions arrive with the WebGL2 renderer. (P3-E-2)
 - Effects now degrade automatically when a machine cannot keep up — dropping post-processing, then particles, then the animated background — and the first drop is announced by name ("dropped post-processing: bloom") instead of happening silently. (P3-D-4)
 
