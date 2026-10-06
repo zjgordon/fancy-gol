@@ -87,10 +87,11 @@ jobs:
     name: bench
     runs-on: ubuntu-latest
     needs: verify
-    # Non-blocking for one remaining reason: `client-js-gzip` is 135.7 kB against the 120 kB floor
-    # until P3-E-7 splits the themes into lazy chunks. (The Node theme-cost cases that used to fail
+    # Non-blocking for one remaining reason: `client-js-gzip` reads 127.45 KiB against the 120 KiB
+    # floor even with the themes split into lazy chunks (P3-E-7). The remaining 7.45 KiB is a decision
+    # recorded in PHASE_3 P3-E-7, not a bug. (The Node theme-cost cases that used to fail
     # here were removed by P3-E-8 — theme cost is now certified in `browser-floor` /
-    # `browser-bench`, see planning/README.md §3.6.) Remove this line when P3-E-7 lands; do not
+    # `browser-bench`, see planning/README.md §3.6.) Remove this line when that is settled; do not
     # lower the budget to make the job green.
     continue-on-error: true
     steps:
