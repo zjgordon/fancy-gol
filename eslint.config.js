@@ -5,6 +5,7 @@ import prettier from 'eslint-config-prettier';
 import globals from 'globals';
 import { noLiteralDesignTokens } from './scripts/eslint-rules/no-literal-design-tokens.mjs';
 import { noCssTransitionOnChrome } from './scripts/eslint-rules/no-css-transition-on-chrome.mjs';
+import { noPerFramePixelIo } from './scripts/eslint-rules/no-per-frame-pixel-io.mjs';
 
 const ENGINE_FORBIDDEN_GLOBALS = [
   'window',
@@ -82,6 +83,13 @@ export default tseslint.config(
       'local/no-literal-design-tokens': 'error',
       'local/no-css-transition-on-chrome': 'error',
     },
+  },
+  // ADR-012 rule 1 (P3-E-5): effect passes composite per frame; they never read or hand-write pixels.
+  {
+    files: ['src/render/effects/**/*.ts'],
+    ignores: ['src/render/effects/software-surface.ts'],
+    plugins: { local: { rules: { 'no-per-frame-pixel-io': noPerFramePixelIo } } },
+    rules: { 'local/no-per-frame-pixel-io': 'error' },
   },
   {
     files: ['**/*.spec.ts', 'tests/**/*.ts'],
