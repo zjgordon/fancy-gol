@@ -121,6 +121,46 @@ test.describe('moving backgrounds (P3-E-3)', () => {
   });
 });
 
+test.describe('degrade governor in a real browser (P3-E-4)', () => {
+  test('chiba-city unpinned for 60 s makes at most one quality transition', async ({ page }) => {
+    test.setTimeout(100_000);
+    await openApp(page);
+    await activateTheme(page, 'chiba-city');
+    await startSoup(page);
+    await page.evaluate(() => window.__fancyGol?.pinQuality(null));
+    const transitions = await page.evaluate(
+      () =>
+        new Promise<number>((resolve) => {
+          let last = window.__fancyGol?.effectQuality;
+          let changes = 0;
+          const timer = setInterval(() => {
+            const q = window.__fancyGol?.effectQuality;
+            if (q !== last) changes += 1;
+            last = q;
+          }, 100);
+          setTimeout(() => {
+            clearInterval(timer);
+            resolve(changes);
+          }, 60_000);
+        }),
+    );
+    test.info().annotations.push({ type: 'quality-transitions', description: String(transitions) });
+    expect(transitions).toBeLessThanOrEqual(1);
+  });
+
+  test('a degraded theme names the dropped passes in the indicator', async ({ page }) => {
+    await openApp(page);
+    await activateTheme(page, 'chiba-city');
+    await page.evaluate(() => window.__fancyGol?.pinQuality(1));
+    await page.waitForFunction(() => (window.__fancyGol?.effectQuality ?? 3) === 1);
+    const text = await page.evaluate(() => window.__fancyGol?.qualityIndicator ?? '');
+    expect(text).toMatch(/effects reduced/);
+    expect(text).toMatch(/bloom/);
+    await page.evaluate(() => window.__fancyGol?.pinQuality(3));
+    expect(await page.evaluate(() => window.__fancyGol?.qualityIndicator ?? 'x')).toBe('');
+  });
+});
+
 test.describe('per-frame cost with the sim running (ADR-012 rules 1 and 4)', () => {
   test.beforeEach(async ({ page }) => {
     await openApp(page);
