@@ -3,6 +3,7 @@ import { CONWAY } from '@engine/rules/builtin';
 import { Simulation } from '@engine/simulation';
 import { Canvas2DRenderer } from '@render/canvas2d';
 import { Compositor } from '@render/compositor';
+import type { EffectPass } from '@render/effects/pass';
 import { QualityGovernor } from '@render/quality-governor';
 import { CanvasRecorder } from '@render/recorder';
 import type { CanvasLike } from '@render/layers';
@@ -271,6 +272,41 @@ describe('Compositor', () => {
 
     compositor.draw(frame);
     expect(bgCtx.fillRectCalls).toBe(0);
+  });
+
+  it('reports per-stage wall time, with background at 0 on frames that do not repaint L0 (P3-E-1)', async () => {
+    const { compositor } = await setUpCompositor();
+    const burn = (stage: 'background' | 'effects' | 'post', ms: number): EffectPass => ({
+      id: `burn-${stage}`,
+      stage,
+      cost: ms,
+      render: () => {
+        const end = performance.now() + ms;
+        while (performance.now() < end) {
+          /* busy-wait: a lower bound on wall time that a loaded runner can only lengthen */
+        }
+      },
+      dispose: () => {},
+    });
+    compositor.setEffectPasses([burn('background', 3), burn('effects', 4), burn('post', 5)]);
+    const sim = blinkerWorld();
+    const frame = { cells: sim.view(), dirty: null as Rect[] | null, tick: 0 };
+
+    compositor.draw(frame); // first draw paints L0
+    const first = { ...compositor.readStageMs() };
+    expect(first.background).toBeGreaterThanOrEqual(3);
+    expect(first.effects).toBeGreaterThanOrEqual(4);
+    expect(first.post).toBeGreaterThanOrEqual(5);
+
+    compositor.draw(frame); // static L0, same quality: background is not repainted
+    const second = compositor.readStageMs();
+    expect(second.background).toBe(0);
+    expect(second.effects).toBeGreaterThanOrEqual(4);
+    expect(second.post).toBeGreaterThanOrEqual(5);
+
+    compositor.setEffectQuality(2); // post stage dropped by the quality ladder
+    compositor.draw(frame);
+    expect(compositor.readStageMs().post).toBeLessThan(5);
   });
 
   it('with effects disabled, composites with exactly two drawImage calls', async () => {

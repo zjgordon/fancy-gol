@@ -22,6 +22,17 @@ import {
 import type { QualityGovernor } from './quality-governor';
 import type { CompiledTheme, RenderFrame, Renderer, RenderStats, Viewport } from './types';
 
+/**
+ * Wall ms the last `draw` spent in each effect stage (P3-E-1). `background` is 0 on frames where L0
+ * was not repainted. Measured around `EffectRegistry.renderStage`, so it is the number the
+ * browser-floor liveness and ratio gates reason about — never a declared cost (ADR-011/012).
+ */
+export interface StageTimings {
+  background: number;
+  effects: number;
+  post: number;
+}
+
 /** How L0 decides whether a camera move forces a background repaint. */
 export type BackgroundMode = 'static' | 'parallax';
 
@@ -81,6 +92,7 @@ export class Compositor implements Renderer {
   private changes: ChangeSummary = EMPTY_CHANGES;
   private readonly stats = { frameMs: 0, drawCalls: 0, tilesRepainted: 0 };
   private compositeDrawCalls = 0;
+  private readonly stageMs: StageTimings = { background: 0, effects: 0, post: 0 };
 
   constructor(options: CompositorOptions = {}) {
     this.layers = new LayerStack(options.canvasFactory ?? defaultCanvasFactory);
@@ -249,6 +261,9 @@ export class Compositor implements Renderer {
 
     const t0 = performance.now();
     const frameTime = (t0 - this.frameTimeOrigin) / 1000;
+    this.stageMs.background = 0;
+    this.stageMs.effects = 0;
+    this.stageMs.post = 0;
 
     this.paintBackgroundIfNeeded(theme, viewport, frame.tick, frameTime);
 
@@ -268,6 +283,11 @@ export class Compositor implements Renderer {
 
   readStats(): RenderStats {
     return this.stats;
+  }
+
+  /** Per-stage wall ms of the most recent `draw` (see {@link StageTimings}). Stable object, live values. */
+  readStageMs(): Readonly<StageTimings> {
+    return this.stageMs;
   }
 
   /** Cell-layer stats alone — what P0-H-3 / dirty-rect ACs compare against. */
@@ -316,6 +336,7 @@ export class Compositor implements Renderer {
       ctx.fillRect(0, 0, w, h);
     }
     if (this.effectsEnabled) {
+      const s0 = performance.now();
       this.effects.renderStage('background', {
         target: ctx,
         source: canvas,
@@ -324,6 +345,7 @@ export class Compositor implements Renderer {
         frameTime,
         changes: this.changes,
       });
+      this.stageMs.background = performance.now() - s0;
     }
     this.l0Dirty = false;
     this.paintedQuality = this.effects.getQuality();
@@ -336,6 +358,7 @@ export class Compositor implements Renderer {
 
     effects.ctx.setTransform(1, 0, 0, 1, 0, 0);
     effects.ctx.clearRect(0, 0, effects.canvas.width, effects.canvas.height);
+    const e0 = performance.now();
     this.effects.renderStage('effects', {
       target: effects.ctx,
       source: cells.canvas,
@@ -344,7 +367,10 @@ export class Compositor implements Renderer {
       frameTime,
       changes: this.changes,
     });
+    this.stageMs.effects = performance.now() - e0;
 
+    // Timed from here so the three L0+L1+L2 → L3 copies count as post cost, not as free setup.
+    const p0 = performance.now();
     post.ctx.setTransform(1, 0, 0, 1, 0, 0);
     post.ctx.clearRect(0, 0, post.canvas.width, post.canvas.height);
     // Post must sample the stack below (L0+L1+L2) so bloom/scanlines hit live cells,
@@ -365,6 +391,7 @@ export class Compositor implements Renderer {
       frameTime,
       changes: this.changes,
     });
+    this.stageMs.post = performance.now() - p0;
   }
 
   private blitToDisplay(displayCtx: Canvas2DContext): number {

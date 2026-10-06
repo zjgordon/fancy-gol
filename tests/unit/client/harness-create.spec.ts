@@ -35,6 +35,8 @@ describe('createHarness', () => {
       setCamera: () => {},
       runCommand: () => {},
       pinQuality: () => {},
+      renderStats: () => ({ frameMs: 3, stageMs: { background: 0, effects: 1, post: 2 } }),
+      heapBytes: () => null,
     });
     expect(harness.ready).toBe(true);
     expect(harness.tick).toBe(4);
@@ -67,5 +69,7 @@ describe('createHarness', () => {
     void harness.runCommand('sim.step');
     harness.pinQuality(0);
     harness.pinQuality(null);
+    expect(harness.renderStats()).toEqual({ frameMs: 3, stageMs: { background: 0, effects: 1, post: 2 } });
+    expect(harness.heapBytes()).toBeNull();
   });
 });

@@ -10,6 +10,14 @@ export function isTestMode(search: string = typeof window === 'undefined' ? '' :
   return new URLSearchParams(search).get('test') === '1';
 }
 
+/** Last frame's render cost as the compositor measured it (P3-E-1). */
+export interface HarnessRenderStats {
+  /** Wall ms of the whole `draw`. */
+  readonly frameMs: number;
+  /** Wall ms per effect stage; `background` is 0 on frames where L0 was not repainted. */
+  readonly stageMs: { readonly background: number; readonly effects: number; readonly post: number };
+}
+
 export interface FancyGolHarness {
   readonly ready: boolean;
   readonly tick: number;
@@ -48,6 +56,13 @@ export interface FancyGolHarness {
   runCommand(id: string): Promise<void> | void;
   /** Pin/unpin the degrade governor (P3-D-4). `null` releases the pin. */
   pinQuality(quality: number | null): void;
+  /** Per-stage cost of the most recent draw. Measured, never declared (ADR-011). */
+  renderStats(): HarnessRenderStats;
+  /**
+   * `usedJSHeapSize` in bytes, or `null` where the browser has no `performance.memory`. Chromium
+   * only: callers must label any gate built on it as Chromium-only (ADR-012 rule 1 proof).
+   */
+  heapBytes(): number | null;
 }
 
 export interface HarnessSources {
@@ -81,6 +96,8 @@ export interface HarnessSources {
   readonly setCamera: (pose: { originX?: number; originY?: number; cellSize?: number }) => void;
   readonly runCommand: (id: string) => Promise<void> | void;
   readonly pinQuality: (quality: number | null) => void;
+  readonly renderStats: () => HarnessRenderStats;
+  readonly heapBytes: () => number | null;
 }
 
 /** Build the inspect object Playwright reads. Getters stay live against the composition root. */
@@ -164,5 +181,7 @@ export function createHarness(src: HarnessSources): FancyGolHarness {
     setCamera: src.setCamera,
     runCommand: src.runCommand,
     pinQuality: src.pinQuality,
+    renderStats: src.renderStats,
+    heapBytes: src.heapBytes,
   };
 }

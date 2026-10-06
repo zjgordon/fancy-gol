@@ -1062,6 +1062,8 @@ function main(): void {
         if (level === null) unpinQuality(quality);
         else pinQuality(quality, clampQuality(level));
       },
+      renderStats: () => ({ frameMs: renderer.readStats().frameMs, stageMs: { ...renderer.readStageMs() } }),
+      heapBytes: () => (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize ?? null,
     });
   }
 
