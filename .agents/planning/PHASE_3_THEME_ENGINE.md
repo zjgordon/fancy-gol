@@ -549,14 +549,21 @@ With no browser available, the task is `- [!]`, never `- [x]`.
 - Chromium (`browser-floor`): Chiba-City unpinned for 60 s, ≤ 1 transition.
 
 
-#### - [ ] P3-E-5 · Fail-loud surfaces & aligned test doubles
+#### - [x] P3-E-5 · Fail-loud surfaces & aligned test doubles
 **Depends on:** P3-E-2, P3-E-3 · **Files:** `src/render/effects/software-surface.ts`, `eslint.config.js` + rule source, `tests/unit/render/*`, `src/render/effects/library.ts`
 **Implementation notes** ADR-012 rules 1–3. The lint rule lands *after* E-2/E-3 because it would fail on the old passes. Pixel truth lives in the browser; unit tests prove structure.
 **Acceptance criteria**
-- [ ] Reading pixels from a non-software surface throws a legible error; a unit test proves it. The zero-buffer path is gone.
-- [ ] Lint rule `no-per-frame-pixel-io` bans `readSourcePixels`, `getImageData`, `putImageData`, and typed-array or `ImageData` allocation inside `render` / `renderTimed`, and a fixture proves it fires.
-- [ ] Pass unit tests assert composite-op call sequences (`CanvasRecorder`, or composite modes implemented in `SoftwareSurface`). No unit test claims pixel output the browser does not produce.
-- [ ] Each pass's `declaredCost` is re-derived from P3-E-1's browser measurements and recorded in `library.ts`.
+- [x] Reading pixels from a non-software surface throws a legible error; a unit test proves it. The zero-buffer path is gone.
+- [x] Lint rule `no-per-frame-pixel-io` bans `readSourcePixels`, `getImageData`, `putImageData`, and typed-array or `ImageData` allocation inside `render` / `renderTimed`, and a fixture proves it fires.
+- [x] Pass unit tests assert composite-op call sequences (`CanvasRecorder`, or composite modes implemented in `SoftwareSurface`). No unit test claims pixel output the browser does not produce.
+- [x] Each pass's `declaredCost` is re-derived from P3-E-1's browser measurements and recorded in `library.ts`.
+
+**Completion notes (2026-10-06)**
+- `readSourcePixels` throws a legible error for a non-software canvas (`tests/unit/render/software-surface.spec.ts`); `writeTargetPixels` and the unused `pixel-hash.ts` are deleted. The Void-Walker starfield test, the last unit test asserting pixel output, now asserts the recorded draw sequence.
+- `local/no-per-frame-pixel-io` (`scripts/eslint-rules/`, wired for `src/render/effects/**`, `software-surface.ts` exempt as the test double) bans the pixel calls and typed-array / `ImageData` / `ArrayBuffer` allocation inside any `render` / `renderTimed`, closures included; `tests/unit/eslint-rules/no-per-frame-pixel-io.spec.ts` is the firing fixture, and a throwaway file under the real config also errored.
+- Declared costs are re-derived from the on-demand `perf/measure-pass-costs.spec.ts` (`harness.renderStats().passMs`); the table is recorded above `declaredCostAtQuality` in `library.ts`.
+- **Finding for E-9:** `chromaticAberration` costs **12–13 ms** in headless software raster (declared 1.2 before) and is ~80% of every post stage that has it (Chiba-City post 16.4 ms, Synthwave 15.3 ms). The ratio and fps gates still hold because the frame sits at vsync, but it is the pass to optimise if the reference-machine ≤ 4 ms post criterion fails.
+
 
 #### - [ ] P3-E-6 · Re-capture per-theme visual baselines
 **Depends on:** P3-E-2, P3-E-3 · **Files:** `tests/visual/themes/*`, `docs/gate-history/README.md`
