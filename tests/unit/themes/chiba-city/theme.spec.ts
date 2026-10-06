@@ -108,7 +108,10 @@ describe('Chiba-City theme module', () => {
     const resolved = r.activate('chiba-city');
     expect(resolved.id).toBe('chiba-city');
     expect(Object.fromEntries(calls)['--gol-color-accent']).toBe(CHIBA_CITY_TOKENS.color.accent);
-    expect(r.getCompiledTheme()?.background).toBe(CHIBA_CITY_TOKENS.color.bg);
+    // The cell layer is transparent so the haze grid on L0 shows through (P3-E-3); the opaque base
+    // colour is hazeGrid's, and the chrome still takes `tokens.color.bg`.
+    expect(r.getCompiledTheme()?.background).toBe('rgba(0, 0, 0, 0)');
+    expect(CHIBA_CITY_TOKENS.color.bg).toBe('#05090c');
   });
 });
 

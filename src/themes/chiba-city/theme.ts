@@ -16,7 +16,10 @@ export const CHIBA_CITY_THEME: ThemeModule = {
   id: 'chiba-city',
   name: 'Chiba-City',
   tokens: CHIBA_CITY_TOKENS,
-  palette: makeChibaPalette(CHIBA_CITY_TOKENS.color.bg),
+  // The cell layer is transparent so L0 shows through: the cyan haze grid is the point of the theme
+  // and was invisible under an opaque layer (found by P3-E-1). `hazeGrid` paints the base itself.
+  palette: makeChibaPalette('rgba(0, 0, 0, 0)'),
+  cellLayerBackground: 'rgba(0, 0, 0, 0)',
   motion: MOTION,
   sound: CHIBA_SOUND_PACK,
   cost: 'medium',

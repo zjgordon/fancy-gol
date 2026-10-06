@@ -15,7 +15,10 @@ export function makeFlatlineTheme(kind: PhosphorKind = 'amber'): ThemeModule {
     id: 'flatline',
     name: kind === 'amber' ? 'Flatline' : `Flatline (${kind})`,
     tokens,
-    palette: makeFlatlinePalette(tokens.color.bg, kind),
+    // Transparent cell layer so the falling text on L0 shows through (it was occluded: P3-E-1).
+    // `textRain` paints the tube's base colour itself.
+    palette: makeFlatlinePalette('rgba(0, 0, 0, 0)', kind),
+    cellLayerBackground: 'rgba(0, 0, 0, 0)',
     motion: flatlineMotionSignature(),
     sound: FLATLINE_SOUND_PACK,
     cost: 'medium',

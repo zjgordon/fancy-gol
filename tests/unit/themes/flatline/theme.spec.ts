@@ -113,7 +113,9 @@ describe('Flatline theme module', () => {
     const resolved = r.activate('flatline');
     expect(resolved.id).toBe('flatline');
     expect(Object.fromEntries(calls)['--gol-color-accent']).toBe(FLATLINE_TOKENS.color.accent);
-    expect(r.getCompiledTheme()?.background).toBe(FLATLINE_TOKENS.color.bg);
+    // Transparent cell layer so the falling text on L0 shows through (P3-E-3); textRain paints the base.
+    expect(r.getCompiledTheme()?.background).toBe('rgba(0, 0, 0, 0)');
+    expect(FLATLINE_TOKENS.color.bg).toBe('#0a0804'); // the base `createFlatlinePassStack` defaults to
   });
 });
 
