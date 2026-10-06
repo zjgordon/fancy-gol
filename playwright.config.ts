@@ -10,10 +10,11 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
  *  - `--enable-precise-memory-info` stops `performance.memory` being bucketed, which the
  *    allocation check reads. Without it a heap-span gate would measure the quantisation.
  */
+const chromiumExecutable = process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE']
+  ? { executablePath: process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE'] }
+  : {};
 const perfLaunchOptions = {
-  ...(process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE']
-    ? { executablePath: process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE'] }
-    : {}),
+  ...chromiumExecutable,
   args: ['--enable-precise-memory-info'],
 };
 
@@ -60,7 +61,7 @@ export default defineConfig({
     {
       name: 'chromium',
       testMatch: 'e2e/**/*.spec.ts',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], launchOptions: chromiumExecutable },
     },
     {
       name: 'firefox',
@@ -76,7 +77,7 @@ export default defineConfig({
       name: 'a11y',
       testMatch: 'a11y/**/*.spec.ts',
       timeout: 60_000,
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], launchOptions: chromiumExecutable },
     },
     {
       name: 'visual',
