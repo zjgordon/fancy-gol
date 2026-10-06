@@ -159,6 +159,13 @@
       "class": "browser",
       "budget": 0.5,
       "higherIsBetter": false
+    },
+    "theme-chunk-gzip-max": {
+      "median": 7.359375,
+      "unit": "kB",
+      "class": "deterministic",
+      "budget": 12,
+      "higherIsBetter": false
     }
   }
 }
