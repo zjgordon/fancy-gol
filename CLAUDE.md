@@ -16,7 +16,7 @@ substitute for the real documents.
 .agents/scripts/build-dashboard.mjs      regenerates it
 .agents/docs/INCEPTION.md                the founding vision and the standard
 .agents/planning/README.md               index + cross-phase engineering rules (§3 mandatory)
-.agents/planning/ARCHITECTURE_DECISIONS.md   ADR-001…010, binding
+.agents/planning/ARCHITECTURE_DECISIONS.md   ADR-001…012, binding
 .agents/planning/PHASE_<0-6>_*.md        the task checklists — counts on the dashboard
 ```
 
@@ -30,8 +30,13 @@ it is not done. That rule is named **Agit-Prop** in the inception document and i
 
 ## Current state
 
-- Phase 2 shipped on `main` as `v0.3.0`. Confirm the next task in `.agents/dashboard.html`
-  before cutting `phase/3-theme-engine`.
+- Phase 2 shipped on `main` as `v0.3.0`. Phase 3 is in progress on `phase/3-theme-engine`.
+- Phase 3 is in **Workstream E (remediation)**: the theme effects are being rebuilt as composited
+  Canvas2D passes (ADR-012) so the themes are fast *and* render their effects. Background:
+  `.agents/artifacts/PHASE_3_PERFORMANCE_REVIEW.md`. Work the tasks in order; the dashboard's
+  "Next up" names the current one.
+- Anything touching `src/render/**` or `src/themes/**` must be run in a real browser before it is
+  ticked (`AGENTS.md` §8).
 - **Do not commit implementation code to `main`.**
 
 ## Branching — important

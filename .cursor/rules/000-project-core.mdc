@@ -14,7 +14,7 @@ doing anything. It is the operating manual; these rules are a summary of it.
 | The vision and the standard | `.agents/docs/INCEPTION.md` |
 | Current status and the next task | `.agents/dashboard.html` |
 | Rules that apply everywhere | `.agents/planning/README.md` §3 |
-| Binding architecture decisions | `.agents/planning/ARCHITECTURE_DECISIONS.md` (ADR-001…010) |
+| Binding architecture decisions | `.agents/planning/ARCHITECTURE_DECISIONS.md` (ADR-001…012) |
 | Exactly what to build | `.agents/planning/PHASE_<0-6>_*.md` |
 
 ## What this is

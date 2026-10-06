@@ -42,11 +42,11 @@ chat transcript. **Here.**
 │   └── RETROSPECTIVE.md       ← written at 1.0.0 (Phase 6)
 └── planning/
     ├── README.md              ← index + the cross-phase engineering rules (§3 is mandatory reading)
-    ├── ARCHITECTURE_DECISIONS.md  ← ADR-001…010. Binding. Read once, in full, before Phase 0.
+    ├── ARCHITECTURE_DECISIONS.md  ← ADR-001…012. Binding. Read once, in full, before Phase 0.
     ├── PHASE_0_FOUNDATION.md      ← 36 tasks   → v0.1.0
     ├── PHASE_1_INTERACTION.md     ← 28 tasks   → v0.2.0
     ├── PHASE_2_LIBRARY_AND_STATS.md ← see dashboard for live task count → v0.3.0
-    ├── PHASE_3_THEME_ENGINE.md    ← 19 tasks   → v0.4.0
+    ├── PHASE_3_THEME_ENGINE.md    ← see dashboard for live task count → v0.4.0
     ├── PHASE_4_POWER_UX.md        ← 17 tasks   → v0.5.0
     ├── PHASE_5_SCALE_AND_PERF.md  ← 15 tasks   → v0.6.0
     └── PHASE_6_LAUNCH.md          ← 19 tasks   → v1.0.0
@@ -144,7 +144,7 @@ See §7. Small, atomic, independently green commits. One task is one to three co
 1. Read `.agents/docs/INCEPTION.md`. Every phase. It is short and it is the standard.
 2. Read `.agents/planning/README.md` — especially **§3, the cross-phase engineering rules**
    (purity, no-bloat, coverage gates, performance budgets, accessibility baseline, determinism).
-3. Read `.agents/planning/ARCHITECTURE_DECISIONS.md` in full, once. Ten binding decisions with
+3. Read `.agents/planning/ARCHITECTURE_DECISIONS.md` in full, once. Twelve binding decisions with
    their TypeScript contracts. Most "should I do X?" questions are already answered there.
 4. Open `.agents/dashboard.html` in a browser. It tells you the next task.
 5. Read the phase document for the phase you are in.
@@ -311,6 +311,11 @@ A task is `- [x]` only when **all** of these hold:
       ratio, browser absolute-budget-only; there is no uniform >10% regression gate).
 - [ ] From Phase 1: the Playwright spec for the feature exists and passes.
 - [ ] From Phase 3: it looks deliberate in **all six themes** and passes contrast in each.
+- [ ] **A task that touches `src/render/**` or `src/themes/**` has been run in a real browser**
+      (`npx playwright test --project=browser-floor`, from P3-E-1). Any criterion about pixels or
+      frame time is proven in Chromium, never on a test double alone (ADR-012 rule 3). With no
+      browser available, the task is `- [!]`, never `- [x]`. *(Added 2026-10-06: Phase 3's themes
+      passed every unit test while the browser rendered none of their post effects.)*
 - [ ] `CHANGELOG.md` updated in the same commit.
 - [ ] Dashboard regenerated and committed.
 

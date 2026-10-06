@@ -543,3 +543,83 @@ Three consequences, all binding:
 - Any future pass must be budgeted by measurement at 1080p before it ships in a theme's quality-3
   stack, and every theme's quality-3 stack must fit the frame budget *or* the theme declares a lower
   `quality.max`. There is no third option where a declaration stands in for a measurement.
+
+### Amendment — 2026-10-06 · The mechanism was wrong; Phase 3 is not blocked on Phase 5
+**Forced by:** `.agents/artifacts/PHASE_3_PERFORMANCE_REVIEW.md` (browser measurement, 2026-10-06),
+operator decision D1.
+**Corrects the mechanism.** There is no `getImageData` anywhere in `src/`. On a real
+`OffscreenCanvas`, `readSourcePixels()` returns a fresh **all-zero** buffer, so every pixel-reading
+pass loops over transparent black, allocates ~25 MB per frame, and `putImageData`s nothing visible.
+Measured in headless Chromium at 1080p: quality 3 and quality 2 are **byte-identical** in Chiba-City,
+Flatline, Void-Walker and Synthwave, while q3 costs 8.7–19 fps against q2's ~60 fps. Node and the
+browser "paid the same" only because both run the loop — Node on real pixels, the browser on zeros.
+**Withdraws consequence 3's remedy** ("GPU post-processing … is the fix, not a smaller effect list")
+and the Consequences bullet "Phase 5's WebGL2 renderer is now a Phase 3 acceptance criterion". The fix
+is **ADR-012** (composited Canvas2D effects), owned by Phase 3 Workstream E. Phase 5's WebGL2 port
+(P5-A-3) remains planned and now ports composited passes.
+**Keeps in force:** consequence 1 (costs are measured, never declared), consequence 2 (the governor is
+hosted and is not optional), the measured-cost budgeting rule, and the ban on lowering
+`theme-*` budgets to go green.
+**Invalidates:** P3-D-4's "blocked on Phase 5" status (re-pointed to P3-E-1…P3-E-5); P3-A-5's per-texel
+pass implementations (replaced by P3-E-2/P3-E-3); P3-A-4's "never oscillates" proof scope (extended by
+P3-E-4); the 48 P3-D-2 baselines (re-captured by P3-E-6, because they froze the themes without their
+post effects).
+**Does not invalidate:** the `EffectPass` / `EffectCtx` contract (PHASE_3 §2.3), the stage ladder, the
+compositor's layer stack, or `tests/perf/themes-fps.spec.ts` as the frame-rate proof path.
+
+---
+
+## ADR-012 — On Canvas2D, effects are composited, not computed
+
+**Status:** ACCEPTED (operator decisions D1–D6, 2026-10-06) · **Affects:** Phase 3 (Workstream E),
+Phase 5 (P5-A-3, P5-E-2, P5-E-3)
+**Amends** ADR-011 (see its 2026-10-06 amendment). **Source:**
+`.agents/artifacts/PHASE_3_PERFORMANCE_REVIEW.md`.
+
+### Decision
+
+Canvas2D already exposes a GPU pipeline: `drawImage` (with scaling and smoothing),
+`globalCompositeOperation` (`lighter`, `multiply`, `screen`, `overlay`, `destination-out`,
+`destination-in`), `globalAlpha`, `createPattern`, gradients and — where supported — `ctx.filter`.
+**Every Canvas2D effect pass is built from those operations.** Per-texel JavaScript is permitted only
+when baking a texture at activation or resize, never on the per-frame path.
+
+Four binding rules:
+
+1. **No per-texel JS and no allocation on the per-frame effect path.** `render` / `renderTimed` may not
+   call `readSourcePixels`, `getImageData`, `putImageData` or allocate typed arrays or `ImageData`.
+   Enforced by a lint rule and a browser heap-delta test (P3-E-5, P3-E-1).
+2. **Fail loud.** A pixel read from a non-software surface throws; it never returns a zero buffer.
+   A silent no-op is a defect (`AGENTS.md` §8).
+3. **Browser truth for pixels; doubles for structure.** Unit tests assert call sequences and composite
+   modes (`CanvasRecorder`). Whether an effect is *visible* and what it *costs* is proven in Chromium
+   (effect-liveness spec, `browser-bench`). A criterion about pixels or frame time is never ticked on
+   `SoftwareSurface` alone.
+4. **The governor predicts before it promotes.** Promotion requires
+   `currentEwma + lastMeasuredCost(stageToEnable) < upgradeThreshold`; a failed probe doubles the next
+   probe interval.
+
+### Effects without a cheap composited form (decision D3)
+Geometric per-texel warps — `crtCurvature` and exact radial chromatic aberration — ship on Canvas2D as a
+**labelled substitute** (corner mask + edge falloff; edge-ring channel fringe from tinted, offset copies).
+The substitute is named as such in the theme README and in the quality indicator copy. The exact effect
+ships with Phase 5's WebGL2 renderer (P5-A-3). This satisfies "never present an approximation as exact".
+
+### Rationale
+- Dropping only the post stage returns every theme to ~60 fps at 1080p even on a software rasterizer;
+  the cell layer, compositor, backgrounds and particles are within budget today.
+- A prototype Chiba-City post stack (bloom via downscale chain + `lighter`, scanline pattern + `multiply`,
+  baked vignette + `multiply`, pre-baked grain tiles + `overlay`) measured **19.7 ms/frame on SwiftShader**
+  (CPU raster, worst case) against ~110 ms for the per-texel path — and it draws the effects.
+- Phase 5 still needs a fast Canvas2D path (P5-A-3 keeps Canvas2D as the fallback; P5-E-2 certifies a
+  no-WebGL2 profile). Composited passes have direct shader twins, which makes P5-E-3's ≤ 3%
+  equivalence target meaningful.
+
+### Consequences
+- The per-texel implementations from P3-A-5 are deleted, not kept as a "fallback": they never rendered.
+- Bloom samples the **L1 cell layer** directly, so it is confined to live cells by construction.
+- `hueShiftByAge` leaves Synthwave's pass stack; the hue shift moves into its age ramp
+  (`Canvas2DRenderer` already applies `theme.palette(state, age)`).
+- Frame-rate gating is two-tier (decision D6, `planning/README.md` §3.6): CI blocks on liveness,
+  zero steady-state allocation and a same-runner ratio against Default; the absolute ≥ 55 fps is
+  certified on a named GPU-backed reference machine via `gate-history: browser-bench`.

@@ -34,8 +34,8 @@ It must also be **fast**, **beautiful**, and **obvious to a beginner while total
 | 5 | [PHASE_5_SCALE_AND_PERF.md](./PHASE_5_SCALE_AND_PERF.md) | WebGL2 renderer, bitboard kernel, LOD, OffscreenCanvas, the Infinite Horizon. | `0.6.0` | *Make it enormous.* |
 | 6 | [PHASE_6_LAUNCH.md](./PHASE_6_LAUNCH.md) | Hardening, docs, demo assets, a11y audit, `1.0.0`. | `1.0.0` | *Make it real.* |
 
-Supporting document: **[ARCHITECTURE_DECISIONS.md](./ARCHITECTURE_DECISIONS.md)** — the ten binding
-decisions (ADR-001 … ADR-010) that these phases implement. Read it once, in full, before Phase 0.
+Supporting document: **[ARCHITECTURE_DECISIONS.md](./ARCHITECTURE_DECISIONS.md)** — the twelve binding
+decisions (ADR-001 … ADR-012) that these phases implement. Read it once, in full, before Phase 0.
 
 ---
 
@@ -219,10 +219,30 @@ rather than summing `EffectPass.cost` declarations. The declarations turned out 
 5–70×, and a gate built on them certified nothing.
 
 **Budgets may not be lowered to go green.** `theme-*-q3-stack-cost` and `theme-*-q0-throttled-frame`
-carry their acceptance budgets and fail them until Phase 5; the CI `bench` job is
-`continue-on-error` for exactly that reason. `scripts/bench.mjs` also refuses to write a
+carry their acceptance budgets. They failed on the per-texel effect path; Phase 3 Workstream E
+(ADR-012) rebuilds the passes so they pass, and P3-E-8 removes the CI `bench` job's
+`continue-on-error` once they do (amended 2026-10-06 — previously "fail them until Phase 5"). `scripts/bench.mjs` also refuses to write a
 `bench-baseline.json` row for any case that missed its budget — so a red row's number lives in the
 phase document and in the run output, never in a file that looks like an approval.
+
+**Two-tier frame-rate gate for themes (decision D6, 2026-10-06, ADR-012).** A frame *rate* is
+certified in a browser, never in Node. The tiers are:
+
+| Tier | Where | Gate | Blocks merge? |
+|---|---|---|---|
+| **CI floor** | Blocking Playwright job on the CI runner (headless Chromium; software raster is acceptable) | Per theme: effect-liveness (each enabled stage changes pixels), zero steady-state heap growth over 300 frames, and **q3 frame ≤ 2.5× Default's frame on the same runner** (a same-runner ratio, like the wall-clock calibration above). | Yes |
+| **Reference certificate** | The **reference machine**: a named, GPU-backed desktop recorded in `docs/gate-history/README.md` (CPU, GPU, browser version, OS) | Absolute ≥ 55 fps at q3 and ≥ 60 fps at q0 under a 4× CPU throttle, 1080p, ~100k visible cells | No: `gate-history: browser-bench`, per §3.10's merge-then-certify rule |
+
+The 2.5× ratio is the initial value P3-E-1 commits. It may be tightened by measurement but never
+loosened to go green.
+
+**What the bundle floor measures (decision D4, 2026-10-06).** The §3.6 floor is "Client JS bundle
+(gzip, **excl. themes**)", but before P3-E-7, `client-js-gzip` summed every emitted JS asset. Its
+135.7 kB "failure" therefore measured a different quantity. From P3-E-7, each non-Default theme is
+a dynamically imported chunk. `client-js-gzip` sums every chunk except theme chunks, so it matches
+the floor as written. A new deterministic case, `theme-chunk-gzip-max`, gates the largest theme
+chunk (budget set by P3-E-7 from measurement, ≤ 3% regression band). This aligns a measurement
+with its stated definition and adds a gate. It does not loosen one.
 
 **Transcribed / non-timed cases:** `cold-load-recorded` is renamed `cold-load-transcribed` and
 carries `transcribed: true`, which the runner's table marks with a `*` and a footnote — visible in
@@ -360,17 +380,32 @@ consecutive CI runs"). Those are a **gate-history** class:
   `workflow_dispatch`. Phase-branch dispatch samples prove the mechanism and are in the log;
   they do not increment the cite. Phase 3's **P3-D-2** consumes `visual-nonflake`; browser-class
   benches still hold their absolute budget in `npm run bench`.
-- **`browser-bench` (added by P3-D-4, 2026-10-04).** `tests/perf/themes-fps.spec.ts` — per-theme
-  frame rate at 1080p with ~100k visible cells, quality 3 and quality 0 under a CDP 4× CPU
-  throttle — runs on the nightly as its own Playwright project and appends under this id. It exists
-  because no Node harness can certify a frame rate: a software-raster harness overstates the cell
-  layer and the compositor's blits by ~6×, and the `CanvasRecorder` path cannot feed the
-  post-process passes real pixels (ADR-011). Its samples are **evidence, not a gate** — the
-  quality-3 rows stay red until post-processing moves to the GPU in Phase 5, and that red is the
-  signal Phase 5 clears. It is deliberately outside the blocking CI jobs.
+- **`browser-bench` (added by P3-D-4, 2026-10-04; amended 2026-10-06).** `tests/perf/themes-fps.spec.ts`
+  measures per-theme frame rate at 1080p with ~100k visible cells: quality 3, and quality 0 under a
+  CDP 4× CPU throttle. It runs on the nightly as its own Playwright project and appends under this
+  id. It exists because no Node harness can certify a frame rate, and because Node doubles diverge
+  from the browser on exactly the behaviour that matters (ADR-011 amendment: in the browser the
+  per-texel passes read zeros). Its samples are the **reference certificate** tier of §3.6's
+  two-tier frame gate. The blocking CI floor tier (effect liveness, allocation, same-runner ratio)
+  is a separate Playwright project that P3-E-1 adds.
 
 Until three official `main` samples exist, criteria that need gate-history keep an honest
 interim note naming the current official streak — never a silent tick.
+
+**Merge-then-certify (decision D5, 2026-10-06).** An official streak can only accumulate on `main`,
+so a phase can never satisfy a streak criterion *before* its merge. A phase branch may therefore
+merge with gate-history criteria still open when **all** of the following hold:
+
+1. Every non-history gate for the phase is green in CI on the branch.
+2. Each open record id has **≥ 1 green branch sample** (a `workflow_dispatch` or seeded
+   `append --event push`) that proves the mechanism works.
+3. Each open criterion carries its interim note, and the phase's Definition of Done lists it as
+   "certifying on `main`".
+
+After the merge, the criteria are ticked from `main`'s official streak, in a docs-only commit on
+`main` (permitted by `AGENTS.md` §6). A red official streak on `main` is a regression: it is fixed
+on the next phase branch before that branch may merge. This rule changes **when** a streak is
+cited, not **what** it requires.
 
 ---
 

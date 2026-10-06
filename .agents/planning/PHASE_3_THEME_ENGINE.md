@@ -5,7 +5,7 @@
 
 | | |
 |---|---|
-| **Status** | ◐ In progress — 18 of 19 tasks closed; **P3-D-4 is blocked on ADR-011** (Phase 5's GPU post-processing), see §4 |
+| **Status** | ◐ In progress. Workstreams A–D: 18 of 19 tasks closed. **P3-D-4 is blocked on Workstream E** (remediation, ADR-012; added 2026-10-06), which rebuilds the effect passes so the themes are fast *and* actually render their effects. Work Workstream E top to bottom. See §3 Workstream E and `.agents/artifacts/PHASE_3_PERFORMANCE_REVIEW.md`. |
 | **Ships version** | `0.4.0` |
 | **Prerequisites** | Phase 2 complete and tagged `v0.3.0`. |
 | **Theme of the phase** | **Make it fabulous.** |
@@ -187,7 +187,7 @@ src/audio/
 - Proven in `tests/unit/render/quality-governor.spec.ts`. Quality-0 / 4× AC uses a **synthetic** Default-shaped stack (themes land in C-*) — labelled synthetic, not hardware proof per theme.
 **Acceptance criteria**
 - [x] A synthetic 40 ms pass triggers a downgrade within 30 frames and the app returns to ≥ 55 fps.
-- [x] Quality never oscillates: a 100-frame test at a borderline cost shows at most one transition.
+- [ ] Quality never oscillates: a 100-frame test at a borderline cost shows at most one transition. — **Re-opened 2026-10-06, owned by P3-E-4.** The 100-frame test passes, but in Chromium, unpinned Chiba-City saw-tooths q3→q2→q3 about every 14 s, with ~3–4 s of 180 ms frames on each return (review §2.3). The governor forgets the cost of the stage it dropped.
 - [x] The indicator explains *which* passes were dropped, in plain language.
 - [x] Quality 0 is proven to hit 60 fps on a throttled 4× CPU-slowdown profile for every theme. — synthetic Default-shaped stack until Workstream C themes exist; re-asserted per theme in C-* / P3-E-1.
 
@@ -203,7 +203,7 @@ src/audio/
 - Proven in `tests/unit/render/effect-library.spec.ts`.
 **Acceptance criteria**
 - [x] Every pass has a unit test asserting deterministic output from a seeded input (via the recorder / pixel hash).
-- [x] Every pass declares and honours a measured cost; the sum for the most expensive theme fits the frame budget at quality 3 on a mid-range machine.
+- [ ] Every pass declares and honours a measured cost; the sum for the most expensive theme fits the frame budget at quality 3 on a mid-range machine. — **Re-opened 2026-10-06, owned by P3-E-2 / P3-E-3.** False on the browser path: the per-texel passes cost 36–123 ms at 1080p (P3-D-4) and, on a real `OffscreenCanvas`, read an all-zero buffer and paint nothing (ADR-011 amendment). The composited rebuild (ADR-012) discharges it.
 - [x] Particle systems are allocation-free in steady state and hard-capped.
 
 #### - [x] P3-A-6 · Motion system — @cursor, completed 2026-09-15
@@ -388,7 +388,14 @@ Every theme task shares this **common definition of done** (repeated criteria ar
 - [x] Zero axe-core violations in any theme.
 - [x] Every ruleset's state palette is distinguishable under both simulated deficiencies in every theme, or the theme provides a documented high-contrast palette variant.
 
-#### - [!] P3-D-4 · Performance certification across themes — @cursor, started 2026-10-04 — **blocked on Phase 5 (GPU post-processing, ADR-011)**
+#### - [!] P3-D-4 · Performance certification across themes — @cursor, started 2026-10-04 — **blocked on Workstream E (P3-E-1…P3-E-5, ADR-012); unblocked and closed by P3-E-9**
+> **Re-pointed 2026-10-06.** This task's measurements were right, but its diagnosis was not. On a real
+> `OffscreenCanvas` the passes never read pixels: `readSourcePixels()` returns zeros, so q3 is
+> byte-identical to q2 in Chromium while costing 8.7–19 fps against ~60 (review §2). The
+> block now points at Workstream E, not Phase 5 (ADR-011 amendment, ADR-012). P3-E-9 flips this
+> task to `- [~]`, re-runs it against the two-tier frame gate (`planning/README.md` §3.6, D6), and
+> closes it. The AC notes below are the 2026-10-04 record and are kept as written.
+
 *Marked blocked, not done: two of the four acceptance criteria are measurably unmet on the current architecture (see below), and `- [x]` means "gates green". Everything the task owns that *can* be proven is delivered and committed; what remains is the frame-rate gate, whose owner is Phase 5's WebGL2 renderer.*
 **Depends on:** P3-A-4 · **Files:** `tests/bench/themes.bench.ts`, `tests/bench/audio.bench.ts`, `tests/perf/themes-fps.spec.ts`, `src/client/quality.ts`
 **Implementation notes** Six themes × two quality levels plus audio, all through the real compositor with each theme's real palette, real pass stack and real age-buffer setting at 1920×1080 with ~100k visible cells (the `render.bench.ts` viewport and soup). The value a theme's case returns is the sum of each pass's **measured** EWMA — `EffectRegistry.totalDeclaredCost()`, the number the degrade governor feeds on — not the declared cost.
@@ -422,6 +429,129 @@ Three consequences, all acted on or explicitly deferred:
 
 ---
 
+### Workstream E — Remediation: composited effects & merge readiness
+
+*Added 2026-10-06 from `.agents/artifacts/PHASE_3_PERFORMANCE_REVIEW.md`, operator decisions D1–D6.*
+**Why it exists.** The theme lag is not over-ambition and not "themes before Phase 5". Every post
+pass (and three effects passes) is a per-texel JS loop that allocates ~25 MB per frame. In the
+browser these passes read an all-zero buffer, so they cost 40–110 ms per frame and paint nothing.
+The degrade governor then saw-tooths between q3 and q2. All of this was verified against
+`SoftwareSurface`, which the browser never runs. **ADR-012** is the contract: effects are
+*composited* from Canvas2D's GPU-backed operations, never *computed* per texel on the frame path.
+
+**Order.** Work top to bottom; the dashboard's "Next up" follows document order. P3-E-1 lands the
+browser proof first, red-first, with `test.fail()` so the branch stays green. P3-E-4, P3-E-7 and
+P3-E-8 depend on nothing else in this workstream and may run in parallel. P3-E-9 closes the phase.
+
+**Standing rule for this workstream** (also `AGENTS.md` §8): a task touching `src/render/**` or
+`src/themes/**` is ticked only after a browser run (`npx playwright test --project=browser-floor`).
+With no browser available, the task is `- [!]`, never `- [x]`.
+
+#### - [ ] P3-E-1 · Browser-truth harness & effect-liveness spec
+**Depends on:** P3-D-4 (harness + `themes-fps.spec.ts`) · **Files:** `tests/perf/themes-liveness.spec.ts`, `tests/perf/themes-fps.spec.ts`, `playwright.config.ts`, `src/client/harness.ts`, `.github/workflows/ci.yml`, `.agents/planning/README.md` §3.6
+**Implementation notes**
+- Add a Playwright project **`browser-floor`**: the CI-floor tier of the two-tier frame gate (`planning/README.md` §3.6, D6). Run it as a **blocking** CI job. Make Chromium resolvable locally: this sandbox ships revision 1237 under `/opt/ms-playwright` (see `SANDBOX-PLAYWRIGHT-INSTALL.md`). Use `executablePath` from an env var, never a hard-coded path.
+- Extend `window.__fancyGol` (test mode only): `renderStats()` → `{ frameMs, stageMs: { background, effects, post } }`, plus `heapBytes()` where `performance.memory` exists (Chromium-only, labelled as such).
+- **Liveness method** (review §9): pause the sim, nudge and restore the camera to force a redraw, then hash the display canvas at each pinned quality. For each theme, every stage the theme enables must change pixels: `q3 ≠ q2` when it has post passes, `q2 ≠ q1` when it has effects passes, `q1 ≠ q0` when it has background passes.
+- **Red-first without a red branch:** the cases that fail today (post stage for Chiba-City, Flatline, Void-Walker, Synthwave, plus whatever the open item below turns up) are marked `test.fail('<owning task id>')`. They pass while broken and fail the run once fixed, which forces the owning task to delete the marker.
+- **Same-runner ratio** per theme: median q3 frame ÷ median Default frame over 3 s after a 1.5 s warm-up, budget **2.5**, also `test.fail()` until E-2/E-3.
+- **Open item from review §2.2:** Chiba-City's `hazeGrid` and Flatline's `textRain` showed no pixel difference between q0 and q2 in a paused frame. Explain both. If either is broken, add it to P3-E-3's scope in this document.
+**Acceptance criteria**
+- [ ] `themes-liveness.spec.ts` covers all six themes and every enabled stage; each known-broken case carries `test.fail()` naming its owning task, and the `browser-floor` job is green.
+- [ ] A per-theme heap check over 300 q3 frames exists (Chromium-only, labelled), expected-fail where the per-texel passes still allocate.
+- [ ] The same-runner ratio case exists per theme with budget 2.5 (`planning/README.md` §3.6 D6).
+- [ ] `browser-floor` runs as a blocking CI job, and the local command is documented in this task.
+- [ ] The §2.2 open item is resolved and written up here, with any broken pass added to P3-E-3.
+
+#### - [ ] P3-E-2 · Composited post passes
+**Depends on:** P3-E-1 · **Files:** `src/render/effects/post-passes.ts`, `src/render/effects/box-blur.ts`, `src/render/effects/ctx.ts`, `src/render/compositor.ts`, `tests/unit/render/effect-library.spec.ts`
+**Implementation notes** Rebuild each pass per ADR-012 and the review §6 table. No per-texel JS and no allocation inside `render`. Bake resources in `resize()` / at activation.
+- `bloom`: sample the **L1 cell layer** (add a read-only `cells: CanvasImageSource` to `EffectCtx`, and record the contract addition in §2.3). Downscale chain ½ → ¼ → ⅛ with smoothing, add back with `'lighter'` at `strength`. `ctx.filter = 'blur()'` is optional and feature-detected, never required.
+- `scanlines`: a 1 × (2·pitch) pattern baked per integer dpr pitch, filled with `'multiply'`. The `scanlinePitch(dpr)` no-moiré guarantee is unchanged.
+- `vignette`: a radial gradient baked once per resize, blitted with `'multiply'`.
+- `filmGrain`: 8 noise tiles (256², seeded Mulberry32) baked at activation. Each tick picks a tile and an offset and fills with `'overlay'` at α. Reduced motion freezes the tile.
+- `chromaticAberration` (edge) and `crtCurvature`: the **labelled substitutes** from ADR-012 D3 (edge-ring fringe from tinted, offset copies; corner mask plus edge falloff). The exact effects belong to P5-A-3.
+- Delete the per-texel implementations and `box-blur.ts` if nothing else uses it. Remove the post-stage `test.fail()` markers from P3-E-1.
+**Acceptance criteria**
+- [ ] In Chromium, `q3 ≠ q2` for Chiba-City, Flatline, Void-Walker and Synthwave (liveness spec, markers removed).
+- [ ] No post pass reads or writes pixels, or allocates, on the per-frame path (P3-E-1 heap check green for post).
+- [ ] The heaviest theme's post stage is ≤ 4 ms at 1080p on the reference machine (recorded), and every theme meets the CI-floor ratio of 2.5.
+- [ ] Chiba-City scanlines do not moiré at dpr 1, 1.5, 2, 3; bloom is confined to live cells (sourced from L1); L4 overlay legibility re-verified per theme.
+- [ ] The CRT and edge-aberration substitutes are labelled as substitutes in each theme README and in the quality-indicator copy (ADR-012 D3).
+
+#### - [ ] P3-E-3 · Composited effects & background passes
+**Depends on:** P3-E-1 · **Files:** `src/render/effects/effects-passes.ts`, `src/render/effects/background-passes.ts`, `src/render/effects/library.ts`, `src/themes/synthwave/{palette,quality}.ts`, `src/themes/flatline/*`
+**Implementation notes**
+- `phosphorDecay`, `trailFade`: use a persistent ghost canvas. Each frame, a `'destination-out'` fill at the decay α, then L1 drawn with `'lighter'`. `reset()` is a `clearRect`.
+- `hueShiftByAge`: remove it from Synthwave's stack and fold the hue shift into Synthwave's age ramp (`Canvas2DRenderer` already applies `theme.palette(state, age)`). Remove the pass from `EFFECT_LIBRARY`, since every library pass must be used by ≥ 1 theme.
+- `gridGlow`: one `Path2D` stroke cached to an offscreen, redrawn only when the vanishing point moves. This replaces ~15k 1×1 `fillRect`s per frame.
+- `parchmentTexture`: bake once into an `OffscreenCanvas` / `ImageBitmap`, then `createPattern`. No 8 MB buffer per L0 repaint.
+- `textRain`: it cannot fall while it lives in a `static` L0. Move it to the effects stage, or give Flatline a time-driven L0 repaint.
+- Particles (`birthFlash`, `deathParticles`): batch into a single path per frame.
+- Remove the effects-stage `test.fail()` markers from P3-E-1.
+**Acceptance criteria**
+- [ ] In Chromium, `q2 ≠ q1` for every theme whose q2 adds an effects-stage pass. Flatline's phosphor ghosts visibly trail a moving glider and clear on grid clear.
+- [ ] No effects or background pass does per-texel JS or allocates per frame; baking happens only at activation or resize (heap check green).
+- [ ] Synthwave's age hue shift comes from its palette ramp (unit-tested), and its q2 frame does not get slower.
+- [ ] `gridGlow` issues ≤ 2 draw calls per frame while the camera is still (recorder-asserted).
+- [ ] `textRain` visibly falls at quality ≥ 1 (two frames 500 ms apart differ in L0/L2 with the sim paused).
+
+#### - [ ] P3-E-4 · Predictive degrade governor
+**Depends on:** P3-A-4 · **Files:** `src/render/quality-governor.ts`, `src/render/effects/registry.ts`, `src/client/quality.ts`, `tests/unit/render/quality-governor.spec.ts`
+**Implementation notes** ADR-012 rule 4. On a downgrade, remember the measured EWMA of the stage being dropped (`TimedPass.cost` already holds it). Promote only when `currentEwma + rememberedStageCost < 12 ms`. After a failed promotion (a downgrade within 60 frames of a promotion), double the probe interval, capped at 4,800 frames. A theme switch or resize clears the memory. The unpinned saw-tooth (review §2.3) is the regression this task exists to prevent.
+**Acceptance criteria**
+- [ ] Promotion is cost-predictive, and a failed probe doubles the next interval (unit-tested, capped).
+- [ ] A 3,000-frame simulation with a real stage-cost model (base 5 ms, post stage 40 ms) shows ≤ 1 transition; when the stage cost drops to 3 ms, the governor promotes within 600 frames.
+- [ ] In Chromium, Chiba-City unpinned for 60 s shows ≤ 1 quality transition. This is proven before P3-E-2 lands (when the post stage is still expensive) and re-run after.
+- [ ] While degraded, the status-bar indicator and `__fancyGol.qualityIndicator` name the dropped passes. The empty reading in review §2.3 is explained or fixed.
+
+#### - [ ] P3-E-5 · Fail-loud surfaces & aligned test doubles
+**Depends on:** P3-E-2, P3-E-3 · **Files:** `src/render/effects/software-surface.ts`, `eslint.config.js` + rule source, `tests/unit/render/*`, `src/render/effects/library.ts`
+**Implementation notes** ADR-012 rules 1–3. The lint rule lands *after* E-2/E-3 because it would fail on the old passes. Pixel truth lives in the browser; unit tests prove structure.
+**Acceptance criteria**
+- [ ] Reading pixels from a non-software surface throws a legible error; a unit test proves it. The zero-buffer path is gone.
+- [ ] Lint rule `no-per-frame-pixel-io` bans `readSourcePixels`, `getImageData`, `putImageData`, and typed-array or `ImageData` allocation inside `render` / `renderTimed`, and a fixture proves it fires.
+- [ ] Pass unit tests assert composite-op call sequences (`CanvasRecorder`, or composite modes implemented in `SoftwareSurface`). No unit test claims pixel output the browser does not produce.
+- [ ] Each pass's `declaredCost` is re-derived from P3-E-1's browser measurements and recorded in `library.ts`.
+
+#### - [ ] P3-E-6 · Re-capture per-theme visual baselines
+**Depends on:** P3-E-2, P3-E-3 · **Files:** `tests/visual/themes/*`, `docs/gate-history/README.md`
+**Implementation notes** Decision D2. The 48 P3-D-2 baselines froze the themes *without* their post effects (e.g. `chiba-city-grid-z16` shows flat cells on black), so they change by design. This is a re-baseline after investigation, as `AGENTS.md` §9 requires. The investigation is the review, and the reason goes here and in `docs/gate-history/README.md`.
+**Acceptance criteria**
+- [ ] All 48 baselines are re-captured on the CI Chromium revision, with the reason recorded in this task and in `docs/gate-history/README.md`.
+- [ ] Each theme's grid baselines visibly show its effects (reviewed side by side against the old capture). Chiba-City shows scanlines and bloom; Void-Walker shows bloom and vignette.
+- [ ] Cropped grid captures (chrome removed) for all six themes are assembled into a review sheet for the operator's three-person identifiability check (§6 DoD).
+- [ ] The `visual` CI job is green, and ≥ 1 green branch sample is appended for `visual-nonflake` (`planning/README.md` §3.10 merge-then-certify).
+
+#### - [ ] P3-E-7 · Theme code-splitting & honest bundle measurement
+**Depends on:** P3-D-1 · **Files:** `src/themes/registry.ts`, `src/client/main.ts`, `src/client/theme-switch.ts`, `src/ui/panels/themes/*`, `tests/bench/bundle.bench.ts`, `bench-baseline.json`
+**Implementation notes** Decision D4 (`planning/README.md` §3.6). Default stays eager. Every other theme (module, passes, sound pack) becomes a dynamic `import()` chunk. Prefetch on theme-picker hover/focus and on `Mod+Shift+T`. `client-js-gzip` sums all chunks except theme chunks, so it measures the floor as written. Add `theme-chunk-gzip-max` (deterministic class), with its budget set from measurement.
+**Acceptance criteria**
+- [ ] Non-Default themes load on demand. A switch to an unloaded theme still cross-fades with no blank frame, and a failed chunk load shows a legible toast and stays on the current theme.
+- [ ] `client-js-gzip` excludes theme chunks and is ≤ 120 kB.
+- [ ] `theme-chunk-gzip-max` exists with a measured budget and the ≤ 3% deterministic band.
+- [ ] P3-D-1's switching criteria still hold (≥ 30 fps, no reload, flat heap over 100 switches), and cold load is unchanged or better.
+
+#### - [ ] P3-E-8 · CI de-flake & bench re-enable
+**Depends on:** P3-E-1 · **Files:** the test files in §4's pre-existing-failure table, `tests/unit/server/live-route.spec.ts`, `tests/bench/themes.bench.ts`, `.github/workflows/ci.yml`, `.agents/planning/README.md` §3.6
+**Implementation notes** "CI passes" has to mean the blocking `verify` job is green on every run, not on a quiet one. Move wall-clock assertions out of unit tests into the bench class they belong to, or onto a same-process ratio. Never loosen a threshold. The Node `theme-*-q3-stack-cost` / `theme-*-q0-throttled-frame` cases measure `SoftwareSurface`, which cannot price composited passes (a software raster overstates them about 6×). Their subject moves to P3-E-1's `browser-floor` tier. Record the replacement in §3.6 so the gate is moved, not dropped.
+**Acceptance criteria**
+- [ ] Every row of §4's pre-existing-failure table is either moved to a bench class / ratio or fixed at its cause, with no threshold loosened.
+- [ ] `live-route.spec.ts` waits on a condition, not a fixed duration.
+- [ ] `npm run coverage` is green on 10 consecutive CI runs (dispatch samples recorded).
+- [ ] The Node theme-cost cases are replaced by the `browser-floor` tier (recorded in §3.6), and the CI `bench` job's `continue-on-error` is removed.
+
+#### - [ ] P3-E-9 · Re-certify Phase 3 and release `v0.4.0`
+**Depends on:** P3-E-1 … P3-E-8 · **Files:** this document, `CHANGELOG.md`, `.agents/dashboard.html`, `docs/demo/phase-3.*`, `docs/gate-history/`
+**Implementation notes** Flip **P3-D-4** `- [!]` → `- [~]` and re-run it under the two-tier frame gate (D6). CI-floor criteria are ticked on CI evidence. Reference-certificate criteria (absolute fps on the reference machine) follow merge-then-certify (D5): an interim note plus ≥ 1 green sample. Then close §4 and §6, merge to `main`, and tag. Post-merge streak ticks are docs-only commits on `main`.
+**Acceptance criteria**
+- [ ] P3-D-4 is `- [x]`. Its CI-floor tier is green, and its reference-certificate criteria carry D5 interim notes with ≥ 1 green `browser-bench` sample.
+- [ ] Every §4 gate is green or marked "certifying on `main`" under D5, and `npm run verify`, `npm run bench` and every blocking CI job are green on the branch.
+- [ ] `docs/demo/phase-3.*` shows all six themes cycling on a running simulation with their effects visible.
+- [ ] `CHANGELOG.md` has a dated `[0.4.0]` entry, the branch is merged to `main` and tagged `v0.4.0`, and the dashboard shows Phase 3 shipped.
+
+---
+
 ## 4. Quality gates for Phase 3
 
 | Gate | Threshold | Status 2026-10-04 |
@@ -430,16 +560,19 @@ Three consequences, all acted on or explicitly deferred:
 | Six themes | all meet the Workstream C common definition of done | ✅ |
 | Contrast | zero AA failures across all themes | ✅ P3-D-3 |
 | axe-core | zero violations across all themes | ✅ P3-D-3 |
-| Frame rate, quality 3 | ≥ 55 fps, 1080p, 100k cells, every theme | ❌ **unmet** — 0–122.6 ms of measured CPU effect cost at 1080p against an 18.18 ms budget (P3-D-4, ADR-011). Deferred to Phase 5's GPU post-processing; the browser proof path is `gate-history: browser-bench`. |
-| Frame rate, quality 0 | ≥ 60 fps under 4× CPU throttle, every theme | ⚠️ **unprovable in Node** — at quality 0 no pass runs, and what remains is the GPU cell layer. Proof path: `tests/perf/themes-fps.spec.ts` under `browser-bench`. |
-| Degrade governor | downgrades within 30 frames; never oscillates | ✅ and now **hosted by the client** (P3-D-4) — it was implemented, unit-tested, and unreachable. |
+| Frame rate, quality 3 | ≥ 55 fps, 1080p, 100k cells, every theme | ❌ **unmet, owned by Workstream E.** Chromium 2026-10-06: Flatline 19, Void-Walker 13.4, Synthwave 10, Chiba-City 8.7 fps; Default and Sids-Place 60. Every theme is ~60 at q2. Two tiers (`planning/README.md` §3.6, D6): CI floor (`browser-floor`, P3-E-1) and reference certificate (`gate-history: browser-bench`, D5). |
+| Frame rate, quality 0 | ≥ 60 fps under 4× CPU throttle, every theme | ⚠️ **unproven, proof path is P3-E-1 / P3-E-9.** Unthrottled Chromium shows 60 fps at q0 for every theme. The 4× throttle run belongs to the reference-certificate tier. |
+| Effect liveness | every enabled stage changes pixels in a real browser | ❌ **failing, owned by P3-E-2 / P3-E-3.** q3 is byte-identical to q2 in all four post-effect themes (ADR-011 amendment). Gate added 2026-10-06. |
+| Per-frame allocation | zero steady-state heap growth with effects on | ❌ **failing, owned by P3-E-2 / P3-E-3 / P3-E-5.** ~75–110 MB allocated per q3 frame, with heap peaks up to 350 MB. Gate added 2026-10-06. |
+| Degrade governor | downgrades within 30 frames; never oscillates | ⚠️ Downgrade ✅ and hosted (P3-D-4). **Oscillation ❌**: unpinned Chiba-City saw-tooths q3↔q2 about every 14 s. Owned by P3-E-4. |
 | Age buffer overhead | ≤ 8% step-throughput regression | ✅ 0.9307 ratio (P3-A-2) |
 | Audio assets in bundle | **zero bytes** | ✅ P3-B-1 |
 | Audio main-thread cost | < 0.5 ms/frame | ✅ 0.0023 ms measured (P3-D-4) |
 | Voice cap | never exceeded under a 10,000 events/sec burst | ✅ P3-B-3 |
 | Theme-switch leaks | flat heap and WebAudio node count over 100 switches | ✅ P3-D-1 |
-| Visual baselines | 48 committed, stable ×3 runs | 48 committed; the ×3 streak is the `visual-nonflake` gate-history criterion (P3-D-2) |
-| Client JS bundle (gzip) | ≤ 120 kB (§3.6 absolute floor) | ❌ **135.7 kB, pre-existing and not caused by P3-D-4** — measured identically with this task's changes stashed. Phase 3's six themes + effects + audio are +19 kB over the 116.5 kB Phase 2 baseline. Under Phase 5's 180 kB target, over the Phase 0 floor. Raising the floor is an ADR decision, not a bench edit; recorded here so it is not rediscovered in Phase 5. |
+| Visual baselines | 48 committed, stable ×3 runs | 48 committed, but they **froze the themes without their post effects**. Re-captured by P3-E-6 (D2). The ×3 streak is `visual-nonflake`, certified on `main` under D5. |
+| Client JS bundle (gzip, excl. themes) | ≤ 120 kB (§3.6 absolute floor) | ❌ **135.7 kB, but measured including themes**, while the floor is defined excluding them (D4). Owned by P3-E-7: theme code-splitting, `client-js-gzip` measured as defined, plus a new `theme-chunk-gzip-max` gate. |
+| Blocking CI stability | `verify` green on every run | ⚠️ Wall-clock unit assertions flake on shared runners (table below). Owned by P3-E-8. |
 
 ### Pre-existing failures on this machine (not P3-D-4's, recorded so nobody re-diagnoses them)
 
@@ -468,7 +601,8 @@ regression, and none was "fixed" by loosening a threshold:
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Effects blow the frame budget on real hardware. | The signature feature makes the app feel broken. | **This risk fired.** The degrade governor was built first (P3-A-4) but never hosted, and the declared costs were 5–70× optimistic, so five of six themes at quality 3 cost 36–123 ms of main-thread time per 1080p frame (P3-D-4). Now: the governor is hosted and announces itself, costs are measured rather than declared (ADR-011), the budgets stay red in `npm run bench` until GPU post-processing lands in Phase 5, and frame rate is certified in a real browser via `gate-history: browser-bench`. |
+| Test doubles diverge from the browser on the behaviour that matters. | Gates go green on a code path production never runs. | **Fired 2026-10-06.** `SoftwareSurface` returned pixels where the browser returned zeros, so effects were invisible and expensive while every unit test passed. Mitigation is ADR-012 rule 3: pixel and cost criteria are proven in Chromium (`browser-floor`, P3-E-1), and doubles prove structure only. |
+| Effects blow the frame budget on real hardware. | The signature feature makes the app feel broken. | **This risk fired.** Root cause corrected 2026-10-06: per-texel JS plus ~25 MB/pass/frame allocation, reading zeros in the browser (ADR-011 amendment). Remedy: composited passes (ADR-012, Workstream E). The original 2026-10-04 note follows: The degrade governor was built first (P3-A-4) but never hosted, and the declared costs were 5–70× optimistic, so five of six themes at quality 3 cost 36–123 ms of main-thread time per 1080p frame (P3-D-4). Now: the governor is hosted and announces itself, costs are measured rather than declared (ADR-011), the budgets stay red in `npm run bench` until GPU post-processing lands in Phase 5, and frame rate is certified in a real browser via `gate-history: browser-bench`. |
 | Beauty defeats usability: selection and cursor vanish under bloom. | The app becomes hard to use in its best-looking themes. | The L4-never-obscured rule, enforced by a per-theme overlay-legibility test against the busiest background. |
 | Sound is annoying and everyone mutes it immediately. | Weeks of work switched off. | Muted by default, rate aggregation (P3-B-3) as a gated criterion, per-category volume, and an explicit "does a glider sound pleasant for 5 minutes straight?" review step before each sound pack is accepted. |
 | Six themes × N components becomes unmaintainable CSS. | Every UI change costs 6×. | The token contract plus the no-literals lint rule from Phase 1. If a theme needs a new token, it is added to the contract for all six, never as a one-off override. |
@@ -480,8 +614,8 @@ regression, and none was "fixed" by loosening a threshold:
 
 ## 6. Definition of Done — Phase 3
 
-- [x] Every task above is `- [x]` or `- [-]` with a recorded reason. — P3-D-4 closes with two of its four criteria recorded as unmet and delegated (see §4 and ADR-011); no criterion was ticked on a measurement that does not exist.
-- [ ] All Phase 3 quality gates (§4) green in CI on `main`. — **Blocked on ADR-011**: the quality-3 frame-rate gate cannot be met on Canvas2D (five of six themes 2–7× over), and the client-bundle floor was already exceeded by Phase 3 (+19 kB). Phase 5's WebGL2 post-processing is the gate's owner. Everything else in §4 is green.
+- [ ] Every task above is `- [x]` or `- [-]` with a recorded reason. — **Re-opened 2026-10-06:** Workstream E (P3-E-1…P3-E-9) was added, and P3-D-4 is `- [!]` until P3-E-9 closes it.
+- [ ] All Phase 3 quality gates (§4) green in CI on `main`. — Owned by Workstream E (ADR-012), no longer by Phase 5. Gate-history streaks (`visual-nonflake`, `browser-bench`) certify on `main` under merge-then-certify (`planning/README.md` §3.10, D5).
 - [x] Every task's acceptance criteria are either ticked or carry a named interim note with its proof path. — the two open P3-D-4 criteria and P3-D-2's `visual-nonflake` streak each name their gate-history record and why the streak is 0 before the Phase 3 merge.
 - [ ] All six themes pass the cropped-screenshot identifiability test with at least three people.
 - [ ] Every theme is beautiful *and* usable *and* accessible *and* fast — no theme trades one for another. — beautiful, usable and accessible: proven (P3-D-2, P3-D-3). **Fast: not yet** (ADR-011).
