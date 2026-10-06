@@ -186,6 +186,14 @@ export class Compositor implements Renderer {
   }
 
   /**
+   * True while the active theme has a background that moves on its own (Flatline's falling text).
+   * A paused scene still needs a redraw each frame then; nothing else does.
+   */
+  hasAnimatedBackground(): boolean {
+    return this.effects.hasAnimatedBackground();
+  }
+
+  /**
    * Births/deaths/transitions for reactive passes (from the worker stats). Consumed by the next
    * `draw`: it applies to that one frame only.
    */

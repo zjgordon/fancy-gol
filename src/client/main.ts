@@ -315,7 +315,10 @@ function main(): void {
   }
 
   function cameraRedrawLoop(): void {
-    if (camera.dirty && hasFrame) {
+    // A moving background (Flatline's rain) must advance while the sim is paused. While frames are
+    // arriving they already draw, so only redraw once the worker has gone quiet for a frame.
+    const idle = lastFrameAt === null || performance.now() - lastFrameAt > 24;
+    if (hasFrame && (camera.dirty || (idle && renderer.hasAnimatedBackground()))) {
       renderer.setViewport(toRenderViewport());
       renderer.draw({ cells: mirror.view(), dirty: null, tick: lastTick });
       camera.clearDirty();
