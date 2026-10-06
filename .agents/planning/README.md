@@ -274,7 +274,8 @@ still emitted — so the floor is redefined as what loads at startup: the entry 
 names, everything it reaches through **static** imports, and the workers started at boot (`sim.worker`).
 This is a statement about the *cold load*, which is what the floor exists to protect, and it is not a
 loosening: **the 120 KiB budget is unchanged**, and the app measured 106.4 KiB under the new
-definition before any panel was made lazy (`bench.worker`, 21 KiB, is created on demand).
+definition before any panel was made lazy, and 85.3 KiB once Statistics, Library and Ruleset Studio
+were (P3-E-10) (`bench.worker`, 21 KiB, is created on demand).
 
 It is measured by import **reachability**, never by chunk name (`tests/bench/bundle-graph.ts`, unit
 tested): a chunk that is lazy by name but statically imported by the entry is counted, so a

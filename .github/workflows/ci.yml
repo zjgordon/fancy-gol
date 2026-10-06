@@ -87,12 +87,13 @@ jobs:
     name: bench
     runs-on: ubuntu-latest
     needs: verify
-    # Non-blocking for one remaining reason: `client-js-gzip` reads 127.45 KiB against the 120 KiB
-    # floor even with the themes split into lazy chunks (P3-E-7). The remaining 7.45 KiB is a decision
-    # recorded in PHASE_3 P3-E-7, not a bug. (The Node theme-cost cases that used to fail
+    # Still non-blocking, but no longer because of a known failure: `client-js-gzip` is initial-load JS
+    # now (P3-E-10, 85 KiB against 120) and this job passed for the first time on that commit. One
+    # green run is not a streak: `stats-overhead` (a Phase 2 wall-clock case) read 13% against 5% on an
+    # earlier run and passed on the next, so remove this line once the job has been green across a few
+    # consecutive pushes. (The Node theme-cost cases that used to fail
     # here were removed by P3-E-8 — theme cost is now certified in `browser-floor` /
-    # `browser-bench`, see planning/README.md §3.6.) Remove this line when that is settled; do not
-    # lower the budget to make the job green.
+    # `browser-bench`, see planning/README.md §3.6.) Do not lower a budget to make the job green.
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
