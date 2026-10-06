@@ -45,12 +45,10 @@ import type { StampTool } from '@ui/tools/stamp';
 import { ThemeRegistry, compileTheme } from '@themes/registry';
 import { DEFAULT_DARK_THEME, DEFAULT_THEME } from '@themes/default/theme';
 import type { ThemeModule } from '@themes/types';
-import { chartTokensFromSet } from '@ui/charts/chart';
-import { createStatisticsPanel } from '@ui/panels/statistics/panel';
 import { openExportDialog } from '@ui/export/dialog';
 import { CHART_EXPORT_SCALE, canvasToPngBlob } from '@ui/export/png';
-import { LIBRARY_DRAG_TYPE, createLibraryPanel } from '@ui/panels/library/panel';
-import { createRulesetStudioPanel, prettyRuleset } from '@ui/panels/ruleset-studio/panel';
+import { LIBRARY_DRAG_TYPE } from '@ui/panels/meta';
+import { prettyRuleset } from '@ui/panels/ruleset-studio/format';
 import { createAppContext } from './app-context';
 import { createViewEditCommands } from './app-commands';
 import { playColdStart } from './cold-start';
@@ -79,6 +77,7 @@ import { builtinRulesetSummaries, userRulesetSummary } from './ruleset-summaries
 import { RulesetThumbnailLoop } from './ruleset-thumbnails';
 import { ThemePreviewLoop } from './theme-previews';
 import { ThemeBundles } from './theme-bundles';
+import { createLazyLibraryPanel, createLazyStatisticsPanel, createLazyStudioPanel } from './lazy-panels';
 import { crossfadeThemeSwitch } from './theme-switch';
 import {
   attachDegradeGovernor,
@@ -322,8 +321,10 @@ function main(): void {
   });
   let statsOpen = false;
   let openExport: () => void = () => {};
-  const statsPanel = createStatisticsPanel({
-    tokens: chartTokensFromSet(DEFAULT_DARK_THEME.tokens),
+  // P3-E-10: Statistics (and the charts it draws) loads on first open; calls made before then are
+  // recorded and replayed (client/lazy-panel.ts).
+  const statsPanel = createLazyStatisticsPanel({
+    tokens: DEFAULT_DARK_THEME.tokens,
     motion: DEFAULT_DARK_THEME.motion,
     onOpen: () => {
       statsOpen = true;
@@ -781,7 +782,7 @@ function main(): void {
     if (hasFrame) renderer.draw({ cells: mirror.view(), dirty: null, tick: lastTick });
   }
 
-  const libraryPanel = createLibraryPanel({
+  const libraryPanel = createLazyLibraryPanel({
     entries: catalog,
     catalogSource: 'bundled',
     activeRuleset: activeRuleset.id,
@@ -796,14 +797,17 @@ function main(): void {
   libraryToggle.setAttribute('aria-label', 'Open pattern library');
   libraryToggle.textContent = 'Library';
   libraryToggle.addEventListener('click', () => panelHost.open('library'));
+  for (const type of ['pointerenter', 'focus'] as const) {
+    libraryToggle.addEventListener(type, () => void libraryPanel.preload());
+  }
   shell.toolbar.appendChild(libraryToggle);
 
   const benchClient = createBenchClient(() =>
     toWorkerLike(new Worker(new URL('../worker/bench.worker.ts', import.meta.url), { type: 'module' })),
   );
 
-  const studioPanel = createRulesetStudioPanel({
-    initialText: JSON.stringify(activeRuleset, null, 2),
+  const studioPanel = createLazyStudioPanel({
+    initialDocument: activeRuleset,
     validate: (value) => {
       try {
         return { ok: true, value: validateRuleSet(value) };
@@ -902,6 +906,9 @@ function main(): void {
   studioToggle.setAttribute('aria-label', 'Open ruleset studio');
   studioToggle.textContent = 'Studio';
   studioToggle.addEventListener('click', () => panelHost.open('studio'));
+  for (const type of ['pointerenter', 'focus'] as const) {
+    studioToggle.addEventListener(type, () => void studioPanel.preload());
+  }
   shell.toolbar.appendChild(studioToggle);
 
   function copyCanvas(src: HTMLCanvasElement): HTMLCanvasElement {
@@ -926,7 +933,8 @@ function main(): void {
         };
       },
       async charts() {
-        const snaps = statsPanel.snapshotCharts(CHART_EXPORT_SCALE, copyCanvas);
+        // Loads the panel if it was never opened: an export finds the charts either way.
+        const snaps = await statsPanel.snapshotCharts(CHART_EXPORT_SCALE, copyCanvas);
         const out: { name: string; blob: Blob }[] = [];
         for (const snap of snaps) out.push({ name: snap.name, blob: await canvasToPngBlob(snap.canvas) });
         return out;
@@ -1102,7 +1110,7 @@ function main(): void {
     if (active) applyThemeVisuals(active);
     themeRegistry.subscribe(({ theme }) => {
       applyThemeVisuals(theme);
-      statsPanel.setTokens(chartTokensFromSet(theme.tokens));
+      statsPanel.setTokens(theme.tokens);
       statsPanel.setMotion(theme.motion);
       themesPanel?.setActive(themeRegistry.getPersistedId() ?? 'default');
       if (hasFrame) {

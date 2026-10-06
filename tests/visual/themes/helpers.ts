@@ -67,6 +67,9 @@ export async function openPanelTab(page: Page, title: string): Promise<void> {
   const tab = page.getByRole('tab', { name: title });
   await tab.click();
   await expectPanelOpen(page, title);
+  // Statistics, Library and Ruleset Studio are lazy chunks (P3-E-10): the host shows the title at
+  // once, but the body is a "Loading…" placeholder until the chunk arrives. Never screenshot that.
+  await page.waitForFunction(() => document.querySelector('.panel-lazy-message') === null);
   await waitForPaint(page);
 }
 

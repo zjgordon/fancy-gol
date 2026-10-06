@@ -5,6 +5,8 @@ const alias = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
 /** Rolldown names a dynamic-entry chunk after its entry module (`src/client/theme-bundles/<id>.ts`). */
 const THEME_CHUNK_NAMES = /^(chiba-city|flatline|sids-place|void-walker|synthwave)$/;
+/** The three heavy panels' entry modules (P3-E-10). */
+const PANEL_MODULE = /\/src\/ui\/panels\/(statistics|library|ruleset-studio)\/panel\.ts$/;
 /** Modules only the themes use: the effect-pass implementations and their pass-stack factories. */
 const THEME_SHARED_MODULES = /\/src\/render\/effects\/(post-passes|background-passes|effects-passes|library|timed-pass|surface|software-surface|pixel-hash)\.ts$/;
 
@@ -42,6 +44,13 @@ export default defineConfig({
         // names are configured here.
         chunkFileNames: (chunk: { name: string; isDynamicEntry: boolean; moduleIds: readonly string[] }) => {
           if (chunk.isDynamicEntry && THEME_CHUNK_NAMES.test(chunk.name)) return 'assets/theme-[name]-[hash].js';
+          // P3-E-10: the lazily loaded panels. Three modules are all called `panel.ts`, so name them by
+          // directory. Cosmetic only: `client-js-gzip` measures by import reachability, not by name.
+          const panel = chunk.moduleIds.map((id) => PANEL_MODULE.exec(id)?.[1]).find(Boolean);
+          if (chunk.isDynamicEntry && panel) return `assets/panel-${panel}-[hash].js`;
+          if (chunk.isDynamicEntry && chunk.moduleIds.some((id) => /\/src\/ui\/charts\/chart\.ts$/.test(id))) {
+            return 'assets/panel-statistics-charts-[hash].js';
+          }
           // The common chunk the themes share: effect passes only themes use, and nothing else.
           if (chunk.moduleIds.length > 0 && chunk.moduleIds.every((id) => THEME_SHARED_MODULES.test(id))) {
             return 'assets/theme-effects-[hash].js';
