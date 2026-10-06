@@ -448,7 +448,7 @@ P3-E-8 depend on nothing else in this workstream and may run in parallel. P3-E-9
 With no browser available, the task is `- [!]`, never `- [x]`.
 
 #### - [~] P3-E-1 · Browser-truth harness & effect-liveness spec — @claude, started 2026-10-06
-**Depends on:** P3-D-4 (harness + `themes-fps.spec.ts`) · **Files:** `tests/perf/themes-liveness.spec.ts`, `tests/perf/themes-fps.spec.ts`, `playwright.config.ts`, `src/client/harness.ts`, `.github/workflows/ci.yml`, `.agents/planning/README.md` §3.6
+**Depends on:** P3-D-4 (harness + `themes-fps.spec.ts`) · **Files:** `tests/perf/{themes-liveness.spec.ts,themes-fps.spec.ts,helpers.ts,theme-stages.ts}`, `tests/unit/perf/theme-stages.spec.ts`, `playwright.config.ts`, `src/client/harness.ts`, `src/render/compositor.ts`, `.github/workflows/ci.yml`, `.agents/planning/README.md` §3.6
 **Implementation notes**
 - Add a Playwright project **`browser-floor`**: the CI-floor tier of the two-tier frame gate (`planning/README.md` §3.6, D6). Run it as a **blocking** CI job. Make Chromium resolvable locally: this sandbox ships revision 1237 under `/opt/ms-playwright` (see `SANDBOX-PLAYWRIGHT-INSTALL.md`). Use `executablePath` from an env var, never a hard-coded path.
 - Extend `window.__fancyGol` (test mode only): `renderStats()` → `{ frameMs, stageMs: { background, effects, post } }`, plus `heapBytes()` where `performance.memory` exists (Chromium-only, labelled as such).
@@ -456,12 +456,26 @@ With no browser available, the task is `- [!]`, never `- [x]`.
 - **Red-first without a red branch:** the cases that fail today (post stage for Chiba-City, Flatline, Void-Walker, Synthwave, plus whatever the open item below turns up) are marked `test.fail('<owning task id>')`. They pass while broken and fail the run once fixed, which forces the owning task to delete the marker.
 - **Same-runner ratio** per theme: median q3 frame ÷ median Default frame over 3 s after a 1.5 s warm-up, budget **2.5**, also `test.fail()` until E-2/E-3.
 - **Open item from review §2.2:** Chiba-City's `hazeGrid` and Flatline's `textRain` showed no pixel difference between q0 and q2 in a paused frame. Explain both. If either is broken, add it to P3-E-3's scope in this document.
+
+**Delivered 2026-10-06 (@claude).**
+- *Run it locally:* `npm run build`, then `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/ms-playwright/chromium-1237/chrome-linux64/chrome E2E_SKIP_BUILD=1 npx playwright test --project=browser-floor --workers=1` (about 3 min; omit the env var where Playwright installed its own Chromium). `--project=browser-bench` runs the absolute-fps tier.
+- *Method refinements over the notes above:* the clock is frozen in the page (`performance.now`) so a time-driven pass such as `textRain` redraws identically, and liveness compares **pixel counts**, not a hash. The heap check is a **peak-to-trough span** of `usedJSHeapSize` (budget 32 MB, set from measurement: healthy 9.5–20.9 MB, per-texel passes 65–263 MB). The ratio uses the median rAF interval, so it floors at one vsync (16.7 ms).
+- *The red-first mechanism is proven:* marking a healthy case in `KNOWN_BROKEN` fails the run with "Expected to fail, but passed".
+- *Two defects found and fixed on the way* (own commits): `pin()` left L0 stale because the compositor only noticed quality changes made inside `draw` (`371c7cc`), and `themes-fps.spec.ts` never started the sim, so it measured an idle page and would have recorded a false-green `browser-bench` sample (`605394a`; no sample had been recorded).
+- *Resolution of the §2.2 open item.* Both were real, for reasons the review did not have:
+  1. **Chiba-City `hazeGrid` and Flatline `textRain` are fully occluded.** L1 fills the viewport with an opaque `theme.background` unless the theme declares a transparent `cellLayerBackground`. Void-Walker, Synthwave and Sids-Place do; Chiba-City and Flatline do not, so their L0 never shows. This is why the committed `chiba-city-grid-*` baselines are flat. This alone explains the review's q0 = q2 equality for these two themes; the `pin()` staleness above is a separate defect that the opaque L1 happened to hide here.
+  2. **`birthFlash` and `deathParticles` never fire.** Nothing in `client/` calls `Compositor.setChangeSummary`, so `ctx.changes` is always empty.
+  3. **Passes that `putImageData` replace their layer rather than composite onto it.** Synthwave's `gridGlow` draws, then `hueShiftByAge` writes a zero buffer over the whole effects layer and erases it.
+  4. **`EffectRegistry.setReducedMotion` has no caller**, so effects ignore reduced motion (a Phase 3 §6 DoD item). All four are added to P3-E-3's scope below.
+- *Measured, for P3-E-2/E-3 to beat* (headless Chromium 1237, SwiftShader, 1080p, soup running): median q3 frame vs Default's 16.7 ms: Chiba-City 116.7 (ratio 7.0), Void-Walker 83.3 (5.0), Synthwave 100.0 (6.0), Flatline 50.0 (3.0), Sids-Place 16.7 (1.0). `post` stage ms: Chiba-City 117, Synthwave 84, Void-Walker 58, Flatline 32.
+- *Also found, for P3-E-9:* with the sim actually running, q0 under the 4× CPU throttle is **47–51 fps for every theme except Default (60)** on this software rasterizer. Not necessarily a theme defect (the age buffer and palette ramp cost something at q0, and a software raster overstates cell-layer cost), but P3-D-4 AC2 cannot be ticked without a reference-machine run.
+
 **Acceptance criteria**
-- [ ] `themes-liveness.spec.ts` covers all six themes and every enabled stage; each known-broken case carries `test.fail()` naming its owning task, and the `browser-floor` job is green.
-- [ ] A per-theme heap check over 300 q3 frames exists (Chromium-only, labelled), expected-fail where the per-texel passes still allocate.
-- [ ] The same-runner ratio case exists per theme with budget 2.5 (`planning/README.md` §3.6 D6).
-- [ ] `browser-floor` runs as a blocking CI job, and the local command is documented in this task.
-- [ ] The §2.2 open item is resolved and written up here, with any broken pass added to P3-E-3.
+- [ ] `themes-liveness.spec.ts` covers all six themes and every enabled stage; each known-broken case carries `test.fail()` naming its owning task, and the `browser-floor` job is green. — Spec: 24/24 pass locally (18 expected-fail, 6 genuinely green), with a drift-guard unit test on the stage table. **Interim: the CI job's own first green run is not yet recorded** (the branch is unpushed); tick when it is.
+- [x] A per-theme heap check over 300 q3 frames exists (Chromium-only, labelled), expected-fail where the per-texel passes still allocate. — `heap:*` cases; Default 9.5 MB and Sids-Place 20.9 MB pass the 32 MB budget; Chiba-City, Flatline, Void-Walker and Synthwave are marked.
+- [x] The same-runner ratio case exists per theme with budget 2.5 (`planning/README.md` §3.6 D6). — `ratio:*` cases; Sids-Place 1.00 passes, the four heavy themes are marked.
+- [ ] `browser-floor` runs as a blocking CI job, and the local command is documented in this task. — Job added to `ci.yml` and the command is documented above. **Interim: not yet executed on a GitHub runner**, and no YAML parser was available offline to validate it beyond structure.
+- [x] The §2.2 open item is resolved and written up here, with any broken pass added to P3-E-3. — see "Resolution" above; scope added to P3-E-3.
 
 #### - [ ] P3-E-2 · Composited post passes
 **Depends on:** P3-E-1 · **Files:** `src/render/effects/post-passes.ts`, `src/render/effects/box-blur.ts`, `src/render/effects/ctx.ts`, `src/render/compositor.ts`, `tests/unit/render/effect-library.spec.ts`
@@ -471,7 +485,7 @@ With no browser available, the task is `- [!]`, never `- [x]`.
 - `vignette`: a radial gradient baked once per resize, blitted with `'multiply'`.
 - `filmGrain`: 8 noise tiles (256², seeded Mulberry32) baked at activation. Each tick picks a tile and an offset and fills with `'overlay'` at α. Reduced motion freezes the tile.
 - `chromaticAberration` (edge) and `crtCurvature`: the **labelled substitutes** from ADR-012 D3 (edge-ring fringe from tinted, offset copies; corner mask plus edge falloff). The exact effects belong to P5-A-3.
-- Delete the per-texel implementations and `box-blur.ts` if nothing else uses it. Remove the post-stage `test.fail()` markers from P3-E-1.
+- Delete the per-texel implementations and `box-blur.ts` if nothing else uses it. Remove the four `liveness:*:post` markers, and `heap:chiba-city` / `ratio:chiba-city`, from `KNOWN_BROKEN` in `tests/perf/themes-liveness.spec.ts`. The other themes' `heap:` / `ratio:` markers come off with P3-E-3.
 **Acceptance criteria**
 - [ ] In Chromium, `q3 ≠ q2` for Chiba-City, Flatline, Void-Walker and Synthwave (liveness spec, markers removed).
 - [ ] No post pass reads or writes pixels, or allocates, on the per-frame path (P3-E-1 heap check green for post).
@@ -488,13 +502,19 @@ With no browser available, the task is `- [!]`, never `- [x]`.
 - `parchmentTexture`: bake once into an `OffscreenCanvas` / `ImageBitmap`, then `createPattern`. No 8 MB buffer per L0 repaint.
 - `textRain`: it cannot fall while it lives in a `static` L0. Move it to the effects stage, or give Flatline a time-driven L0 repaint.
 - Particles (`birthFlash`, `deathParticles`): batch into a single path per frame.
-- Remove the effects-stage `test.fail()` markers from P3-E-1.
+- **Found by P3-E-1 — Chiba-City and Flatline backgrounds are occluded.** Their L1 paints an opaque `theme.background`, so `hazeGrid` / `textRain` on L0 never show. Declare a transparent `cellLayerBackground` on both (as Void-Walker, Synthwave and Sids-Place do) so L0 shows through, then re-verify chrome contrast, overlay legibility against the busiest haze line, and the cellSize 0.5–64 readability criteria. The look changes to what the briefs describe; P3-E-6 re-captures the baselines.
+- **Found by P3-E-1 — reactive passes are unwired.** Nothing in `client/` calls `Compositor.setChangeSummary`, so `birthFlash` and `deathParticles` never fire. Feed `frame.stats` births / deaths / transitions into the compositor in `renderFrame`.
+- **Found by P3-E-1 — reduced motion never reaches effects.** `EffectRegistry.setReducedMotion` has no caller. Wire it from the app's reduced-motion state, including `?test=1`, and prove the reactive passes are silent under it.
+- **Composite, never replace.** A pass that `putImageData`s replaces its whole layer (Synthwave's `hueShiftByAge` erased `gridGlow` this way). Composited passes draw *onto* their layer with an explicit composite op.
+- Remove from `KNOWN_BROKEN` in `tests/perf/themes-liveness.spec.ts`: the four `liveness:*:effects`, the two `liveness:{chiba-city,flatline}:background`, and `heap:` / `ratio:` for flatline, void-walker and synthwave.
 **Acceptance criteria**
 - [ ] In Chromium, `q2 ≠ q1` for every theme whose q2 adds an effects-stage pass. Flatline's phosphor ghosts visibly trail a moving glider and clear on grid clear.
 - [ ] No effects or background pass does per-texel JS or allocates per frame; baking happens only at activation or resize (heap check green).
 - [ ] Synthwave's age hue shift comes from its palette ramp (unit-tested), and its q2 frame does not get slower.
 - [ ] `gridGlow` issues ≤ 2 draw calls per frame while the camera is still (recorder-asserted).
 - [ ] `textRain` visibly falls at quality ≥ 1 (two frames 500 ms apart differ in L0/L2 with the sim paused).
+- [ ] Chiba-City's haze grid and Flatline's text rain are visible in Chromium: `liveness:*:background` markers removed for both, and the overlay-legibility and contrast checks still pass over them.
+- [ ] `birthFlash` and `deathParticles` fire from real births and deaths (the client supplies `ChangeSummary`) and are silent under reduced motion (`registry.setReducedMotion` wired).
 
 #### - [ ] P3-E-4 · Predictive degrade governor
 **Depends on:** P3-A-4 · **Files:** `src/render/quality-governor.ts`, `src/render/effects/registry.ts`, `src/client/quality.ts`, `tests/unit/render/quality-governor.spec.ts`
@@ -543,7 +563,7 @@ With no browser available, the task is `- [!]`, never `- [x]`.
 
 #### - [ ] P3-E-9 · Re-certify Phase 3 and release `v0.4.0`
 **Depends on:** P3-E-1 … P3-E-8 · **Files:** this document, `CHANGELOG.md`, `.agents/dashboard.html`, `docs/demo/phase-3.*`, `docs/gate-history/`
-**Implementation notes** Flip **P3-D-4** `- [!]` → `- [~]` and re-run it under the two-tier frame gate (D6). CI-floor criteria are ticked on CI evidence. Reference-certificate criteria (absolute fps on the reference machine) follow merge-then-certify (D5): an interim note plus ≥ 1 green sample. Then close §4 and §6, merge to `main`, and tag. Post-merge streak ticks are docs-only commits on `main`.
+**Implementation notes** Flip **P3-D-4** `- [!]` → `- [~]` and re-run it under the two-tier frame gate (D6). P3-E-1 found q0 under the 4× throttle at 47–51 fps for every non-Default theme on a software rasterizer (Default 60) with the sim running; decide on the reference machine whether that is a software-raster artefact or a real q0 cost (age buffer, palette ramp), and escalate rather than loosen if it is real. CI-floor criteria are ticked on CI evidence. Reference-certificate criteria (absolute fps on the reference machine) follow merge-then-certify (D5): an interim note plus ≥ 1 green sample. Then close §4 and §6, merge to `main`, and tag. Post-merge streak ticks are docs-only commits on `main`.
 **Acceptance criteria**
 - [ ] P3-D-4 is `- [x]`. Its CI-floor tier is green, and its reference-certificate criteria carry D5 interim notes with ≥ 1 green `browser-bench` sample.
 - [ ] Every §4 gate is green or marked "certifying on `main`" under D5, and `npm run verify`, `npm run bench` and every blocking CI job are green on the branch.

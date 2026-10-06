@@ -107,10 +107,15 @@ P3-D-2 baselines have frozen the themes *without* their post effects.** The Phas
 screenshot is instantly identifiable as that theme with the chrome cropped out") is not met for
 Chiba-City, and is weak for the others.
 
-*Open item:* Chiba-City and Flatline also hash identically at q0 and q2. So `hazeGrid`, `textRain`
-and `phosphorDecay` produced no visible difference in a paused frame either. `phosphorDecay` reads
-a blank source (§3.2), which explains it. `textRain` sits in the `static`-mode L0, which means it
-cannot animate. P3-E-1 should confirm the remaining two.
+*Open item (resolved 2026-10-06 by P3-E-1; see PHASE_3 §3 for the full write-up):* Chiba-City and
+Flatline hashed identically at q0 and q2 because their cell layer paints an opaque
+`theme.background`, so `hazeGrid` / `textRain` on L0 are fully occluded (Void-Walker, Synthwave and
+Sids-Place declare a transparent `cellLayerBackground` and are not). Separately, P3-E-1 found that
+`pin()` left L0 stale, because the compositor only noticed quality changes made *inside* `draw`
+(fixed in `371c7cc`); the opaque layer hid that in these two themes. It also found that
+`birthFlash` / `deathParticles` never fire (nothing calls `setChangeSummary`) and that
+`hueShiftByAge` erases `gridGlow` by `putImageData`ing zeros over its layer. The rendering defects
+are in P3-E-3's scope.
 
 ### 2.3 The governor saw-tooths (normal user mode)
 
