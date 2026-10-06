@@ -79,7 +79,7 @@ export function createStarfieldPass(opts: StarfieldOptions = {}): TimedPass {
 class StarfieldPass extends TimedPass {
   readonly id = 'starfield';
   readonly stage = 'background' as const;
-  readonly declaredCost = 0.8;
+  readonly declaredCost = 0.3;
   private readonly seed: number;
   private readonly layerCount: number;
   private readonly starsPerLayer: number;
@@ -166,7 +166,7 @@ export function createParchmentTexturePass(opts: ParchmentTextureOptions = {}): 
 class ParchmentTexturePass extends TimedPass {
   readonly id = 'parchmentTexture';
   readonly stage = 'background' as const;
-  readonly declaredCost = 0.2;
+  readonly declaredCost = 0.1;
   private readonly seed: number;
   private readonly texW: number;
   private readonly texH: number;
@@ -250,7 +250,7 @@ export function createSunGradientPass(opts: SunGradientOptions = {}): TimedPass 
 class SunGradientPass extends TimedPass {
   readonly id = 'sunGradient';
   readonly stage = 'background' as const;
-  readonly declaredCost = 0.4;
+  readonly declaredCost = 0.1;
   private readonly top: string;
   private readonly bottom: string;
   private readonly sunColor: string;
@@ -313,7 +313,7 @@ export function createTextRainPass(opts: TextRainOptions = {}): TimedPass {
 class TextRainPass extends TimedPass {
   readonly id = 'textRain';
   readonly stage = 'background' as const;
-  readonly declaredCost = 1.2;
+  readonly declaredCost = 0.1;
   override readonly animated = true;
   private readonly seed: number;
   private readonly columns: number;
@@ -389,7 +389,7 @@ export function createHazeGridPass(opts: HazeGridOptions = {}): TimedPass {
 class HazeGridPass extends TimedPass {
   readonly id = 'hazeGrid';
   readonly stage = 'background' as const;
-  readonly declaredCost = 0.4;
+  readonly declaredCost = 0.2;
   private readonly bg: string;
   private readonly line: string;
 

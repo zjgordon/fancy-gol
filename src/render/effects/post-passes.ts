@@ -65,7 +65,7 @@ export function createBloomPass(opts: BloomOptions = {}): TimedPass {
 class BloomPass extends TimedPass {
   readonly id = 'bloom';
   readonly stage = 'post' as const;
-  readonly declaredCost = 2.5;
+  readonly declaredCost = 2.2;
   private readonly strength: number;
   private readonly levels: number;
   private readonly factory: CanvasFactory | undefined;
@@ -153,7 +153,7 @@ export function createScanlinesPass(opts: ScanlinesOptions = {}): TimedPass {
 class ScanlinesPass extends TimedPass {
   readonly id = 'scanlines';
   readonly stage = 'post' as const;
-  readonly declaredCost = 0.3;
+  readonly declaredCost = 0.1;
   private readonly opacity: number;
   private readonly factory: CanvasFactory | undefined;
   private tile: Surface | null = null;
@@ -225,7 +225,7 @@ export function createChromaticAberrationPass(opts: ChromaticAberrationOptions =
 class ChromaticAberrationPass extends TimedPass {
   readonly id = 'chromaticAberration';
   readonly stage = 'post' as const;
-  readonly declaredCost = 1.2;
+  readonly declaredCost = 13.4;
   override readonly approximation = 'colour fringe on the left and right edges, not a radial warp';
   private readonly shift: number;
   private readonly edgeBias: number;
@@ -333,7 +333,7 @@ const VIGNETTE_STOPS = 8;
 class VignettePass extends TimedPass {
   readonly id = 'vignette';
   readonly stage = 'post' as const;
-  readonly declaredCost = 0.4;
+  readonly declaredCost = 0.1;
   private readonly strength: number;
   private gradient: CanvasGradient | null = null;
   private w = 0;
@@ -423,7 +423,7 @@ export function grainFrameFor(tick: number): { tile: number; dx: number; dy: num
 class FilmGrainPass extends TimedPass {
   readonly id = 'filmGrain';
   readonly stage = 'post' as const;
-  readonly declaredCost = 0.8;
+  readonly declaredCost = 0.1;
   private readonly seed: number;
   private readonly amount: number;
   private readonly animate: boolean;
@@ -503,7 +503,7 @@ export function createCrtCurvaturePass(opts: CrtCurvatureOptions = {}): TimedPas
 class CrtCurvaturePass extends TimedPass {
   readonly id = 'crtCurvature';
   readonly stage = 'post' as const;
-  readonly declaredCost = 2.0;
+  readonly declaredCost = 0.1;
   override readonly approximation = 'CRT corners drawn as a mask, not a true barrel warp';
   private readonly amount: number;
   private gradient: CanvasGradient | null = null;

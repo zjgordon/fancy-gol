@@ -1093,7 +1093,11 @@ function main(): void {
         else pinQuality(quality, clampQuality(level));
       },
       setEffectsReducedMotion: (reduced) => renderer.setReducedMotion(reduced),
-      renderStats: () => ({ frameMs: renderer.readStats().frameMs, stageMs: { ...renderer.readStageMs() } }),
+      renderStats: () => ({
+        frameMs: renderer.readStats().frameMs,
+        stageMs: { ...renderer.readStageMs() },
+        passMs: Object.fromEntries(renderer.effectRegistry.list().map((pass) => [pass.id, pass.cost])),
+      }),
       heapBytes: () => (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize ?? null,
     });
   }

@@ -159,7 +159,7 @@ export function createPhosphorDecayPass(opts: PhosphorDecayOptions = {}): TimedP
 class PhosphorDecayPass extends GhostTrailPass {
   readonly id = 'phosphorDecay';
   readonly stage = 'effects' as const;
-  readonly declaredCost = 1.5;
+  readonly declaredCost = 2.8;
 
   constructor(opts: PhosphorDecayOptions) {
     super(opts.fade ?? 0.92, opts.canvasFactory);
@@ -178,7 +178,7 @@ export function createTrailFadePass(opts: TrailFadeOptions = {}): TimedPass {
 class TrailFadePass extends GhostTrailPass {
   readonly id = 'trailFade';
   readonly stage = 'effects' as const;
-  readonly declaredCost = 0.8;
+  readonly declaredCost = 2.8;
 
   constructor(opts: TrailFadeOptions) {
     super(opts.fade ?? 0.85, opts.canvasFactory);
@@ -232,7 +232,7 @@ const GRID_FLOOR_LINES = 18;
 class GridGlowPass extends TimedPass {
   readonly id = 'gridGlow';
   readonly stage = 'effects' as const;
-  readonly declaredCost = 1.0;
+  readonly declaredCost = 0.1;
   private readonly color: string;
   private readonly horizonY: number;
   private readonly parallax: number;
@@ -360,7 +360,7 @@ export function createBirthFlashPass(opts: BirthFlashOptions = {}): TimedPass & 
 class BirthFlashPass extends TimedPass {
   readonly id = 'birthFlash';
   readonly stage = 'effects' as const;
-  readonly declaredCost = 0.5;
+  readonly declaredCost = 0.1;
   readonly cap: number;
   private readonly color: string;
   private readonly x: Float32Array;
@@ -435,7 +435,7 @@ export function createDeathParticlesPass(opts: DeathParticlesOptions = {}): Time
 class DeathParticlesPass extends TimedPass {
   readonly id = 'deathParticles';
   readonly stage = 'effects' as const;
-  readonly declaredCost = 0.6;
+  readonly declaredCost = 0.1;
   readonly cap: number;
   private readonly seed: number;
   private readonly x: Float32Array;

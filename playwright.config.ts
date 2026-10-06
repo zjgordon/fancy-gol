@@ -96,7 +96,7 @@ export default defineConfig({
       // Chromium only (usedJSHeapSize, CDP). Headless software raster is acceptable here because
       // every assertion is a relative one; the absolute ≥ 55 fps lives in `browser-bench`.
       name: 'browser-floor',
-      testMatch: 'perf/themes-liveness.spec.ts',
+      testMatch: ['perf/themes-liveness.spec.ts', 'perf/measure-pass-costs.spec.ts'],
       timeout: 120_000,
       use: {
         ...devices['Desktop Chrome'],

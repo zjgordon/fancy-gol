@@ -16,6 +16,8 @@ export interface HarnessRenderStats {
   readonly frameMs: number;
   /** Wall ms per effect stage; `background` is 0 on frames where L0 was not repainted. */
   readonly stageMs: { readonly background: number; readonly effects: number; readonly post: number };
+  /** Measured EWMA ms per pass id (a pass that has not rendered reports its declared cost). */
+  readonly passMs: Readonly<Record<string, number>>;
 }
 
 export interface FancyGolHarness {

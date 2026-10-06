@@ -198,6 +198,20 @@ export function createSynthwavePassStack(): EffectPass[] {
   ];
 }
 
+/**
+ * Declared costs (ms) are measurements, not estimates (ADR-012 consequence 1; P3-E-5). Source:
+ * `PASS_COSTS=1 npx playwright test --project=browser-floor -g "pass costs"` — each theme at
+ * quality 3 with a running soup, 1920×1080, headless Chromium 1237 on SwiftShader, 2026-10-06,
+ * the passes' own EWMA of CPU time to issue their Canvas2D commands. Rounded up to 0.1 ms, floor
+ * 0.1 ms (the timer's resolution). Software raster, so these are an upper bound for a machine with a
+ * GPU. Re-measure after changing a pass; E-9 re-runs it on the reference machine.
+ *
+ *   post        chromaticAberration 13.3 (the outlier: ~80% of every post stage that has it) ·
+ *               bloom 2.0–2.2 · scanlines, filmGrain, vignette, crtCurvature < 0.1
+ *   effects     phosphorDecay 2.8 · trailFade 2.7 · birthFlash 0.05 · deathParticles < 0.1 ·
+ *               gridGlow < 0.1
+ *   background  starfield 0.3 · hazeGrid 0.2 · sunGradient, textRain, parchmentTexture < 0.1
+ */
 /** Declared-cost sum of passes still running at this quality. Disposes the stack. */
 export function declaredCostAtQuality(theme: ThemeId, quality: EffectQuality): number {
   const active = new Set(stagesForQuality(quality));
