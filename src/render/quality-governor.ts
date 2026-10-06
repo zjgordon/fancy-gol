@@ -82,7 +82,14 @@ export function describeQualityIndicator(
   quality: EffectQuality,
   passes: readonly EffectPass[],
 ): string {
-  if (quality >= 3) return 'effects at full quality';
+  if (quality >= 3) {
+    // ADR-012 D3: a stand-in is never presented as the real thing. Only the approximating passes
+    // are named, so themes without one keep the exact string `qualityIndicatorText` filters out.
+    const approximations = passes.flatMap((p) => (p.approximation ? [`${p.id}: ${p.approximation}`] : []));
+    return approximations.length > 0
+      ? `effects at full quality — approximated: ${approximations.join('; ')}`
+      : 'effects at full quality';
+  }
   const dropped = droppedStages(quality);
   const named = passes.filter((p) => dropped.includes(p.stage)).map((p) => p.id);
   const stageText = describeStages(dropped);

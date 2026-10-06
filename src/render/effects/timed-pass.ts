@@ -11,6 +11,8 @@ export abstract class TimedPass implements EffectPass {
   abstract readonly stage: EffectStage;
   /** Mid-range 1080p budget estimate — governor input before the first measurement. */
   abstract readonly declaredCost: number;
+  /** Set by passes that draw a labelled stand-in (ADR-012 D3). See `EffectPass.approximation`. */
+  readonly approximation?: string;
 
   private ewmaMs = 0;
   private samples = 0;

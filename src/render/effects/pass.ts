@@ -18,6 +18,12 @@ export interface EffectPass {
    */
   readonly cost: number;
   readonly stage: EffectStage;
+  /**
+   * Set when Canvas2D cannot draw this effect exactly and the pass draws a stand-in (ADR-012 D3,
+   * "never present an approximation as exact"). Plain language, surfaced by the quality indicator
+   * and named in the theme README. The exact effect ships with Phase 5's WebGL2 renderer (P5-A-3).
+   */
+  readonly approximation?: string;
   render(ctx: EffectCtx): void;
   resize?(widthPx: number, heightPx: number, dpr: number): void;
   /**

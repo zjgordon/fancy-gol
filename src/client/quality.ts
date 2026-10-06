@@ -73,7 +73,10 @@ export function qualityIndicatorText(host: QualityHost): string {
   const governor = host.getQualityGovernor();
   if (!governor) return '';
   const text = governor.indicatorText();
-  return text === 'effects at full quality' ? '' : text;
+  // At full quality the governor's copy may carry an "— approximated: …" clause (ADR-012 D3). That
+  // is a standing fact about the theme, not a degradation: it is named in the indicator copy and the
+  // theme README, and must not become a toast on every theme switch (or in every `?test=1` capture).
+  return text.startsWith('effects at full quality') ? '' : text;
 }
 
 export interface DegradeNotifier {

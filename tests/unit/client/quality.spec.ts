@@ -100,6 +100,18 @@ describe('qualityIndicatorText', () => {
     expect(text).toMatch(/bloom/);
   });
 
+  it('keeps an approximation label out of the toast, but in the governor copy (ADR-012 D3)', () => {
+    const registry = new EffectRegistry({ quality: 3 });
+    const h = host();
+    const governor = attachDegradeGovernor(h.host, { registry });
+    const crt: EffectPass = { ...stubPass('crtCurvature', 'post', 2), approximation: 'CRT corners drawn as a mask' };
+    registry.setPasses([crt]);
+    expect(governor.indicatorText()).toBe(
+      'effects at full quality — approximated: crtCurvature: CRT corners drawn as a mask',
+    );
+    expect(qualityIndicatorText(h.host)).toBe(''); // a standing fact, not a degradation: no toast
+  });
+
   it('is empty when the host has no governor at all', () => {
     expect(qualityIndicatorText(host().host)).toBe('');
   });
