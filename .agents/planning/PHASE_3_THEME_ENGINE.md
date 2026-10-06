@@ -447,7 +447,7 @@ P3-E-8 depend on nothing else in this workstream and may run in parallel. P3-E-9
 `src/themes/**` is ticked only after a browser run (`npx playwright test --project=browser-floor`).
 With no browser available, the task is `- [!]`, never `- [x]`.
 
-#### - [ ] P3-E-1 · Browser-truth harness & effect-liveness spec
+#### - [~] P3-E-1 · Browser-truth harness & effect-liveness spec — @claude, started 2026-10-06
 **Depends on:** P3-D-4 (harness + `themes-fps.spec.ts`) · **Files:** `tests/perf/themes-liveness.spec.ts`, `tests/perf/themes-fps.spec.ts`, `playwright.config.ts`, `src/client/harness.ts`, `.github/workflows/ci.yml`, `.agents/planning/README.md` §3.6
 **Implementation notes**
 - Add a Playwright project **`browser-floor`**: the CI-floor tier of the two-tier frame gate (`planning/README.md` §3.6, D6). Run it as a **blocking** CI job. Make Chromium resolvable locally: this sandbox ships revision 1237 under `/opt/ms-playwright` (see `SANDBOX-PLAYWRIGHT-INSTALL.md`). Use `executablePath` from an env var, never a hard-coded path.
