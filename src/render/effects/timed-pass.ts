@@ -13,6 +13,8 @@ export abstract class TimedPass implements EffectPass {
   abstract readonly declaredCost: number;
   /** Set by passes that draw a labelled stand-in (ADR-012 D3). See `EffectPass.approximation`. */
   readonly approximation?: string;
+  /** Set by background passes that animate every frame. See `EffectPass.animated`. */
+  readonly animated?: boolean;
 
   private ewmaMs = 0;
   private samples = 0;

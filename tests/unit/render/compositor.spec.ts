@@ -309,6 +309,71 @@ describe('Compositor', () => {
     expect(compositor.readStageMs().post).toBeLessThan(5);
   });
 
+  describe('animated backgrounds, one-shot changes and reduced motion (P3-E-3)', () => {
+    function passRecording(stage: 'background' | 'effects', animated: boolean) {
+      const seen: { births: number; reducedMotion: boolean }[] = [];
+      const pass: EffectPass = {
+        id: `rec-${stage}`,
+        stage,
+        cost: 0,
+        animated,
+        render: (ctx) => void seen.push({ births: ctx.changes.births, reducedMotion: ctx.reducedMotion }),
+        dispose: () => {},
+      };
+      return { pass, seen };
+    }
+    const frame = () => ({ cells: blinkerWorld().view(), dirty: null as Rect[] | null, tick: 0 });
+
+    it('repaints L0 every frame for an animated background pass, and only then', async () => {
+      const animated = passRecording('background', true);
+      const { compositor } = await setUpCompositor();
+      compositor.setEffectPasses([animated.pass]);
+      compositor.draw(frame()); // first draw paints L0
+      compositor.draw(frame());
+      compositor.draw(frame());
+      expect(animated.seen).toHaveLength(3);
+
+      const still = passRecording('background', false);
+      const other = await setUpCompositor();
+      other.compositor.setEffectPasses([still.pass]);
+      other.compositor.draw(frame());
+      other.compositor.draw(frame());
+      other.compositor.draw(frame());
+      expect(still.seen).toHaveLength(1); // static L0: painted once
+    });
+
+    it('stops repainting when motion is reduced or the background stage is dropped', async () => {
+      const animated = passRecording('background', true);
+      const { compositor } = await setUpCompositor();
+      compositor.setEffectPasses([animated.pass]);
+      compositor.draw(frame());
+      compositor.setReducedMotion(true); // dirties L0 once so the frozen frame is painted...
+      compositor.draw(frame());
+      const afterFreeze = animated.seen.length;
+      compositor.draw(frame());
+      compositor.draw(frame());
+      expect(animated.seen.length).toBe(afterFreeze); // ...and then nothing: there is nothing to animate
+      expect(animated.seen.at(-1)!.reducedMotion).toBe(true);
+
+      compositor.setReducedMotion(false);
+      compositor.setEffectQuality(0);
+      const before = animated.seen.length;
+      compositor.draw(frame());
+      compositor.draw(frame());
+      expect(animated.seen.length).toBe(before); // quality 0 runs no passes at all
+    });
+
+    it('hands a frame\'s births to the next draw only, so a camera redraw cannot replay them', async () => {
+      const reactive = passRecording('effects', false);
+      const { compositor } = await setUpCompositor();
+      compositor.setEffectPasses([reactive.pass]);
+      compositor.setChangeSummary({ births: 7, deaths: 0, transitions: 0 });
+      compositor.draw(frame());
+      compositor.draw(frame()); // e.g. a pan: no new simulation frame, so no new births
+      expect(reactive.seen.map((s) => s.births)).toEqual([7, 0]);
+    });
+  });
+
   it('with effects disabled, composites with exactly two drawImage calls', async () => {
     const { compositor, displayCtx } = await setUpCompositor();
     const sim = blinkerWorld();

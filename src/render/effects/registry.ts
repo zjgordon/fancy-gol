@@ -131,6 +131,16 @@ export class EffectRegistry {
     }
   }
 
+  /**
+   * Whether L0 must be repainted every frame: an active background pass is `animated` and motion is
+   * allowed. Reduced motion freezes such passes, so there is nothing to keep repainting (P3-E-3).
+   */
+  hasAnimatedBackground(): boolean {
+    if (this.reducedMotion) return false;
+    if (!stagesForQuality(this.quality).includes('background')) return false;
+    return this.byStage.background.some((pass) => pass.animated === true);
+  }
+
   /** Sum of declared `cost` values still active at the current quality (governor input). */
   totalDeclaredCost(): number {
     const active = new Set(stagesForQuality(this.quality));

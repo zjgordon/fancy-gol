@@ -24,6 +24,13 @@ export interface EffectPass {
    * and named in the theme README. The exact effect ships with Phase 5's WebGL2 renderer (P5-A-3).
    */
   readonly approximation?: string;
+  /**
+   * A background-stage pass that changes every frame (falling text). L0 is normally repainted only
+   * when the theme, size, quality or (for parallax themes) camera changes; the compositor repaints
+   * it every frame while any active background pass is `animated` — and not under reduced motion,
+   * where such a pass freezes and there is nothing to repaint (P3-E-3).
+   */
+  readonly animated?: boolean;
   render(ctx: EffectCtx): void;
   resize?(widthPx: number, heightPx: number, dpr: number): void;
   /**

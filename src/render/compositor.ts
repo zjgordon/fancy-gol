@@ -176,7 +176,19 @@ export class Compositor implements Renderer {
     return text === 'effects at full quality' ? '' : text;
   }
 
-  /** Births/deaths/transitions for reactive passes this frame (from the worker stats). */
+  /**
+   * Whether effects should hold still (`prefers-reduced-motion`, and `?test=1`). Reactive particle
+   * passes spawn nothing and falling text freezes; L0 repaints so the frozen frame is the new one.
+   */
+  setReducedMotion(reduced: boolean): void {
+    this.effects.setReducedMotion(reduced);
+    this.l0Dirty = true;
+  }
+
+  /**
+   * Births/deaths/transitions for reactive passes (from the worker stats). Consumed by the next
+   * `draw`: it applies to that one frame only.
+   */
   setChangeSummary(changes: ChangeSummary): void {
     this.changes = changes;
   }
@@ -284,6 +296,10 @@ export class Compositor implements Renderer {
     this.stats.frameMs = performance.now() - t0;
     this.stats.drawCalls = cellStats.drawCalls + this.compositeDrawCalls;
     this.stats.tilesRepainted = cellStats.tilesRepainted;
+    // Births and deaths belong to the frame that reported them. Left in place, a camera-only redraw
+    // (which draws with no new simulation frame) would see the same births again and spawn the same
+    // particles every time the user pans (P3-E-3).
+    this.changes = EMPTY_CHANGES;
   }
 
   readStats(): RenderStats {
@@ -328,7 +344,9 @@ export class Compositor implements Renderer {
     tick: number,
     frameTime: number,
   ): void {
-    if (!this.l0Dirty) return;
+    // An `animated` background pass (Flatline's falling text) repaints L0 every frame; everything
+    // else repaints only when something it depends on changed.
+    if (!this.l0Dirty && !this.effects.hasAnimatedBackground()) return;
     const { ctx, canvas } = this.layers.get('background');
     const w = canvas.width;
     const h = canvas.height;
