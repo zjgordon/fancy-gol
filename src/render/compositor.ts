@@ -74,6 +74,8 @@ export class Compositor implements Renderer {
   private backgroundPainter: BackgroundPainter | null = null;
   private effectsEnabled = false;
   private l0Dirty = true;
+  /** Quality L0 was last painted at; a mismatch means a background pass appeared or vanished. */
+  private paintedQuality: EffectQuality | null = null;
   private lastCameraKey: string | null = null;
   private frameTimeOrigin = 0;
   private changes: ChangeSummary = EMPTY_CHANGES;
@@ -238,11 +240,12 @@ export class Compositor implements Renderer {
     const theme = this.requireTheme();
 
     // Apply last frame's cost before painting so a downgrade skips this frame's expensive stages.
-    if (this.qualityGovernor) {
-      const qBefore = this.qualityGovernor.getQuality();
-      this.qualityGovernor.observeFrame(this.stats.frameMs);
-      if (this.qualityGovernor.getQuality() !== qBefore) this.l0Dirty = true;
-    }
+    this.qualityGovernor?.observeFrame(this.stats.frameMs);
+    // Compare against what L0 was *painted* at, not against what this call changed: a manual
+    // `pin()` writes straight to the registry between frames, so a before/after check inside
+    // `draw` never sees it and L0 kept the previous quality's background until something else
+    // dirtied it (found by the P3-E-1 liveness spec).
+    if (this.effects.getQuality() !== this.paintedQuality) this.l0Dirty = true;
 
     const t0 = performance.now();
     const frameTime = (t0 - this.frameTimeOrigin) / 1000;
@@ -323,6 +326,7 @@ export class Compositor implements Renderer {
       });
     }
     this.l0Dirty = false;
+    this.paintedQuality = this.effects.getQuality();
   }
 
   private runEffectStages(viewport: Viewport, tick: number, frameTime: number): void {

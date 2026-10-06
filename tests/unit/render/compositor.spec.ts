@@ -3,6 +3,7 @@ import { CONWAY } from '@engine/rules/builtin';
 import { Simulation } from '@engine/simulation';
 import { Canvas2DRenderer } from '@render/canvas2d';
 import { Compositor } from '@render/compositor';
+import { QualityGovernor } from '@render/quality-governor';
 import { CanvasRecorder } from '@render/recorder';
 import type { CanvasLike } from '@render/layers';
 import type { CompiledTheme, Viewport } from '@render/types';
@@ -240,6 +241,36 @@ describe('Compositor', () => {
     expect(compositor.isBackgroundDirty()).toBe(true);
     compositor.draw(frame);
     expect(bgCtx.fillRectCalls).toBeGreaterThan(0);
+  });
+
+  it('repaints L0 when quality changes between frames, e.g. a manual pin (PHASE_3 §2.3)', async () => {
+    const { compositor, bgCtx } = await setUpCompositor();
+    const governor = new QualityGovernor({ registry: compositor.effectRegistry, maxQuality: 3 });
+    compositor.setQualityGovernor(governor);
+    const sim = blinkerWorld();
+    const frame = { cells: sim.view(), dirty: null as Rect[] | null, tick: 0 };
+
+    compositor.draw(frame);
+    bgCtx.resetLog();
+    compositor.draw(frame);
+    expect(bgCtx.fillRectCalls).toBe(0); // static + same quality: L0 is not repainted
+
+    // `pin` writes straight to the registry, between frames. The compositor never sees a change
+    // inside `draw`, so before this was fixed the background stayed at the old quality's pixels
+    // until something unrelated dirtied it.
+    governor.pin(0);
+    compositor.draw(frame);
+    expect(bgCtx.fillRectCalls).toBeGreaterThan(0);
+    bgCtx.resetLog();
+
+    governor.unpin();
+    governor.pin(3);
+    compositor.draw(frame);
+    expect(bgCtx.fillRectCalls).toBeGreaterThan(0);
+    bgCtx.resetLog();
+
+    compositor.draw(frame);
+    expect(bgCtx.fillRectCalls).toBe(0);
   });
 
   it('with effects disabled, composites with exactly two drawImage calls', async () => {
