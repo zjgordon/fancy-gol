@@ -171,3 +171,28 @@ export async function diffPixels(page: Page, a: string, b: string): Promise<numb
     { x: a, y: b },
   );
 }
+
+/**
+ * Like {@link snapAtQuality}, for effects that only draw in reaction to a generation (Chiba's birth
+ * flash): reset to the seed, take one step at the pinned quality, and store the canvas the step's
+ * own draw produced. Reset makes both qualities see the identical generation, so any pixel
+ * difference is the effects stage and not the cells.
+ */
+export async function snapAfterStep(page: Page, quality: number, label: string): Promise<void> {
+  await page.evaluate((q) => {
+    window.__floorFreezeClock?.(true);
+    window.__fancyGol?.pinQuality(q);
+  }, quality);
+  await runCommand(page, 'sim.reset');
+  const before = await page.evaluate(() => window.__fancyGol?.tick ?? 0);
+  await runCommand(page, 'sim.step');
+  await page.waitForFunction((t) => (window.__fancyGol?.tick ?? 0) > t, before, { timeout: 10_000 });
+  await page.evaluate(async (name) => {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    const canvas = document.querySelector<HTMLCanvasElement>('#scene');
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) throw new Error('#scene has no 2d context');
+    window.__floorShots?.set(name, ctx.getImageData(0, 0, canvas.width, canvas.height).data);
+    window.__floorFreezeClock?.(false);
+  }, label);
+}

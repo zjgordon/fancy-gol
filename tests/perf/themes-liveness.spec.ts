@@ -27,9 +27,11 @@ import {
   medianFrameMs,
   openApp,
   pauseSim,
+  snapAfterStep,
   snapAtQuality,
   startSoup,
 } from './helpers';
+import { runCommand } from '../e2e/helpers';
 import { STAGE_QUALITY, THEME_STAGES, type EffectStageName } from './theme-stages';
 
 /** Same-runner ratio budget (planning/README.md §3.6, D6). Tightened by measurement, never loosened. */
@@ -48,42 +50,18 @@ const WARMUP_MS = 1_500;
  * Known-broken checks and the task that owns each fix. Delete the entry in the same commit that
  * fixes the defect (the case then runs as a normal assertion). Keyed `<check>:<theme>[:<stage>]`.
  */
-const KNOWN_BROKEN: Readonly<Record<string, string>> = {
-  // Post stage: per-texel passes read an all-zero buffer on a real OffscreenCanvas and paint
-  // transparent black (ADR-011 amendment). Rebuilt as composited passes by P3-E-2.
-
-  // Effects stage. Four distinct causes, all fixed by P3-E-3:
-  //  - chiba-city: `birthFlash` never fires — nothing in client/ calls `setChangeSummary`, so
-  //    `ctx.changes` is always empty. (`deathParticles` has the same defect in void-walker.)
-  //  - flatline: `phosphorDecay` reads zeros, like the post passes.
-  //  - void-walker: `trailFade` reads zeros and `deathParticles` never fires.
-  //  - synthwave: `gridGlow` draws, then `hueShiftByAge` putImageData()s a zero buffer over the
-  //    whole layer, erasing it. putImageData replaces pixels; it does not composite.
-  'liveness:chiba-city:effects': 'P3-E-3',
-  'liveness:flatline:effects': 'P3-E-3',
-  'liveness:void-walker:effects': 'P3-E-3',
-  'liveness:synthwave:effects': 'P3-E-3',
-
-  // Background stage, chiba-city and flatline only: their L1 cell layer paints an opaque
-  // `theme.background` over the whole viewport, so `hazeGrid` / `textRain` on L0 are fully
-  // occluded. void-walker, synthwave and sids-place declare a transparent `cellLayerBackground`
-  // and show their L0. This is why the committed chiba-city baseline is flat mint-on-black.
-  'liveness:chiba-city:background': 'P3-E-3',
-  'liveness:flatline:background': 'P3-E-3',
-
-  // Allocation: the effects-stage per-texel passes still allocate per frame in flatline,
-  // void-walker and synthwave (P3-E-2 fixed the post stage, which was the bulk of it; the frame
-  // ratio now passes for all of them, so those markers are gone).
-  'heap:flatline': 'P3-E-3 (after P3-E-2)',
-  'heap:void-walker': 'P3-E-3 (after P3-E-2)',
-  'heap:synthwave': 'P3-E-3 (after P3-E-2)',
-};
+const KNOWN_BROKEN: Readonly<Record<string, string>> = {};
 
 function broken(key: string): string | undefined {
   return KNOWN_BROKEN[key];
 }
 
 const LIVENESS_STAGES: readonly EffectStageName[] = ['background', 'effects', 'post'];
+
+// Frame-time and heap checks are measurements: parallel workers would contend for the CPU and make
+// the ratio noise. `default` mode runs this file's tests one at a time on one worker despite the
+// project-wide fullyParallel.
+test.describe.configure({ mode: 'default' });
 
 test.describe('effect liveness: every enabled stage changes pixels (ADR-012 rule 3)', () => {
   test.beforeEach(async ({ page }) => {
@@ -100,10 +78,15 @@ test.describe('effect liveness: every enabled stage changes pixels (ADR-012 rule
         test.fail(owner !== undefined, `known broken, owned by ${owner}`);
 
         await activateTheme(page, theme);
+        // ?test=1 forces reduced motion, which silences the effects stage by design.
+        await page.evaluate(() => window.__fancyGol?.setEffectsReducedMotion(false));
         const hi = STAGE_QUALITY[stage];
         const lo = hi - 1;
-        await snapAtQuality(page, hi, 'hi');
-        await snapAtQuality(page, lo, 'lo');
+        // Chiba's only effects pass (birthFlash) reacts to a generation's births, so it needs a step.
+        const snap = theme === 'chiba-city' && stage === 'effects' ? snapAfterStep : snapAtQuality;
+        if (snap === snapAfterStep) await runCommand(page, 'sim.randomSoup');
+        await snap(page, hi, 'hi');
+        await snap(page, lo, 'lo');
         const changed = await diffPixels(page, 'hi', 'lo');
         expect(
           changed,
@@ -112,6 +95,30 @@ test.describe('effect liveness: every enabled stage changes pixels (ADR-012 rule
       });
     }
   }
+});
+
+test.describe('moving backgrounds (P3-E-3)', () => {
+  test("flatline's text rain falls with the sim paused", async ({ page }) => {
+    await openApp(page);
+    await pauseSim(page);
+    await activateTheme(page, 'flatline');
+    await page.evaluate(() => {
+      window.__fancyGol?.setEffectsReducedMotion(false);
+      window.__fancyGol?.pinQuality(1);
+    });
+    const grab = (name: string) =>
+      page.evaluate((n) => {
+        const canvas = document.querySelector<HTMLCanvasElement>('#scene');
+        const ctx = canvas?.getContext('2d');
+        if (!canvas || !ctx) throw new Error('#scene has no 2d context');
+        window.__floorShots?.set(n, ctx.getImageData(0, 0, canvas.width, canvas.height).data);
+      }, name);
+    await page.waitForTimeout(300);
+    await grab('rain-a');
+    await page.waitForTimeout(500);
+    await grab('rain-b');
+    expect(await diffPixels(page, 'rain-a', 'rain-b'), 'two frames 500 ms apart are identical').toBeGreaterThan(0);
+  });
 });
 
 test.describe('per-frame cost with the sim running (ADR-012 rules 1 and 4)', () => {
