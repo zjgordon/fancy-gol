@@ -477,7 +477,7 @@ With no browser available, the task is `- [!]`, never `- [x]`.
 - [ ] `browser-floor` runs as a blocking CI job, and the local command is documented in this task. — Job added to `ci.yml` and the command is documented above. **Interim: not yet executed on a GitHub runner**, and no YAML parser was available offline to validate it beyond structure.
 - [x] The §2.2 open item is resolved and written up here, with any broken pass added to P3-E-3. — see "Resolution" above; scope added to P3-E-3.
 
-#### - [ ] P3-E-2 · Composited post passes
+#### - [~] P3-E-2 · Composited post passes — @claude, started 2026-10-06
 **Depends on:** P3-E-1 · **Files:** `src/render/effects/post-passes.ts`, `src/render/effects/box-blur.ts`, `src/render/effects/ctx.ts`, `src/render/compositor.ts`, `tests/unit/render/effect-library.spec.ts`
 **Implementation notes** Rebuild each pass per ADR-012 and the review §6 table. No per-texel JS and no allocation inside `render`. Bake resources in `resize()` / at activation.
 - `bloom`: sample the **L1 cell layer** (add a read-only `cells: CanvasImageSource` to `EffectCtx`, and record the contract addition in §2.3). Downscale chain ½ → ¼ → ⅛ with smoothing, add back with `'lighter'` at `strength`. `ctx.filter = 'blur()'` is optional and feature-detected, never required.
