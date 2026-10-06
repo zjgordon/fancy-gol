@@ -554,7 +554,7 @@ With no browser available, the task is `- [!]`, never `- [x]`.
 - [ ] Cropped grid captures (chrome removed) for all six themes are assembled into a review sheet for the operator's three-person identifiability check (§6 DoD).
 - [ ] The `visual` CI job is green, and ≥ 1 green branch sample is appended for `visual-nonflake` (`planning/README.md` §3.10 merge-then-certify).
 
-#### - [ ] P3-E-7 · Theme code-splitting & honest bundle measurement
+#### - [~] P3-E-7 · Theme code-splitting & honest bundle measurement — @claude, started 2026-10-06
 **Depends on:** P3-D-1 · **Files:** `src/themes/registry.ts`, `src/client/main.ts`, `src/client/theme-switch.ts`, `src/ui/panels/themes/*`, `tests/bench/bundle.bench.ts`, `bench-baseline.json`
 **Implementation notes** Decision D4 (`planning/README.md` §3.6). Default stays eager. Every other theme (module, passes, sound pack) becomes a dynamic `import()` chunk. Prefetch on theme-picker hover/focus and on `Mod+Shift+T`. `client-js-gzip` sums all chunks except theme chunks, so it measures the floor as written. Add `theme-chunk-gzip-max` (deterministic class), with its budget set from measurement.
 **Acceptance criteria**
