@@ -111,4 +111,50 @@ describe('FrameGridMirror', () => {
     expect(view.get(65, 65)).toBe(4);
     expect(view.getChunk(0, 0)).toBeUndefined();
   });
+
+  describe('per-chunk views (P3-E-8: the branches the render path takes every frame)', () => {
+    it('reports age 0 for a chunk that arrived without an age page', () => {
+      const mirror = new FrameGridMirror();
+      mirror.applyChunks(onePageChunks(0, 0, [[3, 3, 1]]));
+      const chunk = mirror.view().getChunk(0, 0)!;
+      expect(chunk.age?.(localIndex(3, 3))).toBe(0);
+    });
+
+    it('returns the shipped ages when the frame carries them, and forgets them when a later frame does not', () => {
+      const mirror = new FrameGridMirror();
+      const withAges = onePageChunks(0, 0, [[3, 3, 1]]);
+      const ages = new Uint16Array(CHUNK_AREA);
+      ages[localIndex(3, 3)] = 42;
+      mirror.applyChunks({ ...withAges, ages });
+      expect(mirror.view().getChunk(0, 0)!.age?.(localIndex(3, 3))).toBe(42);
+
+      mirror.applyChunks(onePageChunks(0, 0, [[3, 3, 1]])); // age tracking switched off
+      expect(mirror.view().getChunk(0, 0)!.age?.(localIndex(3, 3))).toBe(0);
+    });
+
+    it('tracks the live extent in every direction, whichever cell is scanned first', () => {
+      const mirror = new FrameGridMirror();
+      // Scanned row-major: (15,3) first, then (10,20), (5,25), (8,28) — each pulls a different edge.
+      mirror.applyChunks(
+        onePageChunks(0, 0, [
+          [15, 3, 1],
+          [10, 20, 1],
+          [5, 25, 1],
+          [8, 28, 1],
+        ]),
+      );
+      const chunk = mirror.view().getChunk(0, 0)!;
+      expect(chunk.population).toBe(4);
+      expect([chunk.liveMinX, chunk.liveMaxX, chunk.liveMinY, chunk.liveMaxY]).toEqual([5, 15, 3, 28]);
+    });
+
+    it('bounds span chunks lying in every direction from the first one applied', () => {
+      const mirror = new FrameGridMirror();
+      mirror.applyChunks(onePageChunks(1, 1, [[40, 40, 1]]));
+      mirror.applyChunks(onePageChunks(-2, 3, [[-60, 100, 1]])); // further left and further down
+      mirror.applyChunks(onePageChunks(3, -1, [[100, -20, 1]])); // further right and further up
+      // chunks x -2..3 → 6 wide, y -1..3 → 5 tall, anchored at chunk (-2,-1) = world (-64,-32)
+      expect(mirror.view().bounds()).toEqual({ x: -64, y: -32, width: 6 * 32, height: 5 * 32 });
+    });
+  });
 });
