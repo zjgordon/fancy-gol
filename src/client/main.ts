@@ -196,6 +196,16 @@ function main(): void {
     return testMode || reducedMotion();
   }
 
+  // P3-E-3: effects hold still under reduced motion (and `?test=1`, which keeps captures
+  // deterministic). The registry had a setter nothing called, so particles, trails and falling text
+  // ignored the preference. Listen for the preference changing mid-session, too.
+  renderer.setReducedMotion(motionReduced());
+  if (!testMode && typeof matchMedia === 'function') {
+    matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => {
+      renderer.setReducedMotion(motionReduced());
+    });
+  }
+
   const themeRegistry = new ThemeRegistry();
   // P3-E-7: Default is eager (the performance and accessibility reference, and the fallback for a
   // failed load); every other theme is a lazy chunk, listed from its manifest and fetched on demand.
@@ -262,6 +272,13 @@ function main(): void {
       renderer.setViewport(toRenderViewport());
       camera.clearDirty();
     }
+    // P3-E-3: birth/flash and death-puff passes react to what this frame's tick changed. Nothing
+    // supplied this before, so they never fired. The compositor consumes it with the draw below.
+    renderer.setChangeSummary({
+      births: frame.stats.births,
+      deaths: frame.stats.deaths,
+      transitions: frame.stats.transitions,
+    });
     renderer.draw({ cells: mirror.view(), dirty: frame.dirty, tick: frame.tick });
     hasFrame = true;
     lastTick = frame.tick;
@@ -1072,6 +1089,7 @@ function main(): void {
         if (level === null) unpinQuality(quality);
         else pinQuality(quality, clampQuality(level));
       },
+      setEffectsReducedMotion: (reduced) => renderer.setReducedMotion(reduced),
       renderStats: () => ({ frameMs: renderer.readStats().frameMs, stageMs: { ...renderer.readStageMs() } }),
       heapBytes: () => (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize ?? null,
     });

@@ -56,6 +56,12 @@ export interface FancyGolHarness {
   runCommand(id: string): Promise<void> | void;
   /** Pin/unpin the degrade governor (P3-D-4). `null` releases the pin. */
   pinQuality(quality: number | null): void;
+  /**
+   * Override whether *effects* hold still. `?test=1` forces reduced motion so captures are
+   * deterministic; the liveness spec turns it off to prove the motion-driven passes (particles,
+   * trails, falling text) actually draw (P3-E-3).
+   */
+  setEffectsReducedMotion(reduced: boolean): void;
   /** Per-stage cost of the most recent draw. Measured, never declared (ADR-011). */
   renderStats(): HarnessRenderStats;
   /**
@@ -96,6 +102,7 @@ export interface HarnessSources {
   readonly setCamera: (pose: { originX?: number; originY?: number; cellSize?: number }) => void;
   readonly runCommand: (id: string) => Promise<void> | void;
   readonly pinQuality: (quality: number | null) => void;
+  readonly setEffectsReducedMotion: (reduced: boolean) => void;
   readonly renderStats: () => HarnessRenderStats;
   readonly heapBytes: () => number | null;
 }
@@ -181,6 +188,7 @@ export function createHarness(src: HarnessSources): FancyGolHarness {
     setCamera: src.setCamera,
     runCommand: src.runCommand,
     pinQuality: src.pinQuality,
+    setEffectsReducedMotion: src.setEffectsReducedMotion,
     renderStats: src.renderStats,
     heapBytes: src.heapBytes,
   };

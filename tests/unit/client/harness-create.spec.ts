@@ -35,6 +35,7 @@ describe('createHarness', () => {
       setCamera: () => {},
       runCommand: () => {},
       pinQuality: () => {},
+      setEffectsReducedMotion: () => {},
       renderStats: () => ({ frameMs: 3, stageMs: { background: 0, effects: 1, post: 2 } }),
       heapBytes: () => null,
     });
@@ -69,6 +70,7 @@ describe('createHarness', () => {
     void harness.runCommand('sim.step');
     harness.pinQuality(0);
     harness.pinQuality(null);
+    harness.setEffectsReducedMotion(false);
     expect(harness.renderStats()).toEqual({ frameMs: 3, stageMs: { background: 0, effects: 1, post: 2 } });
     expect(harness.heapBytes()).toBeNull();
   });
