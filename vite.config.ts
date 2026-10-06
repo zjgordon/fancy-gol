@@ -8,7 +8,7 @@ const THEME_CHUNK_NAMES = /^(chiba-city|flatline|sids-place|void-walker|synthwav
 /** The three heavy panels' entry modules (P3-E-10). */
 const PANEL_MODULE = /\/src\/ui\/panels\/(statistics|library|ruleset-studio)\/panel\.ts$/;
 /** Modules only the themes use: the effect-pass implementations and their pass-stack factories. */
-const THEME_SHARED_MODULES = /\/src\/render\/effects\/(post-passes|background-passes|effects-passes|library|timed-pass|surface|software-surface|pixel-hash)\.ts$/;
+const THEME_SHARED_MODULES = /\/src\/render\/effects\/(post-passes|background-passes|effects-passes|library|timed-pass|surface|software-surface)\.ts$/;
 
 export default defineConfig({
   root: 'src/client',

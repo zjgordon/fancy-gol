@@ -294,7 +294,12 @@ export function asSoftware(source: CanvasImageSource | SoftwareCanvas): Software
   return null;
 }
 
-/** Read RGBA from a software canvas (empty buffer when the source is not software-backed). */
+/**
+ * Read RGBA from a software canvas. A real canvas has no readable pixel buffer here, so this
+ * **throws** rather than returning zeros: the zero-buffer path made every post pass paint nothing
+ * on an `OffscreenCanvas` while its unit tests passed (ADR-011 amendment, ADR-012 rule 3). Pixel
+ * truth lives in the browser; unit tests prove structure.
+ */
 export function readSourcePixels(
   source: CanvasImageSource,
   width: number,
@@ -320,40 +325,8 @@ export function readSourcePixels(
     }
     return out;
   }
-  return new Uint8ClampedArray(width * height * 4);
-}
-
-export function writeTargetPixels(
-  target: {
-    canvas?: CanvasImageSource;
-    putImageData?(image: ImageData, dx: number, dy: number): void;
-    createImageData?(w: number, h: number): ImageData;
-  },
-  pixels: Uint8ClampedArray,
-  width: number,
-  height: number,
-): void {
-  const soft = target.canvas ? asSoftware(target.canvas) : null;
-  if (soft && soft.pixels.length === pixels.length) {
-    soft.pixels.set(pixels);
-    return;
-  }
-  if (typeof target.putImageData !== 'function') return;
-
-  // OffscreenCanvasRenderingContext2D rejects plain `{width,height,data}` objects — it needs a
-  // real ImageData. Prefer createImageData on the destination context so the buffer matches the
-  // canvas implementation (Chromium, Firefox, jsdom fakes).
-  let image: ImageData;
-  if (typeof target.createImageData === 'function') {
-    image = target.createImageData(width, height);
-    image.data.set(pixels);
-  } else if (typeof ImageData === 'function') {
-    const copy = new Uint8ClampedArray(pixels.length);
-    copy.set(pixels);
-    image = new ImageData(copy, width, height);
-  } else {
-    target.putImageData({ width, height, data: pixels, colorSpace: 'srgb' } as ImageData, 0, 0);
-    return;
-  }
-  target.putImageData(image, 0, 0);
+  throw new Error(
+    'readSourcePixels: this canvas is not a SoftwareCanvas. Pixels are never read back from a real ' +
+      'canvas on the frame path (ADR-012 rule 1) — composite with drawImage and a composite op instead.',
+  );
 }

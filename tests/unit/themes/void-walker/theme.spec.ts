@@ -28,9 +28,7 @@ import {
   starParallax,
   starScreenPosition,
 } from '@render/effects/library';
-import { asSoftware, createSoftwareCanvas } from '@render/effects/software-surface';
 import { RecordingCanvas, recordingFactory, stubOffscreenCanvas } from '../../render/recording-canvas';
-import { hashPixels } from '@render/effects/pixel-hash';
 import { EffectRegistry } from '@render/effects/registry';
 import { COMPOSITOR_LAYER_IDS, type CanvasLike } from '@render/layers';
 import { QualityGovernor } from '@render/quality-governor';
@@ -82,11 +80,12 @@ const VIEWPORT: Viewport = {
   dpr: 1,
 };
 
+/** The starfield's recorded draw sequence for a viewport — structure, not pixels (ADR-012). */
 function starfieldHash(vp: Viewport, seed = 42): string {
   const pass = createStarfieldPass({ seed, layers: 3, starsPerLayer: 24 });
-  const target = createSoftwareCanvas(vp.widthPx, vp.heightPx);
+  const target = new RecordingCanvas(vp.widthPx, vp.heightPx);
   const ctx: EffectCtx = {
-    target: target.getContext('2d') as unknown as CanvasRenderingContext2D,
+    target: target.ctx as unknown as CanvasRenderingContext2D,
     source: target as unknown as CanvasImageSource,
     cells: target as unknown as CanvasImageSource,
     viewport: vp,
@@ -97,7 +96,7 @@ function starfieldHash(vp: Viewport, seed = 42): string {
     reducedMotion: true,
   };
   pass.render(ctx);
-  const hash = hashPixels(asSoftware(target)!.pixels);
+  const hash = JSON.stringify(target.ctx.ops);
   pass.dispose();
   return hash;
 }
