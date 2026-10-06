@@ -21,28 +21,19 @@
  *    the accumulating signal, not as a certificate.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { runCommand } from '../e2e/helpers';
+import { THEME_IDS, activateTheme, openApp, startSoup } from './helpers';
 
-/** ~100k visible cells in a 1080p viewport: 1920/4.55 × 1080/4.55 ≈ 422 × 237 (render.bench.ts). */
-const CELL_SIZE = 4.55;
 const FRAME_SAMPLE_MS = 3_000;
-
-const THEME_IDS = ['default', 'chiba-city', 'flatline', 'sids-place', 'void-walker', 'synthwave'] as const;
-
-async function activateTheme(page: Page, theme: (typeof THEME_IDS)[number]): Promise<void> {
-  await runCommand(page, `theme.select.${theme}`);
-  await page.waitForFunction((id) => window.__fancyGol?.themeId === id, theme, { timeout: 10_000 });
-}
 
 /** Frames actually presented over {@link FRAME_SAMPLE_MS}, measured in-page with rAF. */
 async function measureFps(page: Page): Promise<number> {
   return page.evaluate((ms) => {
     return new Promise<number>((resolve) => {
       let frames = 0;
-      const t0 = performance.now();
+      const t0 = Date.now();
       const tick = (): void => {
         frames += 1;
-        const elapsed = performance.now() - t0;
+        const elapsed = Date.now() - t0;
         if (elapsed >= ms) resolve((frames * 1000) / elapsed);
         else requestAnimationFrame(tick);
       };
@@ -53,16 +44,10 @@ async function measureFps(page: Page): Promise<number> {
 
 test.describe('theme frame rate at 1080p (P3-D-4 AC1/AC2)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => {
-      try {
-        localStorage.removeItem('gol.session');
-      } catch {
-        /* private mode */
-      }
-    });
-    await page.goto('/?test=1');
-    await page.waitForFunction(() => window.__fancyGol?.ready === true, null, { timeout: 20_000 });
-    await page.evaluate((cellSize) => window.__fancyGol?.setCamera({ cellSize }), CELL_SIZE);
+    await openApp(page);
+    // `?test=1` boots paused. Without this the page is idle, no frame is ever drawn, and every
+    // theme "holds 60 fps" — which is what this spec measured until P3-E-1 fixed it.
+    await startSoup(page);
   });
 
   for (const theme of THEME_IDS) {
