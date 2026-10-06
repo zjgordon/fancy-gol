@@ -14,7 +14,10 @@ const THEME_CHUNK = /^theme-/;
 const THEME_CHUNK_BUDGET_KIB = 12;
 /** Workers the app starts at boot. `bench.worker` is created on demand, so it is not one. */
 const STARTUP_WORKERS = ['sim.worker'];
-/** Provisional: `bench.worker` (21 KiB) is the largest on-demand chunk today. Re-set from measurement once the panels are lazy. */
+/**
+ * Measured 2026-10-06 with the panels lazy: the largest on-demand chunk is `bench.worker` at 20.98 KiB (the
+ * biggest panel, the Ruleset Studio, is 10.2). 28 leaves room for one to grow by a third.
+ */
 const ON_DEMAND_CHUNK_BUDGET_KIB = 28;
 
 interface Build {

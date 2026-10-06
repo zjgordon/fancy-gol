@@ -11,7 +11,7 @@
   "calibrationMs": null,
   "cases": {
     "client-js-gzip": {
-      "median": 106.44140625,
+      "median": 85.2822265625,
       "unit": "kB",
       "class": "deterministic",
       "budget": 120,
@@ -168,7 +168,7 @@
       "higherIsBetter": false
     },
     "emitted-js-gzip": {
-      "median": 144.2265625,
+      "median": 147.8193359375,
       "unit": "kB",
       "class": "deterministic",
       "higherIsBetter": false
