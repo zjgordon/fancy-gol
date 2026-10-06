@@ -11,7 +11,7 @@
   "calibrationMs": null,
   "cases": {
     "client-js-gzip": {
-      "median": 116.455078125,
+      "median": 106.44140625,
       "unit": "kB",
       "class": "deterministic",
       "budget": 120,
@@ -165,6 +165,19 @@
       "unit": "kB",
       "class": "deterministic",
       "budget": 12,
+      "higherIsBetter": false
+    },
+    "emitted-js-gzip": {
+      "median": 144.2265625,
+      "unit": "kB",
+      "class": "deterministic",
+      "higherIsBetter": false
+    },
+    "on-demand-chunk-gzip-max": {
+      "median": 20.9794921875,
+      "unit": "kB",
+      "class": "deterministic",
+      "budget": 28,
       "higherIsBetter": false
     }
   }

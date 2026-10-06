@@ -267,10 +267,27 @@ written. A new deterministic case, `theme-chunk-gzip-max`, gates the largest the
 against 7.36 measured, ≤ 3% regression band). This aligns a measurement with its stated definition
 and adds a gate. It does not loosen one.
 
-*Status (P3-E-7, 2026-10-06):* measured as defined, the floor reads **127.45 KiB against 120**. Moving
-the themes out recovered 10.2 KiB; the remaining 7.45 is Phase 3's non-theme infrastructure and needs
-a separate decision (lazy-load heavy panels, raise the floor, or define it as initial-load JS). The
-budget is unchanged and the CI `bench` job stays non-blocking until it is settled.
+**The floor is initial-load JS (P3-E-10, operator decision 2026-10-06).** With themes excluded the
+floor still read 127.45 KiB, and the remaining 7.45 KiB was Phase 3's own non-theme infrastructure. A
+metric that sums every emitted chunk cannot be improved by loading things lazily — a lazy chunk is
+still emitted — so the floor is redefined as what loads at startup: the entry chunk `index.html`
+names, everything it reaches through **static** imports, and the workers started at boot (`sim.worker`).
+This is a statement about the *cold load*, which is what the floor exists to protect, and it is not a
+loosening: **the 120 KiB budget is unchanged**, and the app measured 106.4 KiB under the new
+definition before any panel was made lazy (`bench.worker`, 21 KiB, is created on demand).
+
+It is measured by import **reachability**, never by chunk name (`tests/bench/bundle-graph.ts`, unit
+tested): a chunk that is lazy by name but statically imported by the entry is counted, so a
+lazy-loading regression cannot hide. So that moving bytes out of startup never makes them invisible,
+two sibling cases accompany it: `emitted-js-gzip` (every chunk, regression-gated, no budget) and
+`on-demand-chunk-gzip-max` (the largest chunk that is not loaded at startup, budgeted).
+
+| Case | Measures | Gate |
+|---|---|---|
+| `client-js-gzip` | initial-load JS | ≤ 120 KiB; ≤ 3% regression |
+| `emitted-js-gzip` | all emitted JS, loaded or not | ≤ 3% regression |
+| `on-demand-chunk-gzip-max` | largest chunk not loaded at startup | budgeted; ≤ 3% regression |
+| `theme-chunk-gzip-max` | largest theme chunk | 12 KiB; ≤ 3% regression |
 
 **Transcribed / non-timed cases:** `cold-load-recorded` is renamed `cold-load-transcribed` and
 carries `transcribed: true`, which the runner's table marks with a `*` and a footnote — visible in
