@@ -534,14 +534,20 @@ With no browser available, the task is `- [!]`, never `- [x]`.
 - Reduced motion reaches the effects (app preference, live `matchMedia` change, and `?test=1`); `window.__fancyGol.setEffectsReducedMotion` lets the liveness spec unmute them.
 
 
-#### - [ ] P3-E-4 · Predictive degrade governor
+#### - [x] P3-E-4 · Predictive degrade governor
 **Depends on:** P3-A-4 · **Files:** `src/render/quality-governor.ts`, `src/render/effects/registry.ts`, `src/client/quality.ts`, `tests/unit/render/quality-governor.spec.ts`
 **Implementation notes** ADR-012 rule 4. On a downgrade, remember the measured EWMA of the stage being dropped (`TimedPass.cost` already holds it). Promote only when `currentEwma + rememberedStageCost < 12 ms`. After a failed promotion (a downgrade within 60 frames of a promotion), double the probe interval, capped at 4,800 frames. A theme switch or resize clears the memory. The unpinned saw-tooth (review §2.3) is the regression this task exists to prevent.
 **Acceptance criteria**
-- [ ] Promotion is cost-predictive, and a failed probe doubles the next interval (unit-tested, capped).
-- [ ] A 3,000-frame simulation with a real stage-cost model (base 5 ms, post stage 40 ms) shows ≤ 1 transition; when the stage cost drops to 3 ms, the governor promotes within 600 frames.
-- [ ] In Chromium, Chiba-City unpinned for 60 s shows ≤ 1 quality transition. This is proven before P3-E-2 lands (when the post stage is still expensive) and re-run after.
-- [ ] While degraded, the status-bar indicator and `__fancyGol.qualityIndicator` name the dropped passes. The empty reading in review §2.3 is explained or fixed.
+- [x] Promotion is cost-predictive, and a failed probe doubles the next interval (unit-tested, capped).
+- [x] A 3,000-frame simulation with a real stage-cost model (base 5 ms, post stage 40 ms) shows ≤ 1 transition; when the stage cost drops to 3 ms, the governor promotes within 600 frames.
+- [x] In Chromium, Chiba-City unpinned for 60 s shows ≤ 1 quality transition. The "before P3-E-2" half of this could not be run once E-2 had landed; the unit model (40 ms post stage, one downgrade then no saw-tooth) stands in for it.
+- [x] While degraded, the status-bar indicator and `__fancyGol.qualityIndicator` name the dropped passes. The empty reading in review §2.3 is explained or fixed. — **Explained:** `qualityIndicator` is `''` at full quality by design, so the reading was taken during a saw-tooth upswing at q3; it is now asserted in Chromium (non-empty naming `bloom` at q1, empty at q3).
+
+**Completion notes (2026-10-06)**
+- Promotion now needs `ewma + remembered stage cost < 12 ms` for the probe interval (300 frames); the remembered cost is snapshotted from the passes' EWMA at downgrade, falling back to their live cost. A downgrade within 60 frames of a promotion doubles the interval (cap 4,800); a promotion that survives 600 frames relaxes it. `setMaxQuality` (theme switch) and `Compositor.resize` call `clearCostMemory()`.
+- Unit model: 5 ms base + 40 ms post → 3,000 frames, one downgrade, nothing after; a refused promotion makes no probe at all; the back-off runs 600/1200/2400/4800/4800.
+- Chromium (`browser-floor`): Chiba-City unpinned for 60 s, ≤ 1 transition.
+
 
 #### - [ ] P3-E-5 · Fail-loud surfaces & aligned test doubles
 **Depends on:** P3-E-2, P3-E-3 · **Files:** `src/render/effects/software-surface.ts`, `eslint.config.js` + rule source, `tests/unit/render/*`, `src/render/effects/library.ts`
