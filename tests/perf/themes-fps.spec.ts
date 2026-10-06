@@ -10,13 +10,14 @@
  * on a Playwright project that only the nightly runs, and its stability accumulates in
  * `docs/gate-history/` as `browser-bench` (`planning/README.md` §3.10).
  *
- * The Node-side record of the same measurement — every theme's measured CPU effect cost at
- * 1080p, recorded in `bench-baseline.json` — is `tests/bench/themes.bench.ts`.
+ * There is no Node-side twin: `tests/bench/themes.bench.ts` was removed by P3-E-8 because a Node
+ * surface cannot price composited passes (planning/README.md §3.6). `browser-floor`
+ * (`themes-liveness.spec.ts`) is the blocking tier; this file is the reference certificate.
  *
  * Two honest labels, because a perf spec that oversells itself is worse than none:
- *  - **~100k visible cell slots**, not 100k live cells. The post-process passes are per-texel
- *    loops, so their cost is content-independent and this viewport is representative for the
- *    effect stack; the cell layer is GPU work in a real browser and is not what AC1 measures.
+ *  - **~100k visible cell slots**, not 100k live cells. The post-process passes are composited
+ *    full-frame operations, so their cost is content-independent and this viewport is
+ *    representative for the effect stack; the cell layer is GPU work in a real browser and is not what AC1 measures.
  *  - **Headless Chromium on a shared runner** is not a reference machine. Treat the numbers as
  *    the accumulating signal, not as a certificate.
  */

@@ -159,20 +159,6 @@
       "class": "browser",
       "budget": 0.5,
       "higherIsBetter": false
-    },
-    "theme-default-q3-stack-cost": {
-      "median": 0,
-      "unit": "ms",
-      "class": "browser",
-      "budget": 18.181818181818183,
-      "higherIsBetter": false
-    },
-    "theme-sids-place-q3-stack-cost": {
-      "median": 12.835576000000401,
-      "unit": "ms",
-      "class": "browser",
-      "budget": 18.181818181818183,
-      "higherIsBetter": false
     }
   }
 }
