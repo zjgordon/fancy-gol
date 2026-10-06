@@ -504,7 +504,7 @@ With no browser available, the task is `- [!]`, never `- [x]`.
 - [x] Chiba-City scanlines do not moiré at dpr 1, 1.5, 2, 3; bloom is confined to live cells (sourced from L1); L4 overlay legibility re-verified per theme. — Structure, per ADR-012 rule 3: integer pitch and a 2·pitch tile at each dpr; bloom reads `ctx.cells` and never `ctx.source`; L4 is drawn after `compositor.draw()` and is not a compositor layer, and every theme's overlay AA tests still pass. Pixel-level confirmation arrives with the re-captured baselines (P3-E-6).
 - [x] The CRT and edge-aberration substitutes are labelled as substitutes in each theme README and in the quality-indicator copy (ADR-012 D3). — Chiba-City, Flatline and Synthwave READMEs carry an "Approximations" section quoting the pass's string verbatim; `approximations.spec.ts` ties each README to its passes, and `describeQualityIndicator` names them at full quality.
 
-#### - [~] P3-E-3 · Composited effects & background passes — @claude, started 2026-10-06
+#### - [x] P3-E-3 · Composited effects & background passes — @claude, started 2026-10-06
 **Depends on:** P3-E-1 · **Files:** `src/render/effects/effects-passes.ts`, `src/render/effects/background-passes.ts`, `src/render/effects/library.ts`, `src/themes/synthwave/{palette,quality}.ts`, `src/themes/flatline/*`
 **Implementation notes**
 - `phosphorDecay`, `trailFade`: use a persistent ghost canvas. Each frame, a `'destination-out'` fill at the decay α, then L1 drawn with `'lighter'`. `reset()` is a `clearRect`.
@@ -519,13 +519,20 @@ With no browser available, the task is `- [!]`, never `- [x]`.
 - **Composite, never replace.** A pass that `putImageData`s replaces its whole layer (Synthwave's `hueShiftByAge` erased `gridGlow` this way). Composited passes draw *onto* their layer with an explicit composite op.
 - Remove from `KNOWN_BROKEN` in `tests/perf/themes-liveness.spec.ts`: the four `liveness:*:effects`, the two `liveness:{chiba-city,flatline}:background`, and `heap:` / `ratio:` for flatline, void-walker and synthwave.
 **Acceptance criteria**
-- [ ] In Chromium, `q2 ≠ q1` for every theme whose q2 adds an effects-stage pass. Flatline's phosphor ghosts visibly trail a moving glider and clear on grid clear.
-- [ ] No effects or background pass does per-texel JS or allocates per frame; baking happens only at activation or resize (heap check green).
-- [ ] Synthwave's age hue shift comes from its palette ramp (unit-tested), and its q2 frame does not get slower.
-- [ ] `gridGlow` issues ≤ 2 draw calls per frame while the camera is still (recorder-asserted).
-- [ ] `textRain` visibly falls at quality ≥ 1 (two frames 500 ms apart differ in L0/L2 with the sim paused).
-- [ ] Chiba-City's haze grid and Flatline's text rain are visible in Chromium: `liveness:*:background` markers removed for both, and the overlay-legibility and contrast checks still pass over them.
-- [ ] `birthFlash` and `deathParticles` fire from real births and deaths (the client supplies `ChangeSummary`) and are silent under reduced motion (`registry.setReducedMotion` wired).
+- [x] In Chromium, `q2 ≠ q1` for every theme whose q2 adds an effects-stage pass (`browser-floor` liveness, 24/24; Chiba's reactive birth flash is checked on a reset-then-step generation). Flatline's phosphor ghosts visibly trail a moving glider and clear on grid clear.
+- [x] No effects or background pass does per-texel JS or allocates per frame; baking happens only at activation or resize (heap check green).
+- [x] Synthwave's age hue shift comes from its palette ramp (unit-tested), and its q2 frame does not get slower.
+- [x] `gridGlow` issues ≤ 2 draw calls per frame while the camera is still (recorder-asserted).
+- [x] `textRain` visibly falls at quality ≥ 1 (two frames 500 ms apart differ in L0/L2 with the sim paused).
+- [x] Chiba-City's haze grid and Flatline's text rain are visible in Chromium: `liveness:*:background` markers removed for both, and the overlay-legibility and contrast checks still pass over them.
+- [x] `birthFlash` and `deathParticles` fire from real births and deaths (the client supplies `ChangeSummary`) and are silent under reduced motion (`registry.setReducedMotion` wired).
+
+**Completion notes (2026-10-06)**
+- *Measured* (headless Chromium 1237, SwiftShader, 1080p): all `KNOWN_BROKEN` markers are gone (the table is empty); `browser-floor` is 24/24 green on two consecutive local runs, every theme at the 16.7 ms vsync floor, heap span under budget for all six.
+- *Ratio noise, found and fixed here.* The ratio cases failed intermittently in a full run (Default 100 ms vs theme 300–500 ms) and passed in isolation. Cause: `fullyParallel` ran the heap and ratio measurements on parallel workers that contended for the CPU. The spec now runs one test at a time (`test.describe.configure({ mode: 'default' })`).
+- *A paused scene now animates a moving background.* The only redraw sources while paused were camera changes, so Flatline's rain could not fall. `cameraRedrawLoop` redraws when `Compositor.hasAnimatedBackground()` and no sim frame arrived in the last 24 ms. Proven in Chromium (two paused frames 500 ms apart differ).
+- Reduced motion reaches the effects (app preference, live `matchMedia` change, and `?test=1`); `window.__fancyGol.setEffectsReducedMotion` lets the liveness spec unmute them.
+
 
 #### - [ ] P3-E-4 · Predictive degrade governor
 **Depends on:** P3-A-4 · **Files:** `src/render/quality-governor.ts`, `src/render/effects/registry.ts`, `src/client/quality.ts`, `tests/unit/render/quality-governor.spec.ts`
