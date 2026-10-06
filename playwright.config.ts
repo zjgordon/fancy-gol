@@ -4,6 +4,20 @@ const PORT = Number(process.env['E2E_PORT'] ?? 8080);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 /**
+ * Launch options shared by the two browser perf projects (P3-E-1).
+ *  - `PLAYWRIGHT_CHROMIUM_EXECUTABLE` points at a Chromium Playwright did not install itself, e.g.
+ *    a sandbox that ships a different revision (SANDBOX-PLAYWRIGHT-INSTALL.md). Unset in CI.
+ *  - `--enable-precise-memory-info` stops `performance.memory` being bucketed, which the
+ *    allocation check reads. Without it a heap-span gate would measure the quantisation.
+ */
+const perfLaunchOptions = {
+  ...(process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE']
+    ? { executablePath: process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE'] }
+    : {}),
+  args: ['--enable-precise-memory-info'],
+};
+
+/**
  * P1-H-1 / P1-H-2 — Chromium + Firefox + WebKit against the production server. Visual
  * baselines (P1-H-2) run on Chromium only: Firefox/WebKit antialiasing would fork the
  * snapshot set without adding a Phase 1 claim. Determinism lives in the app (`?test=1`),
@@ -75,17 +89,33 @@ export default defineConfig({
       },
     },
     {
-      // P3-D-4 — per-theme frame rate in a real browser at 1080p. Chromium only (the 4× CPU
-      // throttle is CDP), deliberately outside the blocking CI jobs: a headless runner is not the
-      // "reference machine" the acceptance criterion names, so this accumulates in
-      // docs/gate-history/ as `browser-bench` instead of gating every pull request.
-      name: 'browser-bench',
-      testMatch: 'perf/**/*.spec.ts',
+      // P3-E-1 — the CI-floor tier of the two-tier theme frame gate (planning/README.md §3.6, D6).
+      // Blocking: effect liveness, per-frame allocation and a same-runner ratio against Default.
+      // Chromium only (usedJSHeapSize, CDP). Headless software raster is acceptable here because
+      // every assertion is a relative one; the absolute ≥ 55 fps lives in `browser-bench`.
+      name: 'browser-floor',
+      testMatch: 'perf/themes-liveness.spec.ts',
       timeout: 120_000,
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1920, height: 1080 },
         deviceScaleFactor: 1,
+        launchOptions: perfLaunchOptions,
+      },
+    },
+    {
+      // P3-D-4 — per-theme frame rate in a real browser at 1080p. Chromium only (the 4× CPU
+      // throttle is CDP), deliberately outside the blocking CI jobs: a headless runner is not the
+      // "reference machine" the acceptance criterion names, so this accumulates in
+      // docs/gate-history/ as `browser-bench` — the reference-certificate tier (§3.6, D6).
+      name: 'browser-bench',
+      testMatch: 'perf/themes-fps.spec.ts',
+      timeout: 120_000,
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
+        deviceScaleFactor: 1,
+        launchOptions: perfLaunchOptions,
       },
     },
   ],
