@@ -642,22 +642,34 @@ function animateBars() {
 }
 
 function renderFlow() {
+  // Derived from PROJECT_STATE so it can never go stale (it used to say "Phase 0 branch not yet
+  // created" through Phase 3). Hand-edit the wording here; the facts come from the phase docs.
+  const active = ALL.find(p => phaseState(p) !== 'done');
+  const started = active && phaseState(active) !== 'todo';
+  const onBranch = S.repo.branch !== 'main';
+  const tasks = active ? phaseTasks(active) : [];
+  const blocked = tasks.filter(k => k.s === 'blocked').length;
+  const left = tasks.filter(k => k.s !== 'done' && k.s !== 'cut').length;
   const steps = [
-    { on: true,  b: 'main &mdash; planning landed', s: 'Inception, ADRs, seven phase plans and this dashboard.' },
-    { on: false, b: 'branch <span class="mono">phase/0-foundation</span>', s: 'Not yet created. The next agent creates it before writing any code.' },
-    { on: false, b: 'work the phase on its branch', s: 'Tick checkboxes, regenerate this dashboard, commit per task.' },
-    { on: false, b: 'all phase gates green', s: 'verify + coverage + benchmarks + E2E, all passing in CI.' },
-    { on: false, b: 'merge to main, tag', s: 'main only ever holds tested, stable phase output.' },
-    { on: false, b: 'repeat for phases 1&ndash;6', s: 'One branch per phase, one tag per phase.' }
+    { on: true, b: 'main &mdash; ' + (shipped ? 'v' + esc(S.repo.version) + ' shipped' : 'planning landed'),
+      s: shipped ? shipped + ' of ' + ALL.length + ' phases merged and tagged.' : 'Inception, ADRs, seven phase plans and this dashboard.' },
+    { on: onBranch, b: 'branch <span class="mono">' + esc(onBranch ? S.repo.branch : 'phase/' + (active ? active.n : 0) + '-&hellip;') + '</span>',
+      s: onBranch ? 'Created. All implementation work for Phase ' + active.n + ' happens here.' : 'Not yet created. The next agent creates it before writing any code.' },
+    { on: !!started, b: 'work the phase on its branch',
+      s: active ? left + ' task' + (left === 1 ? '' : 's') + ' remaining' + (blocked ? ', ' + blocked + ' blocked' : '') + '. Tick checkboxes, regenerate this dashboard, commit per task.' : 'Every phase is done.' },
+    { on: false, b: 'all phase gates green', s: 'verify + coverage + benchmarks + E2E + browser-floor, all passing in CI.' },
+    { on: false, b: 'merge to main, tag', s: 'main only ever holds tested, stable phase output. Gate-history streaks certify on main (planning/README.md &sect;3.10).' },
+    { on: !active, b: 'repeat through Phase 6', s: 'One branch per phase, one tag per phase.' }
   ];
   $('#flow').innerHTML = steps.map(st => `
     <div class="flowstep" data-on="${st.on}">
       <div class="rail"><span class="node"></span><span class="line"></span></div>
       <div class="body"><b>${st.b}</b><span>${st.s}</span></div>
     </div>`).join('');
-  $('#branchNotice').innerHTML =
-    '<b>Phase 0 branch not yet created.</b> Do not commit implementation code to <code>main</code>. ' +
-    'Create <code>phase/0-foundation</code> first, and merge back only when every Phase&nbsp;0 gate is green.';
+  $('#branchNotice').innerHTML = onBranch
+    ? '<b>Work on <code>' + esc(S.repo.branch) + '</code>.</b> Do not commit implementation code to <code>main</code>; ' +
+      'merge back only when every Phase&nbsp;' + active.n + ' gate is green.'
+    : '<b>' + (active ? 'Phase ' + active.n + ' branch not yet created.' : 'All phases shipped.') + '</b> Do not commit implementation code to <code>main</code>.';
 }
 
 /* ========================================================================== */

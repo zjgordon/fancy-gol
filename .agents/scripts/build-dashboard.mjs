@@ -126,6 +126,15 @@ const state = {
 
 /* ---- splice into the dashboard ------------------------------------------ */
 const html = readFileSync(DASHBOARD, 'utf8');
+const CHECK = process.argv.includes('--check');
+
+// `--check` asks "do the checkboxes match?", not "was this generated today?". Comparing against
+// today's date made every CI run on a later day fail on an untouched, correct dashboard — so the
+// check reuses the committed `generated` date and compares only what the phase docs determine.
+if (CHECK) {
+  const committed = /"generated":"(\d{4}-\d{2}-\d{2})"/.exec(html);
+  if (committed) state.generated = committed[1];
+}
 const i = html.indexOf(BEGIN);
 const j = html.indexOf(END);
 if (i === -1 || j === -1) throw new Error('STATE markers not found in dashboard.html');
@@ -143,7 +152,7 @@ const done = countable.filter((t) => t.s === 'done');
 const crit = tasks.reduce((a, t) => a + t.c, 0);
 const critDone = tasks.reduce((a, t) => a + t.cd, 0);
 
-if (process.argv.includes('--check')) {
+if (CHECK) {
   if (next !== html) {
     console.error('✗ dashboard.html is out of date with the phase plans.');
     console.error('  Run: node .agents/scripts/build-dashboard.mjs');
