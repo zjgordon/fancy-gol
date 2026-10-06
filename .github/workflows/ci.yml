@@ -260,3 +260,43 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 14
+
+  browser-floor:
+    name: browser-floor (playwright)
+    runs-on: ubuntu-latest
+    needs: verify
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_CURRENT }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - run: npm run build
+
+      # P3-E-1 — the blocking tier of the two-tier theme frame gate (planning/README.md §3.6, D6):
+      # effect liveness, per-frame allocation, and a same-runner ratio against Default. Every
+      # assertion is relative, so a headless software-raster runner is a valid host. The absolute
+      # >= 55 fps lives in the nightly `browser-bench`. One worker: the checks measure frame time.
+      - name: Run theme effect-liveness and cost floor (Chromium only)
+        run: npx playwright test --project=browser-floor --workers=1
+        env:
+          E2E_SKIP_BUILD: '1'
+          CI: 'true'
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-browser-floor
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
