@@ -449,7 +449,7 @@ P3-E-8 depend on nothing else in this workstream and may run in parallel. P3-E-9
 `src/themes/**` is ticked only after a browser run (`npx playwright test --project=browser-floor`).
 With no browser available, the task is `- [!]`, never `- [x]`.
 
-#### - [~] P3-E-1 · Browser-truth harness & effect-liveness spec — @claude, started 2026-10-06
+#### - [x] P3-E-1 · Browser-truth harness & effect-liveness spec — @claude, started 2026-10-06
 **Depends on:** P3-D-4 (harness + `themes-fps.spec.ts`) · **Files:** `tests/perf/{themes-liveness.spec.ts,themes-fps.spec.ts,helpers.ts,theme-stages.ts}`, `tests/unit/perf/theme-stages.spec.ts`, `playwright.config.ts`, `src/client/harness.ts`, `src/render/compositor.ts`, `.github/workflows/ci.yml`, `.agents/planning/README.md` §3.6
 **Implementation notes**
 - Add a Playwright project **`browser-floor`**: the CI-floor tier of the two-tier frame gate (`planning/README.md` §3.6, D6). Run it as a **blocking** CI job. Make Chromium resolvable locally: this sandbox ships revision 1237 under `/opt/ms-playwright` (see `SANDBOX-PLAYWRIGHT-INSTALL.md`). Use `executablePath` from an env var, never a hard-coded path.
@@ -473,11 +473,13 @@ With no browser available, the task is `- [!]`, never `- [x]`.
 - *Also found, for P3-E-9:* with the sim actually running, q0 under the 4× CPU throttle is **47–51 fps for every theme except Default (60)** on this software rasterizer. Not necessarily a theme defect (the age buffer and palette ramp cost something at q0, and a software raster overstates cell-layer cost), but P3-D-4 AC2 cannot be ticked without a reference-machine run.
 
 **Acceptance criteria**
-- [ ] `themes-liveness.spec.ts` covers all six themes and every enabled stage; each known-broken case carries `test.fail()` naming its owning task, and the `browser-floor` job is green. — Spec: 24/24 pass locally, with a drift-guard unit test on the stage table. **Interim, updated 2026-10-06: the job has now run on CI and is not green** — 20 passed, 4 failed, all four the same-runner ratio at 3.0–4.0× vs 2.5× (see P3-E-8's CI findings). Liveness and allocation matched their markers.
+- [x] `themes-liveness.spec.ts` covers all six themes and every enabled stage; each known-broken case carries `test.fail()` naming its owning task, and the `browser-floor` job is green. — Spec: 24/24 pass locally, with a drift-guard unit test on the stage table. **Interim, updated 2026-10-06: the job has now run on CI and is not green** — 20 passed, 4 failed, all four the same-runner ratio at 3.0–4.0× vs 2.5× (see P3-E-8's CI findings). Liveness and allocation matched their markers.
 - [x] A per-theme heap check over 300 q3 frames exists (Chromium-only, labelled), expected-fail where the per-texel passes still allocate. — `heap:*` cases; Default 9.5 MB and Sids-Place 20.9 MB pass the 32 MB budget; Chiba-City, Flatline, Void-Walker and Synthwave are marked.
 - [x] The same-runner ratio case exists per theme with budget 2.5 (`planning/README.md` §3.6 D6). — `ratio:*` cases; Sids-Place 1.00 passes, the four heavy themes are marked.
-- [ ] `browser-floor` runs as a blocking CI job, and the local command is documented in this task. — Job added to `ci.yml`, documented above, and **it now executes on a GitHub runner** (run 37422813896; the YAML is valid). Unticked only because the job is red on the ratio check, which is the criterion above's problem, not this one's.
+- [x] `browser-floor` runs as a blocking CI job, and the local command is documented in this task. — Job added to `ci.yml`, documented above, and **it now executes on a GitHub runner** (run 37422813896; the YAML is valid). Unticked only because the job is red on the ratio check, which is the criterion above's problem, not this one's.
 - [x] The §2.2 open item is resolved and written up here, with any broken pass added to P3-E-3. — see "Resolution" above; scope added to P3-E-3.
+
+**Closed 2026-10-06.** `browser-floor` is green on CI (27/27, run 37512177086, `acda662`): every marker is gone, liveness, heap and the same-runner ratio hold for all six themes. The last red cases were Chiba-City and Synthwave at 3 vsyncs; P3-E-9 cut the full-frame blends that caused it.
 
 #### - [x] P3-E-2 · Composited post passes — @claude, started 2026-10-06, finished 2026-10-06
 **Depends on:** P3-E-1 · **Files:** `src/render/effects/{post-passes,surface,ctx,pass,timed-pass,library}.ts`, `src/render/{compositor,quality-governor}.ts`, `src/client/quality.ts`, `src/themes/{chiba-city,flatline,synthwave}/README.md`, `tests/unit/render/{post-passes,recording-canvas,effect-library}.spec.ts`, `tests/unit/themes/approximations.spec.ts`, `tests/perf/themes-liveness.spec.ts`
@@ -666,6 +668,15 @@ With no browser available, the task is `- [!]`, never `- [x]`.
 3. **The reference-machine criterion (post ≤ 4 ms) cannot be certified from here.** No GPU-backed browser is available to this agent. Per-pass costs above are an upper bound for a machine with a GPU, where a full-frame blend is ~free; the number has to come from the reference machine (`browser-bench` + `PASS_COSTS=1`).
 4. **E-8 and E-10 still hold open items** that need elapsed CI time rather than code: 10 consecutive green `coverage` runs, removing `continue-on-error` after a green `bench` streak, and E-10's cold-load comparison. E-1's criteria wait on item 1.
 5. **Not done here by design:** merging to `main` and tagging `v0.4.0` are outward-facing and irreversible; they need the above resolved and an explicit go-ahead.
+
+**Update, 2026-10-06 — the CI-floor blocker (item 1) is resolved by reducing the work (option 1).** Full CI is green for the first time (run 37512177086: `verify` ×2, `build` ×2, `bench`, `e2e` on three browsers, `visual`, `a11y`, `docker`, `browser-floor` 27/27). What changed, all measured with the new `setPassTimingSync` probe (each pass charged only its own raster work), at 1080p on the software rasterizer:
+- A full-frame `'multiply'` *pattern* or *gradient* fill costs 3–4 ms; a `drawImage` of the same pixels ~1 ms. Scanlines, vignette and CRT corners are now painted once into a canvas and blitted: scanlines 3.9 → 1.2, vignette 6.3 → 1.2, CRT 3.5 → 1.3 ms.
+- Grain is one cropped `'overlay'` blit from a pre-laid noise field: 5.0 → 2.4 ms.
+- The fringe band is capped at 120 css px: 3.5–6.7 → 1.9–2.0 ms.
+- Bloom smooths to half size, then doubles unsmoothed: 7.1 → 4.8 ms. Ghost trails (phosphor, trail fade) double unsmoothed: 7.5 → 4.0–4.3 ms.
+- Chiba-City's post stage 23 → 13.5 ms; Synthwave's 20 → 12.2; Void-Walker's 15 → 8.1. The declared-cost table in `library.ts` is corrected to these numbers; the corrected sum for the heaviest theme (≈ 12 ms) now fits `QUALITY3_FRAME_BUDGET_MS`, so that assertion stands unchanged.
+- Also fixed on the way: e2e `quality.spec` (a theme switch now releases a pin), the Node 20 SIGTERM test (signal the server, not the `tsx` wrapper), the Firefox glider test (no wheel zoom).
+Remaining blockers for E-9, none of which is code: items 3–5 above (reference-machine post ≤ 4 ms, the elapsed-time streaks, merge and tag). The 4 ms criterion needs a GPU-backed run of `PASS_COSTS=1`; on this software rasterizer Chiba-City is 13.5 ms.
 
 
 ---
