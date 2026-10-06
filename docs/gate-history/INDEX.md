@@ -1,6 +1,6 @@
 # Gate history
 
-Generated 2026-10-04 by `scripts/gate-history.mjs`. Do not hand-edit.
+Generated 2026-10-06 by `scripts/gate-history.mjs`. Do not hand-edit.
 Source of truth: [`records.jsonl`](./records.jsonl). Policy: `planning/README.md` §3.10.
 
 A task cites this file instead of pretending to run N CI jobs in-process:
@@ -18,11 +18,12 @@ Phase-branch dispatch samples prove the mechanism; they do not count toward the 
 |---|---:|---:|---|
 | `browser-bench` | 0 | 0 | — |
 | `e2e-nonflake` | 0 | 1 | — |
-| `visual-nonflake` | 0 | 1 | — |
+| `visual-nonflake` | 0 | 2 | — |
 
 ## Log (newest first)
 
 | at | id | ok | branch | event | run |
 |---|---|---|---|---|---|
+| 2026-10-06T17:47:50.415Z | `visual-nonflake` | green | `phase/3-theme-engine` | push | [37504998920](https://github.com/zjgordon/fancy-gol/actions/runs/37504998920) |
 | 2026-09-14T20:58:29.978Z | `visual-nonflake` | green | `phase/2-library-and-stats` | push | [34895308935](https://github.com/zjgordon/fancy-gol/actions/runs/34895308935) |
 | 2026-09-14T20:58:29.944Z | `e2e-nonflake` | green | `phase/2-library-and-stats` | push | [34895308935](https://github.com/zjgordon/fancy-gol/actions/runs/34895308935) |

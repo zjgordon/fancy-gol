@@ -95,3 +95,33 @@ Each `records.jsonl` line:
   "note": ""
 }
 ```
+
+## Visual baseline re-captures
+
+A visual baseline is only re-captured after investigating why it changed, with the reason recorded
+here (`AGENTS.md` §9).
+
+### 2026-10-06 — P3-E-6: per-theme baselines re-captured with their effects
+
+- **What changed:** 41 of the 48 `tests/visual/themes` baselines and the four Default chrome
+  `shell` / `toolbar` shots (dark and light) in `tests/visual/chrome.spec.ts-snapshots`.
+- **Why (themes):** the P3-D-2 baselines froze the themes *without* their effects. The post passes
+  read an all-zero buffer on a real canvas and painted nothing (ADR-011 amendment), and Chiba-City
+  and Flatline painted an opaque cell layer over their own backgrounds. P3-E-2 and P3-E-3 rebuilt
+  the effects as composited passes and made those layers transparent, so the grids now show haze,
+  scanlines, bloom, fringe, rain and ghosts. The other seven (the Themes panels for Default,
+  Sid's Place, Void-Walker; Default's dialog and grids) are byte-identical.
+- **Why (Default chrome):** stale since Phase 3 added a *Themes* entry to the toolbar (expected
+  269×170, received 269×214 — a taller toolbar, not an environment difference).
+- **Found while reviewing, fixed before capture:** the edge fringe added red and blue copies on top
+  of the unmodified band, washing Synthwave's sides magenta. It now strips red and blue first
+  (`5ecab57`).
+- **How:** captured on the CI image (ubuntu-latest, Playwright's Chromium, DejaVu + Liberation
+  fonts) from commit `5ecab57` by a throwaway workflow on a throwaway branch, then committed. Not
+  captured locally, because the sandbox's Chromium revision differs from CI's.
+- **Why the old baselines did not fail earlier:** `maxDiffPixelRatio: 0.001` with Playwright's
+  default per-pixel colour threshold is blind to dark, low-contrast effects (haze, scanlines, grain)
+  on a near-black frame; only a bright change (bloom, a washed edge) trips it. The baselines
+  therefore guard layout and cell rendering; *effects are proven by `browser-floor` liveness*, not
+  by these images.
+- **Sample:** `visual-nonflake` green on run 37504998920 (phase branch, so a seed sample).

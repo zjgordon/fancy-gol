@@ -565,14 +565,22 @@ With no browser available, the task is `- [!]`, never `- [x]`.
 - **Finding for E-9:** `chromaticAberration` costs **12–13 ms** in headless software raster (declared 1.2 before) and is ~80% of every post stage that has it (Chiba-City post 16.4 ms, Synthwave 15.3 ms). The ratio and fps gates still hold because the frame sits at vsync, but it is the pass to optimise if the reference-machine ≤ 4 ms post criterion fails.
 
 
-#### - [ ] P3-E-6 · Re-capture per-theme visual baselines
+#### - [x] P3-E-6 · Re-capture per-theme visual baselines
 **Depends on:** P3-E-2, P3-E-3 · **Files:** `tests/visual/themes/*`, `docs/gate-history/README.md`
 **Implementation notes** Decision D2. The 48 P3-D-2 baselines froze the themes *without* their post effects (e.g. `chiba-city-grid-z16` shows flat cells on black), so they change by design. This is a re-baseline after investigation, as `AGENTS.md` §9 requires. The investigation is the review, and the reason goes here and in `docs/gate-history/README.md`.
 **Acceptance criteria**
-- [ ] All 48 baselines are re-captured on the CI Chromium revision, with the reason recorded in this task and in `docs/gate-history/README.md`.
-- [ ] Each theme's grid baselines visibly show its effects (reviewed side by side against the old capture). Chiba-City shows scanlines and bloom; Void-Walker shows bloom and vignette.
-- [ ] Cropped grid captures (chrome removed) for all six themes are assembled into a review sheet for the operator's three-person identifiability check (§6 DoD).
-- [ ] The `visual` CI job is green, and ≥ 1 green branch sample is appended for `visual-nonflake` (`planning/README.md` §3.10 merge-then-certify).
+- [x] All 48 baselines are re-captured on the CI Chromium revision, with the reason recorded in this task and in `docs/gate-history/README.md`.
+- [x] Each theme's grid baselines visibly show its effects (reviewed side by side against the old capture). Chiba-City shows scanlines and bloom; Void-Walker shows bloom and vignette.
+- [x] Cropped grid captures (chrome removed) for all six themes are assembled into a review sheet for the operator's three-person identifiability check (§6 DoD).
+- [x] The `visual` CI job is green, and ≥ 1 green branch sample is appended for `visual-nonflake` (`planning/README.md` §3.10 merge-then-certify).
+
+**Completion notes (2026-10-06)**
+- Only 5 of the 48 failed on CI before the re-capture (Flatline z32 and four Default chrome shots): the images are blind to subtle effects (see `docs/gate-history/README.md`). All themes were re-captured regardless, 41 changing, so the committed images match what the app draws. The reason is recorded in `docs/gate-history/README.md`.
+- Captured on the CI image by a throwaway workflow on a throwaway branch (deleted), not locally.
+- Side-by-side review found a real defect: the chromatic-aberration fringe brightened rather than shifted channels (Synthwave's edges went magenta). Fixed in `5ecab57` before capture, with a structural unit test.
+- Review sheet for the three-person identifiability check: `.agents/artifacts/PHASE_3_THEME_REVIEW_SHEET.html` (**the check itself is the operator's and is not yet done**; criterion 3 asks only that the sheet exists).
+- `visual` green on CI run 37504998920; one `visual-nonflake` sample appended.
+
 
 #### - [x] P3-E-7 · Theme code-splitting & honest bundle measurement — @claude, started 2026-10-06, finished 2026-10-06
 **Depends on:** P3-D-1 · **Files:** `src/themes/registry.ts`, `src/client/{main,theme-bundles}.ts`, `src/client/theme-bundles/*.ts`, `src/ui/panels/themes/panel.ts`, `vite.config.ts`, `tests/bench/bundle.bench.ts`, `bench-baseline.json`, `tests/e2e/theme-lazy.spec.ts`, `tests/unit/{themes/registry-lazy,client/theme-bundles}.spec.ts`
