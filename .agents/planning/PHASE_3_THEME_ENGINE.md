@@ -504,7 +504,7 @@ With no browser available, the task is `- [!]`, never `- [x]`.
 - [x] Chiba-City scanlines do not moiré at dpr 1, 1.5, 2, 3; bloom is confined to live cells (sourced from L1); L4 overlay legibility re-verified per theme. — Structure, per ADR-012 rule 3: integer pitch and a 2·pitch tile at each dpr; bloom reads `ctx.cells` and never `ctx.source`; L4 is drawn after `compositor.draw()` and is not a compositor layer, and every theme's overlay AA tests still pass. Pixel-level confirmation arrives with the re-captured baselines (P3-E-6).
 - [x] The CRT and edge-aberration substitutes are labelled as substitutes in each theme README and in the quality-indicator copy (ADR-012 D3). — Chiba-City, Flatline and Synthwave READMEs carry an "Approximations" section quoting the pass's string verbatim; `approximations.spec.ts` ties each README to its passes, and `describeQualityIndicator` names them at full quality.
 
-#### - [ ] P3-E-3 · Composited effects & background passes
+#### - [~] P3-E-3 · Composited effects & background passes — @claude, started 2026-10-06
 **Depends on:** P3-E-1 · **Files:** `src/render/effects/effects-passes.ts`, `src/render/effects/background-passes.ts`, `src/render/effects/library.ts`, `src/themes/synthwave/{palette,quality}.ts`, `src/themes/flatline/*`
 **Implementation notes**
 - `phosphorDecay`, `trailFade`: use a persistent ghost canvas. Each frame, a `'destination-out'` fill at the decay α, then L1 drawn with `'lighter'`. `reset()` is a `clearRect`.
