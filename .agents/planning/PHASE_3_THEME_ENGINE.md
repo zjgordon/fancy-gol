@@ -660,6 +660,14 @@ With no browser available, the task is `- [!]`, never `- [x]`.
 - [ ] `docs/demo/phase-3.*` shows all six themes cycling on a running simulation with their effects visible.
 - [ ] `CHANGELOG.md` has a dated `[0.4.0]` entry, the branch is merged to `main` and tagged `v0.4.0`, and the dashboard shows Phase 3 shipped.
 
+**Readiness assessment, 2026-10-06 (@claude) — not started; blocked, escalated.** P3-E-9 depends on E-1…E-8 and E-10; E-2…E-7 are done, and these are not:
+1. **`browser-floor` is red on CI for the two themes that stack the most full-frame post passes.** Chiba-City and Synthwave measure 50 ms (3 vsyncs, 2.99×) against Default's 16.7 ms on the CI runner, on two consecutive runs; the budget is 2.5× and has not been loosened. The other four themes pass. Locally all six sit at the 16.7 ms vsync.
+2. **Why, measured (not guessed).** The passes' own EWMAs misattribute: `chromaticAberration` read 12–13 ms because it is the first pass to read the canvas back and so pays for the flush of everything before it. With a 1×1 `getImageData` before and after each pass (a temporary probe, not committed), the honest per-pass cost in headless software raster at 1080p is: bloom 6.4–6.8, vignette 6.3, trailFade 6.9, phosphorDecay 6.6, filmGrain 5.0, scanlines 3.9–4.0, crtCurvature 3.5, chromaticAberration 3.5–6.5, hazeGrid 2.4, sunGradient 2.8, starfield 1.7, parchmentTexture 1.6, gridGlow 0.9, textRain 0.4, particles ≤ 0.1. Every one is a full-frame blend, ~4–7 ms each on a software rasterizer. Chiba-City's post stage is ~23 ms, Synthwave's ~20 ms, Void-Walker's ~15 ms (E-5's declared-cost table in `library.ts` used the unsynchronised EWMAs, so it under-states all of these; it has **not** been changed, because the corrected sum for Chiba-City (~25 ms) exceeds the 18.18 ms `QUALITY3_FRAME_BUDGET_MS` that `effect-library.spec.ts` asserts, and that is a decision, below).
+3. **The reference-machine criterion (post ≤ 4 ms) cannot be certified from here.** No GPU-backed browser is available to this agent. Per-pass costs above are an upper bound for a machine with a GPU, where a full-frame blend is ~free; the number has to come from the reference machine (`browser-bench` + `PASS_COSTS=1`).
+4. **E-8 and E-10 still hold open items** that need elapsed CI time rather than code: 10 consecutive green `coverage` runs, removing `continue-on-error` after a green `bench` streak, and E-10's cold-load comparison. E-1's criteria wait on item 1.
+5. **Not done here by design:** merging to `main` and tagging `v0.4.0` are outward-facing and irreversible; they need the above resolved and an explicit go-ahead.
+
+
 ---
 
 ## 4. Quality gates for Phase 3
