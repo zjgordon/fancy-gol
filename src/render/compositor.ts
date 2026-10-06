@@ -245,6 +245,7 @@ export class Compositor implements Renderer {
 
     this.cellRenderer.resize(widthPx, heightPx, dpr);
     this.effects.resize(widthPx, heightPx, dpr);
+    this.qualityGovernor?.clearCostMemory();
 
     this.viewport = {
       ...(this.viewport ?? { originX: 0, originY: 0, cellSize: 16 }),

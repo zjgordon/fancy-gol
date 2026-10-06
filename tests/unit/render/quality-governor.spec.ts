@@ -296,3 +296,84 @@ describe('Quality 0 under synthetic 4× slowdown (Default-shaped stack)', () => 
     compositor.dispose();
   });
 });
+
+describe('predictive promotion (P3-E-4, ADR-012 rule 4)', () => {
+  /** A stack whose per-stage cost the test can change, and a frame-time model built on it. */
+  function model(baseMs: number, costs: { post: number; effects: number }) {
+    const live = { ...costs };
+    const mk = (id: string, stage: EffectStage): EffectPass => ({
+      id,
+      stage,
+      get cost() {
+        return stage === 'post' ? live.post : stage === 'effects' ? live.effects : 0.1;
+      },
+      render() {},
+      dispose() {},
+    });
+    const registry = new EffectRegistry();
+    registry.setPasses([mk('bg', 'background'), mk('fx', 'effects'), mk('post', 'post')]);
+    const gov = new QualityGovernor({ registry });
+    const frameMs = (): number => {
+      const q = gov.getQuality();
+      return baseMs + (q >= 3 ? live.post : 0) + (q >= 2 ? live.effects : 0);
+    };
+    const run = (frames: number): void => {
+      for (let i = 0; i < frames; i++) gov.observeFrame(frameMs());
+    };
+    return { gov, live, run };
+  }
+
+  it('3,000 frames with a 40 ms post stage settle after one downgrade — no saw-tooth', () => {
+    const { gov, run } = model(5, { post: 40, effects: 0 });
+    run(3000);
+    expect(gov.getQuality()).toBe(2);
+    expect(gov.getTransitionCount()).toBeLessThanOrEqual(1);
+  });
+
+  it('promotes within 600 frames once the stage cost falls to 3 ms', () => {
+    const { gov, live, run } = model(5, { post: 40, effects: 0 });
+    run(1000);
+    expect(gov.getQuality()).toBe(2);
+    live.post = 3;
+    // The memory holds the stage's measured 40 ms until a new measurement exists, so a promotion
+    // would be refused. A theme switch / resize clears it; the live cost (3 ms) then predicts safe.
+    gov.clearCostMemory();
+    run(600);
+    expect(gov.getQuality()).toBe(3);
+  });
+
+  it('refuses a promotion the EWMA predicts will fail (no probe at all)', () => {
+    const { gov, run } = model(5, { post: 40, effects: 0 });
+    run(200);
+    const transitions = gov.getTransitionCount();
+    run(4000);
+    expect(gov.getTransitionCount()).toBe(transitions);
+  });
+
+  it('a failed probe doubles the next interval, capped at 4,800 frames', () => {
+    const { gov, live } = model(5, { post: 3, effects: 0 });
+    expect(gov.getProbeIntervalFrames()).toBe(300);
+    // The stage looks cheap in memory (3 ms) but is really 40 ms: every probe fails.
+    live.post = 3;
+    const real = (): number => (gov.getQuality() >= 3 ? 45 : 5);
+    for (let i = 0; i < 100 && gov.getQuality() === 3; i++) gov.observeFrame(real()); // downgrade
+    expect(gov.getQuality()).toBe(2);
+    const seen: number[] = [];
+    for (let probe = 0; probe < 7; probe++) {
+      for (let i = 0; i < 6000 && gov.getQuality() === 2; i++) gov.observeFrame(real());
+      expect(gov.getQuality()).toBe(3);
+      for (let i = 0; i < 200 && gov.getQuality() === 3; i++) gov.observeFrame(real());
+      expect(gov.getQuality()).toBe(2);
+      seen.push(gov.getProbeIntervalFrames());
+    }
+    expect(seen.slice(0, 5)).toEqual([600, 1200, 2400, 4800, 4800]);
+    expect(Math.max(...seen)).toBe(4800);
+  });
+
+  it('a theme switch or resize clears the memory and the back-off', () => {
+    const { gov, run } = model(5, { post: 40, effects: 0 });
+    run(100);
+    gov.setMaxQuality(3);
+    expect(gov.getProbeIntervalFrames()).toBe(300);
+  });
+});

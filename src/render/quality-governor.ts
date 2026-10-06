@@ -5,6 +5,12 @@
  *   > 20 ms for 30 consecutive frames  → quality−−  (post → effects → background)
  *   < 12 ms for 300 consecutive frames → quality++  (up to the theme max)
  * Quality 0 = tokens + palette only. A manual pin freezes automatic changes.
+ *
+ * P3-E-4 / ADR-012 rule 4 — **the governor predicts before it promotes.** Reactive hysteresis alone
+ * saw-tooths: drop post (frame 16 ms), see 16 < 20... then 300 fast frames later restore it, the
+ * frame is 60 ms again, drop again. So a downgrade remembers what the dropped stage cost, a
+ * promotion needs `ewma + remembered cost < FAST_MS`, and a promotion that is undone within
+ * {@link FAILED_PROBE_FRAMES} frames doubles the wait before the next one (capped).
  */
 import type { EffectQuality } from './effects/ctx';
 import { stagesForQuality } from './effects/ctx';
@@ -20,6 +26,11 @@ const SLOW_MS = 20;
 const FAST_MS = 12;
 const SLOW_STREAK = 30;
 const FAST_STREAK = 300;
+/** A downgrade this soon after a promotion means the promotion failed. */
+const FAILED_PROBE_FRAMES = 60;
+const MAX_PROBE_INTERVAL = 4800;
+/** A promotion that survives this long counts as settled: the probe interval relaxes to the base. */
+const SETTLED_FRAMES = 600;
 
 export type QualityChangeReason =
   | {
@@ -112,6 +123,12 @@ export class QualityGovernor {
   private ewmaReady = false;
   private slowStreak = 0;
   private fastStreak = 0;
+  /** Frames the EWMA must predict a safe promotion before one is tried (doubles on a failed probe). */
+  private probeInterval = FAST_STREAK;
+  /** Frames since the last promotion; `null` when none is outstanding. */
+  private sincePromotion: number | null = null;
+  /** Measured cost (ms) of the stages each downgrade removed, keyed by the quality it dropped from. */
+  private readonly droppedCost = new Map<EffectQuality, number>();
   private lastReason: QualityChangeReason;
   private transitionCount = 0;
 
@@ -135,6 +152,7 @@ export class QualityGovernor {
   /** Raise or lower the theme ceiling (e.g. after activating a `cost: 'low'` theme). */
   setMaxQuality(max: EffectQuality): void {
     this.maxQuality = max;
+    this.clearCostMemory();
     if (this.pinned !== null) {
       this.pinned = clampQuality(this.pinned, max);
       this.applyQuality(this.pinned, { kind: 'pin', quality: this.pinned });
@@ -149,6 +167,30 @@ export class QualityGovernor {
         dropped: describeStages(droppedStages(max)),
       });
     }
+  }
+
+  /**
+   * Forget what dropped stages cost and relax the probe interval. A new theme (or a resize) is a new
+   * pass stack at a new size: the old numbers describe something that no longer exists.
+   */
+  clearCostMemory(): void {
+    this.droppedCost.clear();
+    this.probeInterval = FAST_STREAK;
+    this.sincePromotion = null;
+    this.fastStreak = 0;
+  }
+
+  /** The probe interval in frames — exposed so tests can see the back-off. */
+  getProbeIntervalFrames(): number {
+    return this.probeInterval;
+  }
+
+  /** Sum of the live passes' costs in the stages that differ between two qualities. */
+  private stageCost(from: EffectQuality, to: EffectQuality): number {
+    const lost = stagesForQuality(from).filter((s) => !stagesForQuality(to).includes(s));
+    let sum = 0;
+    for (const pass of this.registry.list()) if (lost.includes(pass.stage)) sum += pass.cost;
+    return sum;
   }
 
   isPinned(): boolean {
@@ -207,6 +249,14 @@ export class QualityGovernor {
 
     if (this.pinned !== null) return;
 
+    if (this.sincePromotion !== null) {
+      this.sincePromotion += 1;
+      if (this.sincePromotion >= SETTLED_FRAMES) {
+        this.probeInterval = FAST_STREAK;
+        this.sincePromotion = null;
+      }
+    }
+
     if (this.ewmaMs > SLOW_MS) {
       this.slowStreak += 1;
       this.fastStreak = 0;
@@ -214,6 +264,12 @@ export class QualityGovernor {
         const from = this.quality;
         const to = clampQuality(from - 1, this.maxQuality);
         this.slowStreak = 0;
+        // Measure the stage while its passes still hold their EWMA, before it stops running.
+        this.droppedCost.set(from, this.stageCost(from, to));
+        if (this.sincePromotion !== null && this.sincePromotion < FAILED_PROBE_FRAMES) {
+          this.probeInterval = Math.min(this.probeInterval * 2, MAX_PROBE_INTERVAL);
+        }
+        this.sincePromotion = null;
         this.applyQuality(to, {
           kind: 'downgrade',
           from,
@@ -226,12 +282,23 @@ export class QualityGovernor {
     }
 
     if (this.ewmaMs < FAST_MS) {
-      this.fastStreak += 1;
       this.slowStreak = 0;
-      if (this.fastStreak >= FAST_STREAK && this.quality < this.maxQuality) {
-        const from = this.quality;
-        const to = clampQuality(from + 1, this.maxQuality);
+      if (this.quality >= this.maxQuality) {
         this.fastStreak = 0;
+        return;
+      }
+      const from = this.quality;
+      const to = clampQuality(from + 1, this.maxQuality);
+      // The EWMA is of frames *without* the stage; restoring it adds back what it cost when it ran.
+      const cost = this.droppedCost.get(to) ?? this.stageCost(to, from);
+      if (this.ewmaMs + cost >= FAST_MS) {
+        this.fastStreak = 0;
+        return;
+      }
+      this.fastStreak += 1;
+      if (this.fastStreak >= this.probeInterval) {
+        this.fastStreak = 0;
+        this.sincePromotion = 0;
         this.applyQuality(to, {
           kind: 'upgrade',
           from,
