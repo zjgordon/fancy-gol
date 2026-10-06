@@ -155,14 +155,36 @@ export interface AdaptiveThemeModule {
   readonly dark: ThemeModule;
 }
 
-export type ThemeRegistration = ThemeModule | AdaptiveThemeModule;
+/**
+ * A theme whose module is fetched on demand (P3-E-7, decision D4). Everything a picker or a command
+ * list needs without loading any code — id, name, cost — is carried here; `load()` resolves the real
+ * module (a dynamic `import()` in production). Until it has resolved, the theme can be listed and
+ * selected but not `activate()`d or `resolve()`d: `await registry.load(id)` first.
+ */
+export interface LazyThemeModule {
+  readonly kind: 'lazy';
+  readonly id: string;
+  readonly name: string;
+  readonly cost: ThemeModule['cost'];
+  load(): Promise<ThemeModule>;
+}
+
+export type ThemeRegistration = ThemeModule | AdaptiveThemeModule | LazyThemeModule;
+
+/** Thrown by `activate()` / `resolve()` for a lazy theme that has not been `load()`ed yet. */
+export class ThemeNotLoadedError extends Error {
+  constructor(readonly themeId: string) {
+    super(`theme "${themeId}" has not been loaded — await registry.load("${themeId}") first`);
+    this.name = 'ThemeNotLoadedError';
+  }
+}
 
 function isAdaptive(reg: ThemeRegistration): reg is AdaptiveThemeModule {
   return 'kind' in reg && reg.kind === 'adaptive';
 }
 
-function resolve(reg: ThemeRegistration, prefersDark: boolean): ThemeModule {
-  return isAdaptive(reg) ? (prefersDark ? reg.dark : reg.light) : reg;
+function isLazy(reg: ThemeRegistration): reg is LazyThemeModule {
+  return 'kind' in reg && reg.kind === 'lazy';
 }
 
 export interface ThemeSummary {
@@ -172,6 +194,7 @@ export interface ThemeSummary {
 }
 
 function summarize(reg: ThemeRegistration): ThemeSummary {
+  if (isLazy(reg)) return { id: reg.id, name: reg.name, cost: reg.cost };
   // An adaptive pair's two variants are expected to share a cost (light/dark differ in palette,
   // not in how expensive they are to draw) — the light variant's is the one reported.
   const cost = isAdaptive(reg) ? reg.light.cost : reg.cost;
@@ -258,6 +281,9 @@ export class ThemeRegistry {
 
   private activeId: string | null = null;
   private activeTheme: ThemeModule | null = null;
+  /** Modules of lazy themes that have finished loading, and loads still in flight (one per id). */
+  private readonly loadedLazy = new Map<string, ThemeModule>();
+  private readonly loadingLazy = new Map<string, Promise<ThemeModule>>();
 
   constructor(options: ThemeRegistryOptions = {}) {
     this.root = options.root ?? REAL_ROOT;
@@ -279,6 +305,55 @@ export class ThemeRegistry {
     return [...this.entries.values()].map(summarize);
   }
 
+  /** Whether `id` can be `activate()`d right now. Always true for a plain or adaptive theme. */
+  isLoaded(id: string): boolean {
+    const registration = this.entries.get(id);
+    if (!registration) return false;
+    return !isLazy(registration) || this.loadedLazy.has(id);
+  }
+
+  /**
+   * Make `id` ready to `activate()`. A plain or adaptive theme resolves immediately; a lazy one
+   * fetches its module once (concurrent callers share one load) and caches it. A failed load is
+   * **not** cached *here*: the rejection propagates and a later call calls `load()` again. Whether
+   * that second call can succeed is the loader's business — a browser caches a failed dynamic
+   * `import()` of the same URL for the page's lifetime, so in production recovery is a reload.
+   * Never touches the active theme.
+   */
+  load(id: string): Promise<ThemeModule> {
+    const registration = this.entries.get(id);
+    if (!registration) return Promise.reject(new RangeError(`no theme registered with id "${id}"`));
+    if (!isLazy(registration)) return Promise.resolve(this.concrete(registration));
+    const loaded = this.loadedLazy.get(id);
+    if (loaded) return Promise.resolve(loaded);
+    const inFlight = this.loadingLazy.get(id);
+    if (inFlight) return inFlight;
+    const promise = registration
+      .load()
+      .then((module) => {
+        if (module.id !== registration.id) {
+          throw new Error(`lazy theme "${registration.id}" loaded a module whose id is "${module.id}"`);
+        }
+        this.loadedLazy.set(id, module);
+        return module;
+      })
+      .finally(() => {
+        this.loadingLazy.delete(id);
+      });
+    this.loadingLazy.set(id, promise);
+    return promise;
+  }
+
+  /** A registration's concrete module, picking the adaptive variant; throws for an unloaded lazy one. */
+  private concrete(registration: ThemeRegistration): ThemeModule {
+    if (isLazy(registration)) {
+      const loaded = this.loadedLazy.get(registration.id);
+      if (!loaded) throw new ThemeNotLoadedError(registration.id);
+      return loaded;
+    }
+    return isAdaptive(registration) ? (this.prefersDark() ? registration.dark : registration.light) : registration;
+  }
+
   /**
    * Resolve a registration to its concrete `ThemeModule` without activating or persisting.
    * Theme-picker previews use this so they can compile a palette without thrashing tokens.
@@ -288,7 +363,7 @@ export class ThemeRegistry {
     if (!registration) {
       throw new RangeError(`no theme registered with id "${id}"`);
     }
-    return resolve(registration, this.prefersDark());
+    return this.concrete(registration);
   }
 
   /** The id last passed to `activate()`, restored from storage across reloads if nothing has
@@ -329,6 +404,10 @@ export class ThemeRegistry {
       throw new RangeError(`no theme registered with id "${id}"`);
     }
 
+    // Fail before touching any state: an unloaded lazy theme must not leave `activeId` pointing at a
+    // theme that was never applied. (`activeId` must still be set *before* the notification, since
+    // subscribers read `getPersistedId()` while being told about the change.)
+    this.concrete(registration);
     this.activeId = id;
     const theme = this.applyAndNotify(registration);
 
@@ -349,7 +428,7 @@ export class ThemeRegistry {
   }
 
   private applyAndNotify(registration: ThemeRegistration): ThemeModule {
-    const theme = resolve(registration, this.prefersDark());
+    const theme = this.concrete(registration);
     for (const [name, value] of tokenEntries(theme.tokens)) {
       this.root.setProperty(name, value);
     }
