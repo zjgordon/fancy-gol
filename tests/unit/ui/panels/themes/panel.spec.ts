@@ -49,6 +49,60 @@ describe('createThemesPanel', () => {
     expect(chiba?.getAttribute('aria-selected')).toBe('true');
   });
 
+  it('asks to prefetch a theme when its card is hovered or focused, before any click (P3-E-7)', () => {
+    const mount = document.createElement('div');
+    document.body.appendChild(mount);
+    const prefetched: string[] = [];
+    const selected: string[] = [];
+    const panel = createThemesPanel({
+      themes: [
+        { id: 'default', name: 'Default', cost: 'low' },
+        { id: 'chiba-city', name: 'Chiba-City', cost: 'medium' },
+        { id: 'flatline', name: 'Flatline', cost: 'medium' },
+      ],
+      activeId: 'default',
+      onSelect: (id) => selected.push(id),
+      onPrefetch: (id) => prefetched.push(id),
+    });
+    const host = attachPanelHost({ mount, getViewportWidth: () => 1000 });
+    host.register(panel.spec);
+    host.open(THEMES_PANEL_ID);
+    cleanup = () => {
+      panel.dispose();
+      host.dispose();
+      mount.remove();
+    };
+
+    const card = (id: string) => panel.root.querySelector<HTMLButtonElement>(`[data-theme-id="${id}"]`)!;
+    card('chiba-city').dispatchEvent(new Event('pointerenter'));
+    card('flatline').dispatchEvent(new Event('focus'));
+    expect(prefetched).toEqual(['chiba-city', 'flatline']);
+    expect(selected).toEqual([]); // hovering is not choosing
+  });
+
+  it('is happy without an onPrefetch handler', () => {
+    const mount = document.createElement('div');
+    document.body.appendChild(mount);
+    const panel = createThemesPanel({
+      themes: [{ id: 'default', name: 'Default', cost: 'low' }],
+      activeId: 'default',
+      onSelect: () => {},
+    });
+    const host = attachPanelHost({ mount, getViewportWidth: () => 1000 });
+    host.register(panel.spec);
+    host.open(THEMES_PANEL_ID);
+    cleanup = () => {
+      panel.dispose();
+      host.dispose();
+      mount.remove();
+    };
+    const card = panel.root.querySelector<HTMLButtonElement>('[data-theme-id="default"]')!;
+    expect(() => {
+      card.dispatchEvent(new Event('pointerenter'));
+      card.dispatchEvent(new Event('focus'));
+    }).not.toThrow();
+  });
+
   it('starts and stops previews with panel open/close', () => {
     let open = 0;
     let close = 0;

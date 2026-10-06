@@ -19,6 +19,12 @@ export interface ThemesPanelOptions {
   readonly activeId: string;
   readonly onSelect: (id: string) => void;
   readonly onPreviewCreated?: (id: string, canvas: HTMLCanvasElement) => void;
+  /**
+   * Called when the pointer or keyboard focus reaches a card, before any click (P3-E-7): the
+   * composition root starts fetching that theme's chunk so the switch does not wait on the network.
+   * Fires on every enter/focus; the caller dedupes (a loaded or in-flight theme is a no-op).
+   */
+  readonly onPrefetch?: (id: string) => void;
   readonly onOpen?: () => void;
   readonly onClose?: () => void;
 }
@@ -88,6 +94,8 @@ export function createThemesPanel(opts: ThemesPanelOptions): ThemesPanel {
     body.append(name, cost);
 
     btn.append(canvas, body);
+    btn.addEventListener('pointerenter', () => opts.onPrefetch?.(theme.id));
+    btn.addEventListener('focus', () => opts.onPrefetch?.(theme.id));
     btn.addEventListener('click', () => {
       if (theme.id === activeId) return;
       opts.onSelect(theme.id);
