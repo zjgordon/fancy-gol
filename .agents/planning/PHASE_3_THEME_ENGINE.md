@@ -563,7 +563,7 @@ With no browser available, the task is `- [!]`, never `- [x]`.
 - [ ] `theme-chunk-gzip-max` exists with a measured budget and the ≤ 3% deterministic band.
 - [ ] P3-D-1's switching criteria still hold (≥ 30 fps, no reload, flat heap over 100 switches), and cold load is unchanged or better.
 
-#### - [ ] P3-E-8 · CI de-flake & bench re-enable
+#### - [~] P3-E-8 · CI de-flake & bench re-enable — @claude, started 2026-10-06
 **Depends on:** P3-E-1 · **Files:** the test files in §4's pre-existing-failure table, `tests/unit/server/live-route.spec.ts`, `tests/bench/themes.bench.ts`, `.github/workflows/ci.yml`, `.agents/planning/README.md` §3.6
 **Implementation notes** "CI passes" has to mean the blocking `verify` job is green on every run, not on a quiet one. Move wall-clock assertions out of unit tests into the bench class they belong to, or onto a same-process ratio. Never loosen a threshold. The Node `theme-*-q3-stack-cost` / `theme-*-q0-throttled-frame` cases measure `SoftwareSurface`, which cannot price composited passes (a software raster overstates them about 6×). Their subject moves to P3-E-1's `browser-floor` tier. Record the replacement in §3.6 so the gate is moved, not dropped.
 **Acceptance criteria**
