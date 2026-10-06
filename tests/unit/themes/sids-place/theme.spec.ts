@@ -3,7 +3,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { EventMapper } from '@audio/events';
 import { Mixer } from '@audio/mixer';
 import { AudioPolicy } from '@audio/policy';
@@ -17,10 +17,7 @@ import {
   createThemePassStack,
   declaredCostAtQuality,
 } from '@render/effects/library';
-import { asSoftware, createSoftwareCanvas } from '@render/effects/software-surface';
-import { hashPixels } from '@render/effects/pixel-hash';
 import { EffectRegistry } from '@render/effects/registry';
-import { EMPTY_CHANGES } from '@render/effects/ctx';
 import type { CanvasLike } from '@render/layers';
 import { QualityGovernor } from '@render/quality-governor';
 import type { Viewport } from '@render/types';
@@ -34,6 +31,11 @@ import { SIDS_PLACE_TOKENS } from '@themes/sids-place/tokens';
 import { defaultMotionSignature } from '@themes/motion/choreography';
 import { FakeAudioContext, ManualClock, MemoryStorage } from '../../audio/fakes';
 import { UNDER_COVERAGE, calibratedBudget } from '../../../support/timing';
+import { recordingFactory, stubOffscreenCanvas } from '../../render/recording-canvas';
+
+// The parchment stack bakes a canvas at construction (ADR-012); jsdom has no OffscreenCanvas.
+beforeAll(stubOffscreenCanvas);
+afterAll(() => vi.unstubAllGlobals());
 
 const BLACK: RGB = { r: 0, g: 0, b: 0 };
 
@@ -186,62 +188,29 @@ describe('Sids-Place sound pack', () => {
 
 describe('Sids-Place parchment texture', () => {
   it('is seeded, deterministic, and generated once under 40 ms at 256²', () => {
-    const a = createParchmentTexturePass({ seed: 7, width: 256, height: 256 });
-    const b = createParchmentTexturePass({ seed: 7, width: 256, height: 256 });
-    a.generate();
-    b.generate();
-    expect(a.generated).toBe(true);
+    // Structure, not pixels (ADR-012 rule 3): the baked bytes are what the seed determines, and the
+    // browser-floor liveness spec proves the result is drawn.
+    const bake = (seed: number) => {
+      const baked = recordingFactory();
+      const pass = createParchmentTexturePass({ seed, width: 256, height: 256, canvasFactory: baked.factory });
+      pass.generate();
+      return { pass, baked };
+    };
+    const a = bake(7);
+    const b = bake(7);
+    expect(a.pass.generated).toBe(true);
     // Calibrated, and not under coverage (P3-E-8): 61 ms against 40 ms under V8 instrumentation, 12 without.
-    if (!UNDER_COVERAGE) expect(a.generationMs).toBeLessThan(calibratedBudget(SIDS_PARCHMENT_BUDGET_MS));
-    const ms = a.generationMs;
-    a.generate();
-    expect(a.generationMs).toBe(ms);
+    if (!UNDER_COVERAGE) expect(a.pass.generationMs).toBeLessThan(calibratedBudget(SIDS_PARCHMENT_BUDGET_MS));
+    const ms = a.pass.generationMs;
+    a.pass.generate();
+    expect(a.pass.generationMs).toBe(ms); // generated once, never again
+    expect(a.baked.canvases).toHaveLength(1);
 
-    const va = createSoftwareCanvas(48, 32);
-    const vb = createSoftwareCanvas(48, 32);
-    const vp = { ...VIEWPORT };
-    a.render({
-      target: va.getContext('2d') as unknown as CanvasRenderingContext2D,
-      source: va as unknown as CanvasImageSource,
-      cells: va as unknown as CanvasImageSource,
-      viewport: vp,
-      tick: 0,
-      frameTime: 0,
-      changes: EMPTY_CHANGES,
-      quality: 3,
-      reducedMotion: false,
-    });
-    b.render({
-      target: vb.getContext('2d') as unknown as CanvasRenderingContext2D,
-      source: vb as unknown as CanvasImageSource,
-      cells: vb as unknown as CanvasImageSource,
-      viewport: vp,
-      tick: 0,
-      frameTime: 0,
-      changes: EMPTY_CHANGES,
-      quality: 3,
-      reducedMotion: false,
-    });
-    expect(hashPixels(asSoftware(va)!.pixels)).toBe(hashPixels(asSoftware(vb)!.pixels));
-
-    const other = createParchmentTexturePass({ seed: 99, width: 256, height: 256 });
-    other.generate();
-    const vo = createSoftwareCanvas(48, 32);
-    other.render({
-      target: vo.getContext('2d') as unknown as CanvasRenderingContext2D,
-      source: vo as unknown as CanvasImageSource,
-      cells: vo as unknown as CanvasImageSource,
-      viewport: vp,
-      tick: 0,
-      frameTime: 0,
-      changes: EMPTY_CHANGES,
-      quality: 3,
-      reducedMotion: false,
-    });
-    expect(hashPixels(asSoftware(vo)!.pixels)).not.toBe(hashPixels(asSoftware(va)!.pixels));
-    a.dispose();
-    b.dispose();
-    other.dispose();
+    const bytes = (x: ReturnType<typeof bake>) => x.baked.canvases[0]!.ctx.imageData[0]!.join(',');
+    expect(bytes(a)).toBe(bytes(b));
+    const other = bake(99);
+    expect(bytes(other)).not.toBe(bytes(a));
+    for (const x of [a, b, other]) x.pass.dispose();
   });
 
   it('createSidsPlacePassStack bakes parchment at construction', () => {

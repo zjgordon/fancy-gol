@@ -135,10 +135,12 @@ export const FLATLINE_TEXT_RAIN_BUDGET_MS = 1.5;
 /** Flatline's tuned stack (ADR-009: lives in render/, not themes/). */
 export function createFlatlinePassStack(
   phosphor: readonly [number, number, number] = [255, 176, 0],
+  /** The tube's base colour: Flatline's cell layer is transparent, so L0 owns the background. */
+  background = '#0a0804',
 ): EffectPass[] {
   const hex = `#${phosphor.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
   return [
-    createTextRainPass({ seed: 3, opacity: 0.055, color: hex, columns: 48 }),
+    createTextRainPass({ seed: 3, opacity: 0.055, color: hex, columns: 48, background }),
     createPhosphorDecayPass({ fade: 0.9 }),
     createScanlinesPass({ opacity: 0.14 }),
     createCrtCurvaturePass({ amount: 0.06 }),

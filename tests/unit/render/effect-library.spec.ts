@@ -9,16 +9,13 @@ import {
   createThemePassStack,
   mostExpensiveThemeDeclaredCostMs,
 } from '@render/effects/library';
-import { hashPixels } from '@render/effects/pixel-hash';
 import {
   createBirthFlashPass,
   createDeathParticlesPass,
   createParchmentTexturePass,
 } from '@render/effects/library';
 import { RecordingCanvas, recordingFactory, stubOffscreenCanvas } from './recording-canvas';
-import { createSoftwareCanvas, asSoftware } from '@render/effects/software-surface';
 import type { EffectCtx } from '@render/effects/ctx';
-import type { EffectPass } from '@render/effects/pass';
 import type { Viewport } from '@render/types';
 
 const VIEWPORT: Viewport = {
@@ -30,57 +27,16 @@ const VIEWPORT: Viewport = {
   dpr: 2,
 };
 
-function paintSource(): ReturnType<typeof createSoftwareCanvas> {
-  const canvas = createSoftwareCanvas(VIEWPORT.widthPx, VIEWPORT.heightPx);
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#102030';
-  ctx.fillRect(0, 0, VIEWPORT.widthPx, VIEWPORT.heightPx);
-  ctx.fillStyle = '#ff8800';
-  ctx.fillRect(8, 6, 12, 10);
-  ctx.fillStyle = '#44aaff';
-  ctx.fillRect(28, 14, 8, 8);
-  return canvas;
+/** Canvas ids come from a global counter; rename them by first appearance so two runs compare equal. */
+function normaliseIds(json: string): string {
+  const seen = new Map<string, string>();
+  return json.replace(/"c\d+"/g, (id) => {
+    if (!seen.has(id)) seen.set(id, `"canvas${seen.size}"`);
+    return seen.get(id)!;
+  });
 }
 
-function makeCtx(
-  pass: EffectPass,
-  tick = 7,
-  changes = EMPTY_CHANGES,
-  quality: 0 | 1 | 2 | 3 = 3,
-): { ctx: EffectCtx; target: ReturnType<typeof createSoftwareCanvas>; source: ReturnType<typeof createSoftwareCanvas> } {
-  const source = paintSource();
-  const target = createSoftwareCanvas(VIEWPORT.widthPx, VIEWPORT.heightPx);
-  const ctx: EffectCtx = {
-    target: target.getContext('2d') as unknown as CanvasRenderingContext2D,
-    source: source as unknown as CanvasImageSource,
-    cells: source as unknown as CanvasImageSource,
-    viewport: VIEWPORT,
-    tick,
-    frameTime: tick * (1 / 60),
-    changes,
-    quality,
-    reducedMotion: false,
-  };
-  void pass;
-  return { ctx, target, source };
-}
-
-function runHash(pass: EffectPass, tick = 7, changes = EMPTY_CHANGES, quality: 0 | 1 | 2 | 3 = 3): string {
-  const { ctx, target } = makeCtx(pass, tick, changes, quality);
-  pass.resize?.(VIEWPORT.widthPx, VIEWPORT.heightPx, VIEWPORT.dpr);
-  pass.render(ctx);
-  const soft = asSoftware(target)!;
-  return hashPixels(soft.pixels);
-}
-
-const NON_POST_ENTRIES = EFFECT_LIBRARY.filter((e) => {
-  const pass = e.create();
-  const isPost = pass.stage === 'post';
-  pass.dispose();
-  return !isPost;
-});
-
-/** A ctx whose target records draws instead of holding pixels — for composited post passes. */
+/** A ctx whose target records draws instead of holding pixels: every pass is composited (ADR-012). */
 function makeRecordingCtx(tick = 7): { ctx: EffectCtx; baked: ReturnType<typeof recordingFactory> } {
   const target = new RecordingCanvas(VIEWPORT.widthPx, VIEWPORT.heightPx);
   const cells = new RecordingCanvas(VIEWPORT.widthPx, VIEWPORT.heightPx);
@@ -132,20 +88,24 @@ describe('effect library (P3-A-5)', () => {
     }
   });
 
-  // Post passes are composited (ADR-012) and have no pixels to hash on a test double: their
-  // determinism is asserted as a draw sequence in post-passes.spec.ts. Browser truth for what they
-  // look like is tests/perf/themes-liveness.spec.ts.
-  it.each(NON_POST_ENTRIES.map((e) => [e.id, e] as const))(
-    '%s is deterministic from a seeded input (pixel hash)',
+    // Every pass is composited now (ADR-012), so there are no pixels to hash on a test double: determinism
+  // is asserted as an identical draw sequence. What the passes look like is the browser's job
+  // (tests/perf/themes-liveness.spec.ts).
+  it.each(EFFECT_LIBRARY.map((e) => [e.id, e] as const))(
+    '%s is deterministic from a seeded input (draw sequence)',
     (_id, entry) => {
-      const a = entry.create();
-      const b = entry.create();
-      const ha = runHash(a, 11);
-      const hb = runHash(b, 11);
-      expect(ha).toBe(hb);
-      expect(ha).not.toBe('00000000');
-      a.dispose();
-      b.dispose();
+      const run = (): string => {
+        const pass = entry.create();
+        const { ctx } = makeRecordingCtx(11);
+        pass.resize?.(VIEWPORT.widthPx, VIEWPORT.heightPx, VIEWPORT.dpr);
+        // Reactive passes draw nothing on a quiet frame, so give every pass something to react to.
+        pass.render({ ...ctx, changes: { births: 5, deaths: 5, transitions: 10 } });
+        pass.dispose();
+        return normaliseIds(JSON.stringify((ctx.target as unknown as { canvas: RecordingCanvas }).canvas.ctx.ops));
+      };
+      const a = run();
+      expect(a).toBe(run());
+      expect(a).not.toBe('[]');
     },
   );
 
@@ -154,7 +114,7 @@ describe('effect library (P3-A-5)', () => {
       const pass = entry.create();
       const declared = pass.cost;
       expect(declared).toBeGreaterThan(0);
-      const { ctx } = pass.stage === 'post' ? makeRecordingCtx() : makeCtx(pass);
+      const { ctx } = makeRecordingCtx();
       pass.resize?.(VIEWPORT.widthPx, VIEWPORT.heightPx, VIEWPORT.dpr);
       pass.render(ctx);
       // EWMA replaces the declaration after the first sample.

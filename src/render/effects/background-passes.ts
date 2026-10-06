@@ -1,9 +1,15 @@
 /**
- * P3-A-5 — background passes (L0): starfield, parchment, sun gradient, text rain.
+ * P3-A-5 / P3-E-3 — background passes (L0): starfield, parchment, sun gradient, text rain, haze grid.
+ *
+ * **Composited, not computed (ADR-012).** L0 is repainted only when the theme, size, quality or (for a
+ * parallax theme) the camera changes, so these are not per-frame costs, but they must still be cheap
+ * and allocation-free: parchment used to allocate an 8 MB buffer and loop over 2 M texels on every
+ * repaint, and the sun was ~290 one-pixel rects. They draw with real Canvas2D operations now, from
+ * resources baked once at activation or resize.
  */
 import { Mulberry32 } from '@shared/rng';
 import type { EffectCtx } from './ctx';
-import { SoftwareSurface, writeTargetPixels } from './software-surface';
+import { createSurface, releaseSurface, type CanvasFactory, type Surface } from './surface';
 import { TimedPass } from './timed-pass';
 
 export const STARFIELD_PERIOD = 4096;
@@ -43,12 +49,21 @@ export function starScreenPosition(
   viewport: { originX: number; originY: number; cellSize: number; widthPx: number; heightPx: number },
   parallax: number,
 ): { x: number; y: number } {
-  const ox = starOriginShift(viewport.originX, parallax, viewport.cellSize, viewport.widthPx);
-  const oy = starOriginShift(viewport.originY, parallax, viewport.cellSize, viewport.heightPx);
   return {
-    x: wrapCoord(wx - ox, viewport.widthPx),
-    y: wrapCoord(wy - oy, viewport.heightPx),
+    x: starScreenX(wx, viewport, parallax),
+    y: starScreenY(wy, viewport, parallax),
   };
+}
+
+type StarViewport = { originX: number; originY: number; cellSize: number; widthPx: number; heightPx: number };
+
+/** The two axes of {@link starScreenPosition}, separately, so the per-frame loop allocates no object per star. */
+export function starScreenX(wx: number, vp: StarViewport, parallax: number): number {
+  return wrapCoord(wx - starOriginShift(vp.originX, parallax, vp.cellSize, vp.widthPx), vp.widthPx);
+}
+
+export function starScreenY(wy: number, vp: StarViewport, parallax: number): number {
+  return wrapCoord(wy - starOriginShift(vp.originY, parallax, vp.cellSize, vp.heightPx), vp.heightPx);
 }
 
 export interface StarfieldOptions {
@@ -70,6 +85,8 @@ class StarfieldPass extends TimedPass {
   private readonly starsPerLayer: number;
   /** Packed [x,y,brightness] per star, world-fixed — parallax from camera only. */
   private stars: Float32Array | null = null;
+  /** Reused every frame: the viewport the star positions are computed against. */
+  private readonly vp: StarViewport = { originX: 0, originY: 0, cellSize: 1, widthPx: 1, heightPx: 1 };
 
   constructor(opts: StarfieldOptions) {
     super();
@@ -97,6 +114,12 @@ class StarfieldPass extends TimedPass {
     ctx.target.fillStyle = '#05010f';
     ctx.target.fillRect(0, 0, w, h);
     const stars = this.stars!;
+    const vp = this.vp;
+    vp.originX = originX;
+    vp.originY = originY;
+    vp.cellSize = cellSize;
+    vp.widthPx = w;
+    vp.heightPx = h;
     for (let layer = 0; layer < this.layerCount; layer++) {
       const parallax = starParallax(layer);
       const size = 1 + (layer === this.layerCount - 1 ? 1 : 0);
@@ -105,16 +128,10 @@ class StarfieldPass extends TimedPass {
         const wx = stars[i]!;
         const wy = stars[i + 1]!;
         const br = stars[i + 2]!;
-        const pos = starScreenPosition(
-          wx,
-          wy,
-          { originX, originY, cellSize, widthPx: w, heightPx: h },
-          parallax,
-        );
         const a = ctx.reducedMotion ? br * 0.7 : br;
         ctx.target.globalAlpha = a;
         ctx.target.fillStyle = '#e8e0ff';
-        ctx.target.fillRect(pos.x, pos.y, size, size);
+        ctx.target.fillRect(starScreenX(wx, vp, parallax), starScreenY(wy, vp, parallax), size, size);
       }
     }
     ctx.target.globalAlpha = 1;
@@ -129,6 +146,7 @@ export interface ParchmentTextureOptions {
   readonly seed?: number;
   readonly width?: number;
   readonly height?: number;
+  readonly canvasFactory?: CanvasFactory;
 }
 
 export function createParchmentTexturePass(opts: ParchmentTextureOptions = {}): TimedPass & {
@@ -140,6 +158,11 @@ export function createParchmentTexturePass(opts: ParchmentTextureOptions = {}): 
   return new ParchmentTexturePass(opts);
 }
 
+/**
+ * Procedural parchment, baked once into a small canvas and scaled to the viewport with a single
+ * nearest-neighbour `drawImage`. Per-texel work happens only in {@link generate} — at activation, not
+ * on any repaint — which is what ADR-012 permits.
+ */
 class ParchmentTexturePass extends TimedPass {
   readonly id = 'parchmentTexture';
   readonly stage = 'background' as const;
@@ -147,7 +170,8 @@ class ParchmentTexturePass extends TimedPass {
   private readonly seed: number;
   private readonly texW: number;
   private readonly texH: number;
-  private texture: SoftwareSurface | null = null;
+  private readonly factory: CanvasFactory | undefined;
+  private texture: Surface | null = null;
   generated = false;
   generationMs = 0;
 
@@ -156,15 +180,17 @@ class ParchmentTexturePass extends TimedPass {
     this.seed = opts.seed ?? 0x50415243;
     this.texW = opts.width ?? 256;
     this.texH = opts.height ?? 256;
+    this.factory = opts.canvasFactory;
   }
 
   /** Bake once — themes call this on activation; also lazy on first render. */
   generate(): void {
     if (this.generated && this.texture) return;
     const t0 = performance.now();
-    const surf = new SoftwareSurface(this.texW, this.texH);
+    const surface = createSurface(this.factory, this.texW, this.texH);
+    const image = surface.ctx.createImageData(this.texW, this.texH);
     const rng = new Mulberry32(this.seed);
-    const px = surf.pixels;
+    const px = image.data;
     for (let y = 0; y < this.texH; y++) {
       for (let x = 0; x < this.texW; x++) {
         const n =
@@ -180,39 +206,27 @@ class ParchmentTexturePass extends TimedPass {
         px[i + 3] = 255;
       }
     }
-    this.texture = surf;
+    surface.ctx.putImageData(image, 0, 0);
+    this.texture = surface;
     this.generated = true;
     this.generationMs = performance.now() - t0;
   }
 
   protected renderTimed(ctx: EffectCtx): void {
     if (!this.generated) this.generate();
+    const texture = this.texture;
+    if (!texture) return;
     const w = ctx.viewport.widthPx | 0;
     const h = ctx.viewport.heightPx | 0;
-    ctx.target.clearRect(0, 0, w, h);
-    if (!this.texture) return;
-    // SoftwareSurface is not a CanvasImageSource OffscreenCanvas accepts — nearest-neighbour
-    // scale into a pixel buffer and putImageData instead of drawImage.
-    const src = this.texture.pixels;
-    const tw = this.texW;
-    const th = this.texH;
-    const out = new Uint8ClampedArray(w * h * 4);
-    for (let y = 0; y < h; y++) {
-      const sy = Math.min(th - 1, ((y * th) / h) | 0);
-      for (let x = 0; x < w; x++) {
-        const sx = Math.min(tw - 1, ((x * tw) / w) | 0);
-        const si = (sy * tw + sx) * 4;
-        const di = (y * w + x) * 4;
-        out[di] = src[si]!;
-        out[di + 1] = src[si + 1]!;
-        out[di + 2] = src[si + 2]!;
-        out[di + 3] = src[si + 3]!;
-      }
-    }
-    writeTargetPixels(ctx.target, out, w, h);
+    const target = ctx.target;
+    target.save();
+    target.imageSmoothingEnabled = false; // hand-made grain: nearest, never blurred
+    target.drawImage(texture.canvas, 0, 0, this.texW, this.texH, 0, 0, w, h);
+    target.restore();
   }
 
   protected override onDispose(): void {
+    releaseSurface(this.texture);
     this.texture = null;
     this.generated = false;
   }
@@ -229,6 +243,10 @@ export function createSunGradientPass(opts: SunGradientOptions = {}): TimedPass 
   return new SunGradientPass(opts);
 }
 
+/**
+ * A vertical gradient and a disc: two fills, where the stepped version was ~290 one-pixel rects. The
+ * gradient object is cached against the viewport height.
+ */
 class SunGradientPass extends TimedPass {
   readonly id = 'sunGradient';
   readonly stage = 'background' as const;
@@ -237,6 +255,8 @@ class SunGradientPass extends TimedPass {
   private readonly bottom: string;
   private readonly sunColor: string;
   private readonly sunY: number;
+  private gradient: CanvasGradient | null = null;
+  private gradientHeight = -1;
 
   constructor(opts: SunGradientOptions) {
     super();
@@ -249,22 +269,26 @@ class SunGradientPass extends TimedPass {
   protected renderTimed(ctx: EffectCtx): void {
     const w = ctx.viewport.widthPx;
     const h = ctx.viewport.heightPx;
-    // Banded vertical gradient (software-canvas has no real CanvasGradient).
-    const bands = 32;
-    for (let i = 0; i < bands; i++) {
-      const t = i / (bands - 1);
-      ctx.target.fillStyle = lerpHex(this.top, this.bottom, t);
-      ctx.target.fillRect(0, ((i * h) / bands) | 0, w, Math.ceil(h / bands) + 1);
+    const t = ctx.target;
+    if (!this.gradient || this.gradientHeight !== h) {
+      const g = t.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, this.top);
+      g.addColorStop(1, this.bottom);
+      this.gradient = g;
+      this.gradientHeight = h;
     }
-    const cy = h * this.sunY;
-    const cx = w * 0.5;
-    const r = Math.min(w, h) * 0.12;
-    ctx.target.fillStyle = this.sunColor;
-    // Approximate sun as a filled square stack (circle without path API).
-    for (let dy = -r; dy <= r; dy++) {
-      const half = Math.sqrt(Math.max(0, r * r - dy * dy));
-      ctx.target.fillRect(cx - half, cy + dy, half * 2, 1);
-    }
+    t.save();
+    t.fillStyle = this.gradient;
+    t.fillRect(0, 0, w, h);
+    t.fillStyle = this.sunColor;
+    t.beginPath();
+    t.arc(w * 0.5, h * this.sunY, Math.min(w, h) * 0.12, 0, Math.PI * 2);
+    t.fill();
+    t.restore();
+  }
+
+  protected override onDispose(): void {
+    this.gradient = null;
   }
 }
 
@@ -273,20 +297,29 @@ export interface TextRainOptions {
   readonly columns?: number;
   readonly color?: string;
   readonly opacity?: number;
+  /** The base colour painted under the rain. L1 is transparent for this theme, so L0 owns its background. */
+  readonly background?: string;
 }
 
 export function createTextRainPass(opts: TextRainOptions = {}): TimedPass {
   return new TextRainPass(opts);
 }
 
+/**
+ * Faint falling glyph stand-ins behind the cells. It is `animated`: the compositor repaints L0 every
+ * frame while it is active (and not under reduced motion, where it freezes), which is what lets it
+ * fall at all — in a static L0 it was drawn once and never moved. All glyphs go in one path, one fill.
+ */
 class TextRainPass extends TimedPass {
   readonly id = 'textRain';
   readonly stage = 'background' as const;
   readonly declaredCost = 1.2;
+  override readonly animated = true;
   private readonly seed: number;
   private readonly columns: number;
   private readonly color: string;
   private readonly opacity: number;
+  private readonly background: string | undefined;
   private offsets: Float32Array | null = null;
   private speeds: Float32Array | null = null;
 
@@ -296,6 +329,7 @@ class TextRainPass extends TimedPass {
     this.columns = opts.columns ?? 48;
     this.color = opts.color ?? '#ffb000';
     this.opacity = opts.opacity ?? 0.12;
+    this.background = opts.background;
   }
 
   private ensure(): void {
@@ -314,18 +348,26 @@ class TextRainPass extends TimedPass {
     const w = ctx.viewport.widthPx;
     const h = ctx.viewport.heightPx;
     const colW = w / this.columns;
-    ctx.target.globalAlpha = this.opacity;
-    ctx.target.fillStyle = this.color;
+    const glyphW = Math.max(1, colW * 0.25);
     const t = ctx.reducedMotion ? 0 : ctx.frameTime;
-    for (let c = 0; c < this.columns; c++) {
-      const phase = (this.offsets![c]! + t * this.speeds![c]!) % 1;
-      const y = phase * h;
-      const x = c * colW + colW * 0.35;
-      // Glyph stand-in: 2×6 block (no font metrics in software ctx).
-      ctx.target.fillRect(x, y, Math.max(1, colW * 0.25), 6);
-      ctx.target.fillRect(x, (y + 14) % h, Math.max(1, colW * 0.25), 6);
+    const target = ctx.target;
+    target.save();
+    if (this.background) {
+      target.fillStyle = this.background;
+      target.fillRect(0, 0, w, h);
     }
-    ctx.target.globalAlpha = 1;
+    target.globalAlpha = this.opacity;
+    target.fillStyle = this.color;
+    target.beginPath();
+    for (let c = 0; c < this.columns; c++) {
+      const y = ((this.offsets![c]! + t * this.speeds![c]!) % 1) * h;
+      const x = c * colW + colW * 0.35;
+      // Glyph stand-in: a 6 px block, twice per column (no font metrics needed).
+      target.rect(x, y, glyphW, 6);
+      target.rect(x, (y + 14) % h, glyphW, 6);
+    }
+    target.fill();
+    target.restore();
   }
 
   protected override onDispose(): void {
@@ -404,20 +446,3 @@ class HazeGridPass extends TimedPass {
   }
 }
 
-function lerpHex(a: string, b: string, t: number): string {
-  const pa = parseHex(a);
-  const pb = parseHex(b);
-  const r = (pa[0] + (pb[0] - pa[0]) * t) | 0;
-  const g = (pa[1] + (pb[1] - pa[1]) * t) | 0;
-  const bl = (pa[2] + (pb[2] - pa[2]) * t) | 0;
-  return `#${hex2(r)}${hex2(g)}${hex2(bl)}`;
-}
-
-function parseHex(s: string): [number, number, number] {
-  const h = s.replace('#', '');
-  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-}
-
-function hex2(n: number): string {
-  return Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0');
-}

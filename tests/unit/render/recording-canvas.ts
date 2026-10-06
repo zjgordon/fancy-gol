@@ -18,6 +18,8 @@ export interface DrawOp {
     | 'putImageData'
     | 'fill'
     | 'stroke'
+    | 'rect'
+    | 'arc'
     | 'moveTo'
     | 'lineTo'
     | 'translate'
@@ -150,7 +152,13 @@ export class RecordingContext {
   lineTo(x: number, y: number): void {
     this.push({ kind: 'lineTo', args: [x, y] });
   }
-  rect(): void {}
+  rect(x: number, y: number, w: number, h: number): void {
+    this.push({ kind: 'rect', args: [x, y, w, h] });
+  }
+
+  arc(x: number, y: number, r: number, a0: number, a1: number): void {
+    this.push({ kind: 'arc', args: [x, y, r, a0, a1] });
+  }
   roundRect(): void {}
 
   stroke(): void {

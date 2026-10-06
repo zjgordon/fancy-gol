@@ -21,7 +21,6 @@ import {
   createThemePassStack,
   declaredCostAtQuality,
 } from '@render/effects/library';
-import { createSoftwareCanvas } from '@render/effects/software-surface';
 import { RecordingCanvas, recordingFactory, stubOffscreenCanvas } from '../../render/recording-canvas';
 import { EffectRegistry } from '@render/effects/registry';
 import type { CanvasLike } from '@render/layers';
@@ -75,26 +74,6 @@ const VIEWPORT: Viewport = {
   heightPx: 32,
   dpr: 1,
 };
-
-function effectCtx(
-  target: ReturnType<typeof createSoftwareCanvas>,
-  source: ReturnType<typeof createSoftwareCanvas>,
-  extra: Partial<EffectCtx> = {},
-): EffectCtx {
-  const w = extra.viewport?.widthPx ?? source.width;
-  const h = extra.viewport?.heightPx ?? source.height;
-  return {
-    target: target.getContext('2d') as unknown as CanvasRenderingContext2D,
-    source: source as unknown as CanvasImageSource,
-    cells: source as unknown as CanvasImageSource,
-    viewport: { ...VIEWPORT, widthPx: w, heightPx: h, ...(extra.viewport ?? {}) },
-    tick: extra.tick ?? 0,
-    frameTime: extra.frameTime ?? 0,
-    changes: extra.changes ?? EMPTY_CHANGES,
-    quality: extra.quality ?? 3,
-    reducedMotion: extra.reducedMotion ?? false,
-  };
-}
 
 describe('Flatline README (written before implementation)', () => {
   it('states what the theme is about in one paragraph', () => {
@@ -309,13 +288,21 @@ describe('Flatline textRain costs < 1.5 ms/frame at 1080p', () => {
   timingIt('[timing] warm render stays under the budget, calibrated to this machine', () => {
     const w = 1920;
     const h = 1080;
-    const pass = createTextRainPass({ seed: 3, opacity: 0.055, columns: 48, color: '#ffb000' });
-    const source = createSoftwareCanvas(w, h);
-    const target = createSoftwareCanvas(w, h);
-    const ctx = effectCtx(target, source, {
+    const pass = createTextRainPass({ seed: 3, opacity: 0.055, columns: 48, color: '#ffb000', background: '#0a0804' });
+    // A recording target: the pass issues draw calls and touches no pixels (ADR-012), so what this
+    // times is the CPU cost of building and issuing them at 1080p, which is the part that is ours.
+    const target = new RecordingCanvas(w, h);
+    const ctx: EffectCtx = {
+      target: target.ctx as unknown as CanvasRenderingContext2D,
+      source: target as unknown as CanvasImageSource,
+      cells: target as unknown as CanvasImageSource,
       viewport: { ...VIEWPORT, widthPx: w, heightPx: h },
+      tick: 0,
       frameTime: 0.5,
-    });
+      changes: EMPTY_CHANGES,
+      quality: 3,
+      reducedMotion: false,
+    };
     // Discard cold-start / JIT frames so the EWMA and median both reflect warm cost.
     for (let i = 0; i < 4; i++) pass.render(ctx);
     const samples: number[] = [];
