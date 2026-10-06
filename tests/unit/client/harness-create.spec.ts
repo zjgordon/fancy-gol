@@ -36,6 +36,7 @@ describe('createHarness', () => {
       runCommand: () => {},
       pinQuality: () => {},
       setEffectsReducedMotion: () => {},
+      setPassTimingSync: () => {},
       renderStats: () => ({ frameMs: 3, stageMs: { background: 0, effects: 1, post: 2 }, passMs: { bloom: 0.4 } }),
       heapBytes: () => null,
     });
@@ -71,6 +72,7 @@ describe('createHarness', () => {
     harness.pinQuality(0);
     harness.pinQuality(null);
     harness.setEffectsReducedMotion(false);
+    harness.setPassTimingSync(true);
     expect(harness.renderStats()).toEqual({ frameMs: 3, stageMs: { background: 0, effects: 1, post: 2 }, passMs: { bloom: 0.4 } });
     expect(harness.heapBytes()).toBeNull();
   });

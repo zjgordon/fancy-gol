@@ -6,6 +6,7 @@
 import { CONWAY, getBuiltin } from '@engine/rules/builtin';
 import { RuleValidationError } from '@engine/rules/errors';
 import { validateRuleSet } from '@engine/rules/validate';
+import { passTiming } from '@render/effects/timed-pass';
 import { Compositor } from '@render/compositor';
 import type { Viewport as RenderViewport } from '@render/types';
 import { decode as decodeRle } from '@shared/rle';
@@ -1096,6 +1097,9 @@ function main(): void {
         else pinQuality(quality, clampQuality(level));
       },
       setEffectsReducedMotion: (reduced) => renderer.setReducedMotion(reduced),
+      setPassTimingSync: (on) => {
+        passTiming.sync = on;
+      },
       renderStats: () => ({
         frameMs: renderer.readStats().frameMs,
         stageMs: { ...renderer.readStageMs() },

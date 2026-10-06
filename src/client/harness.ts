@@ -64,6 +64,8 @@ export interface FancyGolHarness {
    * trails, falling text) actually draw (P3-E-3).
    */
   setEffectsReducedMotion(reduced: boolean): void;
+  /** Drain the canvas around each pass so its measured cost is its own (measurement only). */
+  setPassTimingSync(on: boolean): void;
   /** Per-stage cost of the most recent draw. Measured, never declared (ADR-011). */
   renderStats(): HarnessRenderStats;
   /**
@@ -105,6 +107,7 @@ export interface HarnessSources {
   readonly runCommand: (id: string) => Promise<void> | void;
   readonly pinQuality: (quality: number | null) => void;
   readonly setEffectsReducedMotion: (reduced: boolean) => void;
+  readonly setPassTimingSync: (on: boolean) => void;
   readonly renderStats: () => HarnessRenderStats;
   readonly heapBytes: () => number | null;
 }
@@ -191,6 +194,7 @@ export function createHarness(src: HarnessSources): FancyGolHarness {
     runCommand: src.runCommand,
     pinQuality: src.pinQuality,
     setEffectsReducedMotion: src.setEffectsReducedMotion,
+    setPassTimingSync: src.setPassTimingSync,
     renderStats: src.renderStats,
     heapBytes: src.heapBytes,
   };

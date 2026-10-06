@@ -199,18 +199,24 @@ export function createSynthwavePassStack(): EffectPass[] {
 }
 
 /**
- * Declared costs (ms) are measurements, not estimates (ADR-012 consequence 1; P3-E-5). Source:
- * `PASS_COSTS=1 npx playwright test --project=browser-floor -g "pass costs"` — each theme at
- * quality 3 with a running soup, 1920×1080, headless Chromium 1237 on SwiftShader, 2026-10-06,
- * the passes' own EWMA of CPU time to issue their Canvas2D commands. Rounded up to 0.1 ms, floor
- * 0.1 ms (the timer's resolution). Software raster, so these are an upper bound for a machine with a
- * GPU. Re-measure after changing a pass; E-9 re-runs it on the reference machine.
+ * Declared costs (ms) are measurements, not estimates (ADR-012 consequence 1; P3-E-5, corrected by
+ * P3-E-9). Source: `PASS_COSTS=1 npx playwright test --project=browser-floor -g "pass costs"` — each
+ * theme at quality 3 with a running soup, 1920×1080, headless Chromium 1237 on SwiftShader,
+ * 2026-10-06, with `setPassTimingSync(true)` so each pass is charged only its own raster work
+ * (without it a pass's EWMA includes the queue its first readback drains: E-5's first table
+ * credited `chromaticAberration` with 13 ms that belonged to everything before it). Rounded up to
+ * 0.1 ms. Software raster, so these are an upper bound for a machine with a GPU, where a full-frame
+ * blend is close to free. E-9 repeats the run on the reference machine.
  *
- *   post        chromaticAberration 13.3 (the outlier: ~80% of every post stage that has it) ·
- *               bloom 2.0–2.2 · scanlines, filmGrain, vignette, crtCurvature < 0.1
- *   effects     phosphorDecay 2.8 · trailFade 2.7 · birthFlash 0.05 · deathParticles < 0.1 ·
- *               gridGlow < 0.1
- *   background  starfield 0.3 · hazeGrid 0.2 · sunGradient, textRain, parchmentTexture < 0.1
+ *   post        bloom 4.8–5.2 · filmGrain 2.3 · chromaticAberration 1.9 · scanlines 1.1–1.3 ·
+ *               crtCurvature 1.25 · vignette 1.2
+ *   effects     trailFade 4.3 · phosphorDecay 4.0 · gridGlow 0.9 · deathParticles, birthFlash < 0.2
+ *   background  hazeGrid 0.6 · sunGradient 0.6 · textRain 0.45 · starfield 0.45 · parchment 0.35
+ *
+ * What made them this cheap: a full-frame `'multiply'` pattern or gradient fill costs ~3–4 ms on a
+ * software rasterizer and a `drawImage` of the same pixels ~1 ms, so scanlines, vignette and CRT
+ * corners are painted once into a canvas and blitted; grain is one cropped blit; bloom and ghost
+ * trails double a half-size image without smoothing.
  */
 /** Declared-cost sum of passes still running at this quality. Disposes the stack. */
 export function declaredCostAtQuality(theme: ThemeId, quality: EffectQuality): number {

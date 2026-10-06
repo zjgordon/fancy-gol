@@ -17,6 +17,7 @@ for (const theme of THEME_IDS) {
     await activateTheme(page, theme);
     await page.evaluate(() => {
       window.__fancyGol?.setEffectsReducedMotion(false);
+      window.__fancyGol?.setPassTimingSync(true); // each pass's own cost, not the queue it drains
       window.__fancyGol?.pinQuality(3);
     });
     await startSoup(page);
