@@ -87,6 +87,7 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 720 },
         deviceScaleFactor: 1,
+        launchOptions: chromiumExecutable,
       },
     },
     {
