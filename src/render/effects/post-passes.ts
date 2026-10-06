@@ -220,7 +220,8 @@ export function createChromaticAberrationPass(opts: ChromaticAberrationOptions =
  * **Substitute (ADR-012 D3):** an additive red and blue fringe on the left and right edge bands,
  * fading to nothing toward the middle — not the radial per-pixel channel shift of the original.
  * Each band is copied to a small scratch surface, tinted with a gradient `'multiply'`, and added
- * back offset in opposite directions with `'lighter'`. Only ~25% of the frame is touched.
+ * back offset in opposite directions with `'lighter'`, after red and blue were stripped from the
+ * band in place so the fringe moves channels instead of adding light. Only ~25% of the frame is touched.
  */
 class ChromaticAberrationPass extends TimedPass {
   readonly id = 'chromaticAberration';
@@ -233,8 +234,15 @@ class ChromaticAberrationPass extends TimedPass {
   private red: Surface | null = null;
   private blue: Surface | null = null;
   /** Tint ramps, outer edge → inner edge, for the left band and its mirror for the right. */
-  private ramps: { redL: CanvasGradient; blueL: CanvasGradient; redR: CanvasGradient; blueR: CanvasGradient } | null =
-    null;
+  private ramps: {
+    redL: CanvasGradient;
+    blueL: CanvasGradient;
+    redR: CanvasGradient;
+    blueR: CanvasGradient;
+    /** Edge → inner: green only fading to white. Strips red and blue from the base before they are re-added shifted. */
+    keepL: CanvasGradient;
+    keepR: CanvasGradient;
+  } | null = null;
   private bandW = 0;
   private w = 0;
   private h = 0;
@@ -260,7 +268,15 @@ class ChromaticAberrationPass extends TimedPass {
       g.addColorStop(1, '#000000');
       return g;
     };
+    const keep = (fromX: number, toX: number): CanvasGradient => {
+      const g = ctx.createLinearGradient(fromX, 0, toX, 0);
+      g.addColorStop(0, '#00ff00');
+      g.addColorStop(1, '#ffffff');
+      return g;
+    };
     this.ramps = {
+      keepL: keep(0, this.bandW),
+      keepR: keep(this.bandW, 0),
       redL: ramp(0, this.bandW, '#ff0000'),
       blueL: ramp(0, this.bandW, '#0000ff'),
       redR: ramp(this.bandW, 0, '#ff0000'),
@@ -290,6 +306,16 @@ class ChromaticAberrationPass extends TimedPass {
       };
       tint(red, side === -1 ? ramps.redL : ramps.redR);
       tint(blue, side === -1 ? ramps.blueL : ramps.blueR);
+      // A real channel shift moves red and blue; it does not add light. Strip them from the base
+      // band (green stays), then add them back offset in opposite directions. Without this the band
+      // was content + red copy + blue copy: a magenta wash on bright scenes.
+      withState(ctx.target, 'multiply', () => {
+        ctx.target.save();
+        ctx.target.translate(bx, 0);
+        ctx.target.fillStyle = side === -1 ? ramps.keepL : ramps.keepR;
+        ctx.target.fillRect(0, 0, bandW, h);
+        ctx.target.restore();
+      });
       withState(ctx.target, 'lighter', () => {
         ctx.target.drawImage(red.canvas, bx + side * this.shift, 0);
         ctx.target.drawImage(blue.canvas, bx - side * this.shift, 0);

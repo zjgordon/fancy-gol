@@ -362,6 +362,24 @@ describe('chromatic aberration (labelled substitute, ADR-012 D3)', () => {
     expect(rightBlue).toBe(1000 - bandW - 3);
     pass.dispose();
   });
+
+  it('strips red and blue from each band before re-adding them, so it shifts channels and adds no light', () => {
+    const r = rig(1000, 500);
+    const pass = createChromaticAberrationPass({ amount: 3, edgeBias: 0.8, canvasFactory: r.baked.factory });
+    pass.resize?.(1000, 500, 1);
+    pass.render(r.ctx());
+    const ops = r.target.ctx.ops.filter((o) => (o.kind === 'fillRect' || o.kind === 'drawImage') && o.composite !== 'source-over');
+    // Per side: one 'multiply' strip, then the two 'lighter' blits. The strip has to come first.
+    expect(ops.map((o) => `${o.kind}:${o.composite}`)).toEqual([
+      'fillRect:multiply',
+      'drawImage:lighter',
+      'drawImage:lighter',
+      'fillRect:multiply',
+      'drawImage:lighter',
+      'drawImage:lighter',
+    ]);
+    pass.dispose();
+  });
 });
 
 describe('CRT curvature (labelled substitute, ADR-012 D3)', () => {
