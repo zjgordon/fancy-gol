@@ -73,9 +73,9 @@ const POST_PASSES: readonly (readonly [string, Factory])[] = [
   ['bloom', (canvasFactory) => createBloomPass({ strength: 0.5, radius: 2, canvasFactory })],
   ['scanlines', (canvasFactory) => createScanlinesPass({ opacity: 0.2, canvasFactory })],
   ['chromaticAberration', (canvasFactory) => createChromaticAberrationPass({ amount: 2, edgeBias: 0.7, canvasFactory })],
-  ['vignette', () => createVignettePass({ strength: 0.6 })],
+  ['vignette', (canvasFactory) => createVignettePass({ strength: 0.6, canvasFactory })],
   ['filmGrain', (canvasFactory) => createFilmGrainPass({ seed: 3, amount: 9, canvasFactory })],
-  ['crtCurvature', () => createCrtCurvaturePass({ amount: 0.06 })],
+  ['crtCurvature', (canvasFactory) => createCrtCurvaturePass({ amount: 0.06, canvasFactory })],
 ];
 
 describe.each(POST_PASSES)('%s is composited (ADR-012 rules 1 and 2)', (_id, make) => {
@@ -204,20 +204,25 @@ describe('scanlines do not moiré at dpr 1, 1.5, 2, 3', () => {
 
     const pitch = scanlinePitch(dpr);
     expect(Number.isInteger(pitch)).toBe(true);
-    const tile = r.baked.canvases[0]!;
-    expect([tile.width, tile.height]).toEqual([1, 2 * pitch]);
-
-    const rows = tile.ctx.only('fillRect');
+    // The 1 × 2·pitch tile is baked, painted into a full-frame overlay as a pattern, then released.
+    const [tile, overlay] = r.baked.canvases;
+    const rows = tile!.ctx.only('fillRect');
     expect(rows.map((o) => [o.detail, o.args])).toEqual([
       ['#ffffff', [0, 0, 1, pitch]],
       ['rgb(204,204,204)', [0, pitch, 1, pitch]],
     ]);
 
-    const fills = r.target.ctx.only('fillRect');
-    expect(fills).toHaveLength(1);
-    expect(fills[0]!.composite).toBe('multiply');
-    expect(fills[0]!.detail).toBe('pattern');
-    expect(fills[0]!.args).toEqual([0, 0, 640, 360]);
+    expect([overlay!.width, overlay!.height]).toEqual([640, 360]);
+    const baked = overlay!.ctx.only('fillRect');
+    expect(baked).toHaveLength(1);
+    expect(baked[0]!.detail).toBe('pattern');
+    expect(baked[0]!.args).toEqual([0, 0, 640, 360]);
+
+    // Per frame: one multiply blit of the overlay, no fill (a multiply pattern fill is ~4× dearer).
+    expect(r.target.ctx.only('fillRect')).toHaveLength(0);
+    const blits = r.target.ctx.only('drawImage');
+    expect(blits).toHaveLength(1);
+    expect(blits[0]!.composite).toBe('multiply');
     pass.dispose();
   });
 
@@ -226,10 +231,10 @@ describe('scanlines do not moiré at dpr 1, 1.5, 2, 3', () => {
     const pass = createScanlinesPass({ canvasFactory: r.baked.factory });
     pass.render(r.ctx());
     pass.render(r.ctx());
-    expect(r.baked.canvases).toHaveLength(1);
+    expect(r.baked.canvases).toHaveLength(2); // tile + overlay
     pass.render({ ...r.ctx(), viewport: { ...r.ctx().viewport, dpr: 2 } });
-    expect(r.baked.canvases).toHaveLength(2);
-    expect(r.baked.canvases[1]!.height).toBe(4);
+    expect(r.baked.canvases).toHaveLength(4);
+    expect(r.baked.canvases[2]!.ctx.only('fillRect')[0]!.args).toEqual([0, 0, 1, 2]); // pitch 2
     pass.dispose();
   });
 });
@@ -239,9 +244,9 @@ describe('vignette', () => {
 
   it.each([0.5, 0.55, 0.62])('strength %s: the baked gradient tracks 1 − s·d² within one 8-bit level', (strength) => {
     const r = rig(640, 360);
-    const pass = createVignettePass({ strength });
+    const pass = createVignettePass({ strength, canvasFactory: r.baked.factory });
     pass.render(r.ctx());
-    const g = r.target.ctx.gradients[0] as FakeGradient;
+    const g = r.baked.canvases[0]!.ctx.gradients[0] as FakeGradient;
     expect(g.shape).toBe('radial');
     const stops = g.stops.map((s) => ({ t: s.offset, v: Number(/rgb\((\d+),/.exec(s.color)![1]) }));
     expect(stops[0]).toEqual({ t: 0, v: 255 });
@@ -260,14 +265,16 @@ describe('vignette', () => {
 
   it('is centred on the pixel-centre midpoint and reaches a corner at its outer radius', () => {
     const r = rig(640, 360);
-    const pass = createVignettePass({ strength: 0.55 });
+    const pass = createVignettePass({ strength: 0.55, canvasFactory: r.baked.factory });
     pass.render(r.ctx());
-    const [cx, cy, r0, cx2, cy2, r1] = r.target.ctx.gradients[0]!.coords;
+    const [cx, cy, r0, cx2, cy2, r1] = r.baked.canvases[0]!.ctx.gradients[0]!.coords;
     expect([cx, cy, r0, cx2, cy2]).toEqual([319.5, 179.5, 0, 319.5, 179.5]);
     expect(r1).toBeCloseTo(Math.hypot(319.5, 179.5), 10);
-    const fills = r.target.ctx.only('fillRect');
-    expect(fills).toHaveLength(1);
-    expect(fills[0]!.composite).toBe('multiply');
+    // Painted once into the overlay; per frame it is one multiply blit.
+    expect(r.target.ctx.only('fillRect')).toHaveLength(0);
+    const blits = r.target.ctx.only('drawImage');
+    expect(blits).toHaveLength(1);
+    expect(blits[0]!.composite).toBe('multiply');
     pass.dispose();
   });
 });
@@ -277,9 +284,13 @@ describe('filmGrain', () => {
     const r = rig();
     const pass = createFilmGrainPass({ seed: 5, amount: 9, canvasFactory: r.baked.factory });
     pass.render(r.ctx());
-    expect(r.baked.canvases).toHaveLength(GRAIN_TILE_COUNT);
-    for (const c of r.baked.canvases) expect([c.width, c.height]).toEqual([GRAIN_TILE_SIZE, GRAIN_TILE_SIZE]);
-    const bytes = r.baked.canvases.map((c) => c.ctx.imageData[0]!);
+    // Eight tiles, then one field a tile larger than the frame that they are laid out into.
+    expect(r.baked.canvases).toHaveLength(GRAIN_TILE_COUNT + 1);
+    const tiles = r.baked.canvases.slice(0, GRAIN_TILE_COUNT);
+    for (const c of tiles) expect([c.width, c.height]).toEqual([GRAIN_TILE_SIZE, GRAIN_TILE_SIZE]);
+    const field = r.baked.canvases[GRAIN_TILE_COUNT]!;
+    expect([field.width, field.height]).toEqual([640 + GRAIN_TILE_SIZE, 360 + GRAIN_TILE_SIZE]);
+    const bytes = tiles.map((c) => c.ctx.imageData[0]!);
     // Aggregate in a plain loop: half a million per-texel expect() calls is slow and, under a
     // loaded runner, a wall-clock hazard — the class of flake P3-E-8 exists to remove.
     let maxDeviation = 0;
@@ -324,10 +335,11 @@ describe('filmGrain', () => {
       const pass = createFilmGrainPass({ seed: 5, amount: 9, canvasFactory: r.baked.factory });
       pass.render(r.ctx(over));
       pass.dispose();
-      const fill = r.target.ctx.only('fillRect')[0]!;
-      expect(fill.composite).toBe('overlay');
-      expect(fill.detail).toBe('pattern');
-      return JSON.stringify([r.target.ctx.only('translate')[0]!.args, fill.args]);
+      // One cropped overlay blit: source offset (dx, dy), 640 × 360 → the whole frame.
+      expect(r.target.ctx.only('fillRect')).toHaveLength(0);
+      const blit = r.target.ctx.only('drawImage')[0]!;
+      expect(blit.composite).toBe('overlay');
+      return JSON.stringify(blit.args);
     };
     expect(drawFor({ tick: 5 })).not.toBe(drawFor({ tick: 6 }));
     expect(drawFor({ tick: 5, reducedMotion: true })).toBe(drawFor({ tick: 99, reducedMotion: true }));
@@ -399,16 +411,18 @@ describe('CRT curvature (labelled substitute, ADR-012 D3)', () => {
 
   it('multiplies an edge-weighted falloff, then blacks out the corners', () => {
     const r = rig();
-    const pass = createCrtCurvaturePass({ amount: 0.08 });
+    const pass = createCrtCurvaturePass({ amount: 0.08, canvasFactory: r.baked.factory });
     pass.render(r.ctx());
-    const fills = r.target.ctx.only('fillRect');
-    expect(fills).toHaveLength(1);
-    expect(fills[0]!.composite).toBe('multiply');
-    const v = r.target.ctx.gradients[0]!.stops.map((s) => Number(/rgb\((\d+),/.exec(s.color)![1]));
+    // Both are painted once into one overlay; per frame it is a single multiply blit.
+    const overlay = r.baked.canvases[0]!.ctx;
+    const blits = r.target.ctx.only('drawImage');
+    expect(blits).toHaveLength(1);
+    expect(blits[0]!.composite).toBe('multiply');
+    const v = overlay.gradients[0]!.stops.map((s) => Number(/rgb\((\d+),/.exec(s.color)![1]));
     expect(v[0]).toBe(255); // centre untouched
     for (let i = 1; i < v.length; i++) expect(v[i]!).toBeLessThanOrEqual(v[i - 1]!); // darker outward
     expect(v.at(-1)!).toBeLessThan(255);
-    expect(r.target.ctx.only('fill')).toHaveLength(1);
+    expect(overlay.only('fill')).toHaveLength(1);
     pass.dispose();
   });
 });

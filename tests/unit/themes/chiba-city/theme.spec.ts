@@ -234,12 +234,14 @@ describe('Chiba-City scanlines do not moiré at dpr 1, 1.5, 2, 3', () => {
       quality: 3,
       reducedMotion: false,
     });
-    const tile = baked.canvases[0]!;
-    expect([tile.width, tile.height]).toEqual([1, pitch * 2]);
-    const fills = target.ctx.only('fillRect');
-    expect(fills).toHaveLength(1);
-    expect(fills[0]!.composite).toBe('multiply');
-    expect(fills[0]!.args).toEqual([0, 0, 24, 24]);
+    // Tile rows are `pitch` tall each (the tile itself is released once painted into the overlay).
+    const [tile, overlay] = baked.canvases;
+    expect(tile!.ctx.only('fillRect').map((o) => o.args![3])).toEqual([pitch, pitch]);
+    expect([overlay!.width, overlay!.height]).toEqual([24, 24]);
+    expect(overlay!.ctx.only('fillRect')[0]!.args).toEqual([0, 0, 24, 24]);
+    const blits = target.ctx.only('drawImage');
+    expect(blits).toHaveLength(1);
+    expect(blits[0]!.composite).toBe('multiply');
     pass.dispose();
   });
 });

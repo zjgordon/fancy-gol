@@ -120,7 +120,12 @@ abstract class GhostTrailPass extends TimedPass {
       g.fillRect(-GHOST_DITHER_TILE, -GHOST_DITHER_TILE, gw + GHOST_DITHER_TILE, gh + GHOST_DITHER_TILE);
     });
     withState(g, 'source-over', 1, () => g.drawImage(ctx.cells, 0, 0, gw, gh));
-    withState(ctx.target, 'source-over', 1, () => ctx.target.drawImage(ghost.canvas, 0, 0, w, h));
+    // Doubling a half-size ghost without smoothing is invisible on 1-cell-wide pixel art and measured
+    // ~2× cheaper than the bilinear stretch on a software rasterizer (P3-E-9).
+    withState(ctx.target, 'source-over', 1, () => {
+      ctx.target.imageSmoothingEnabled = false;
+      ctx.target.drawImage(ghost.canvas, 0, 0, w, h);
+    });
   }
 
   protected override onDispose(): void {

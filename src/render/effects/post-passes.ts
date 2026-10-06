@@ -156,8 +156,9 @@ class ScanlinesPass extends TimedPass {
   readonly declaredCost = 0.1;
   private readonly opacity: number;
   private readonly factory: CanvasFactory | undefined;
-  private tile: Surface | null = null;
-  private pattern: CanvasPattern | null = null;
+  private overlay: Surface | null = null;
+  private w = 0;
+  private h = 0;
   private pitch = 0;
 
   constructor(opts: ScanlinesOptions) {
@@ -166,44 +167,60 @@ class ScanlinesPass extends TimedPass {
     this.factory = opts.canvasFactory;
   }
 
-  override resize(_widthPx: number, _heightPx: number, dpr: number): void {
-    this.bake(scanlinePitch(dpr));
+  override resize(widthPx: number, heightPx: number, dpr: number): void {
+    this.bake(widthPx | 0, heightPx | 0, scanlinePitch(dpr));
   }
 
   protected renderTimed(ctx: EffectCtx): void {
+    const w = ctx.viewport.widthPx | 0;
+    const h = ctx.viewport.heightPx | 0;
     const pitch = scanlinePitch(ctx.viewport.dpr);
-    if (!this.pattern || this.pitch !== pitch) this.bake(pitch);
-    const pattern = this.pattern;
-    if (!pattern) return;
+    if (!this.overlay || this.w !== w || this.h !== h || this.pitch !== pitch) this.bake(w, h, pitch);
+    const overlay = this.overlay;
+    if (!overlay) return;
     withState(ctx.target, 'multiply', () => {
-      ctx.target.fillStyle = pattern;
-      ctx.target.fillRect(0, 0, ctx.viewport.widthPx, ctx.viewport.heightPx);
+      ctx.target.drawImage(overlay.canvas, 0, 0);
     });
   }
 
   protected override onDispose(): void {
-    releaseSurface(this.tile);
-    this.tile = null;
-    this.pattern = null;
+    releaseSurface(this.overlay);
+    this.overlay = null;
   }
 
-  private bake(pitch: number): void {
-    releaseSurface(this.tile);
+  /**
+   * The pattern is painted once into a full-frame canvas, because a `'multiply'` *pattern fill*
+   * measured ~4.3 ms a frame at 1080p on a software rasterizer against ~1 ms for a `'multiply'`
+   * `drawImage` of the same pixels (P3-E-9).
+   */
+  private bake(w: number, h: number, pitch: number): void {
+    releaseSurface(this.overlay);
     const tile = createSurface(this.factory, 1, 2 * pitch);
     const grey = Math.round(255 * (1 - this.opacity));
     tile.ctx.fillStyle = '#ffffff';
     tile.ctx.fillRect(0, 0, 1, pitch);
     tile.ctx.fillStyle = `rgb(${grey},${grey},${grey})`;
     tile.ctx.fillRect(0, pitch, 1, pitch);
-    this.tile = tile;
+    const overlay = createSurface(this.factory, Math.max(1, w), Math.max(1, h));
+    const pattern = overlay.ctx.createPattern(tile.canvas, 'repeat');
+    if (pattern) {
+      overlay.ctx.fillStyle = pattern;
+      overlay.ctx.fillRect(0, 0, w, h);
+    }
+    releaseSurface(tile);
+    this.overlay = overlay;
+    this.w = w;
+    this.h = h;
     this.pitch = pitch;
-    this.pattern = tile.ctx.createPattern(tile.canvas, 'repeat');
   }
 }
 
 // ---------------------------------------------------------------------------------------------
 // chromatic aberration (labelled substitute)
 // ---------------------------------------------------------------------------------------------
+
+/** Widest fringe band, in CSS px (scaled by dpr). */
+const MAX_FRINGE_BAND_CSS_PX = 120;
 
 export interface ChromaticAberrationOptions extends FactoryOption {
   /** Fringe offset in device pixels. */
@@ -254,11 +271,15 @@ class ChromaticAberrationPass extends TimedPass {
     this.factory = opts.canvasFactory;
   }
 
-  override resize(widthPx: number, heightPx: number, _dpr: number): void {
+  override resize(widthPx: number, heightPx: number, dpr: number): void {
     this.release();
     this.w = widthPx | 0;
     this.h = heightPx | 0;
-    this.bandW = Math.max(8, Math.round(this.w * (1 - this.edgeBias) * 0.5));
+    // Capped: the fringe is a few pixels wide and its band is composited ~10 times, so band area is
+    // the pass's cost. At 336–432 px a side (Chiba-City, Synthwave) it measured 3.5–6.7 ms at 1080p
+    // on a software rasterizer; the cap keeps the look and cuts the area (P3-E-9).
+    const cap = Math.round(MAX_FRINGE_BAND_CSS_PX * Math.max(1, dpr));
+    this.bandW = Math.min(cap, Math.max(8, Math.round(this.w * (1 - this.edgeBias) * 0.5)));
     this.red = createSurface(this.factory, this.bandW, this.h);
     this.blue = createSurface(this.factory, this.bandW, this.h);
     const ctx = this.red.ctx;
@@ -340,7 +361,7 @@ class ChromaticAberrationPass extends TimedPass {
 // vignette
 // ---------------------------------------------------------------------------------------------
 
-export interface VignetteOptions {
+export interface VignetteOptions extends FactoryOption {
   readonly strength?: number;
 }
 
@@ -361,48 +382,53 @@ class VignettePass extends TimedPass {
   readonly stage = 'post' as const;
   readonly declaredCost = 0.1;
   private readonly strength: number;
-  private gradient: CanvasGradient | null = null;
+  private readonly factory: CanvasFactory | undefined;
+  private overlay: Surface | null = null;
   private w = 0;
   private h = 0;
 
   constructor(opts: VignetteOptions) {
     super();
     this.strength = clamp(opts.strength ?? 0.55, 0, 1);
+    this.factory = opts.canvasFactory;
   }
 
   override resize(widthPx: number, heightPx: number, _dpr: number): void {
-    this.w = widthPx | 0;
-    this.h = heightPx | 0;
-    this.gradient = null;
+    this.bake(widthPx | 0, heightPx | 0);
   }
 
   protected renderTimed(ctx: EffectCtx): void {
     const w = ctx.viewport.widthPx | 0;
     const h = ctx.viewport.heightPx | 0;
-    if (!this.gradient || this.w !== w || this.h !== h) this.bake(ctx.target, w, h);
-    const gradient = this.gradient;
-    if (!gradient) return;
+    if (!this.overlay || this.w !== w || this.h !== h) this.bake(w, h);
+    const overlay = this.overlay;
+    if (!overlay) return;
     withState(ctx.target, 'multiply', () => {
-      ctx.target.fillStyle = gradient;
-      ctx.target.fillRect(0, 0, w, h);
+      ctx.target.drawImage(overlay.canvas, 0, 0);
     });
   }
 
   protected override onDispose(): void {
-    this.gradient = null;
+    releaseSurface(this.overlay);
+    this.overlay = null;
   }
 
-  private bake(target: Canvas2DContext, w: number, h: number): void {
+  /** The gradient is painted once into a full-frame canvas: a per-frame gradient fill measured ~3 ms, a `drawImage` ~1 ms (P3-E-9). */
+  private bake(w: number, h: number): void {
+    releaseSurface(this.overlay);
+    const overlay = createSurface(this.factory, Math.max(1, w), Math.max(1, h));
     const cx = (w - 1) * 0.5;
     const cy = (h - 1) * 0.5;
     const maxR = Math.hypot(cx, cy) || 1;
-    const g = target.createRadialGradient(cx, cy, 0, cx, cy, maxR);
+    const g = overlay.ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR);
     for (let i = 0; i <= VIGNETTE_STOPS; i++) {
       const t = i / VIGNETTE_STOPS;
       const v = Math.round(255 * (1 - this.strength * t * t));
       g.addColorStop(t, `rgb(${v},${v},${v})`);
     }
-    this.gradient = g;
+    overlay.ctx.fillStyle = g;
+    overlay.ctx.fillRect(0, 0, w, h);
+    this.overlay = overlay;
     this.w = w;
     this.h = h;
   }
@@ -441,10 +467,11 @@ export function grainFrameFor(tick: number): { tile: number; dx: number; dy: num
 }
 
 /**
- * Eight seeded 256² noise tiles baked at activation (the only per-texel work, and it runs once).
- * Each tick picks a tile and an offset from the tick alone — deterministic, so a fixed tick is a
- * fixed frame — and fills with `'overlay'`, which leaves pure black untouched and is strongest in
- * the midtones. Reduced motion pins tick 0.
+ * Eight seeded 256² noise tiles baked at activation (the only per-texel work, and it runs once) are
+ * laid out, in a seeded arrangement, into one field a tile larger than the frame. Each tick picks an
+ * offset from the tick alone — deterministic, so a fixed tick is a fixed frame — and blits that crop
+ * with `'overlay'`, which leaves pure black untouched and is strongest in the midtones. Reduced
+ * motion pins tick 0.
  */
 class FilmGrainPass extends TimedPass {
   readonly id = 'filmGrain';
@@ -455,7 +482,10 @@ class FilmGrainPass extends TimedPass {
   private readonly animate: boolean;
   private readonly factory: CanvasFactory | undefined;
   private tiles: Surface[] = [];
-  private patterns: CanvasPattern[] = [];
+  /** The tiles laid out once into one field `GRAIN_TILE_SIZE` larger than the frame in each axis. */
+  private field: Surface | null = null;
+  private w = 0;
+  private h = 0;
 
   constructor(opts: FilmGrainOptions) {
     super();
@@ -465,27 +495,47 @@ class FilmGrainPass extends TimedPass {
     this.factory = opts.canvasFactory;
   }
 
-  override resize(_widthPx: number, _heightPx: number, _dpr: number): void {
-    if (this.patterns.length === 0) this.bake();
+  override resize(widthPx: number, heightPx: number, _dpr: number): void {
+    this.layout(widthPx | 0, heightPx | 0);
   }
 
   protected renderTimed(ctx: EffectCtx): void {
-    if (this.patterns.length === 0) this.bake();
+    const w = ctx.viewport.widthPx | 0;
+    const h = ctx.viewport.heightPx | 0;
+    if (!this.field || this.w !== w || this.h !== h) this.layout(w, h);
+    const field = this.field;
+    if (!field) return;
     const tick = ctx.reducedMotion || !this.animate ? 0 : ctx.tick;
-    const { tile, dx, dy } = grainFrameFor(tick);
-    const pattern = this.patterns[tile];
-    if (!pattern) return;
+    const { dx, dy } = grainFrameFor(tick);
+    // One cropped blit. A `'overlay'` pattern fill of the same area measured ~4.9 ms a frame at
+    // 1080p on a software rasterizer, the cropped `drawImage` ~2.2 ms (P3-E-9).
     withState(ctx.target, 'overlay', () => {
-      ctx.target.fillStyle = pattern;
-      ctx.target.translate(dx, dy);
-      ctx.target.fillRect(-dx, -dy, ctx.viewport.widthPx, ctx.viewport.heightPx);
+      ctx.target.drawImage(field.canvas, dx, dy, w, h, 0, 0, w, h);
     });
   }
 
   protected override onDispose(): void {
     for (const tile of this.tiles) releaseSurface(tile);
     this.tiles = [];
-    this.patterns = [];
+    releaseSurface(this.field);
+    this.field = null;
+  }
+
+  private layout(w: number, h: number): void {
+    if (this.tiles.length === 0) this.bake();
+    releaseSurface(this.field);
+    const field = createSurface(this.factory, w + GRAIN_TILE_SIZE, h + GRAIN_TILE_SIZE);
+    const cols = Math.ceil(field.canvas.width / GRAIN_TILE_SIZE);
+    const rows = Math.ceil(field.canvas.height / GRAIN_TILE_SIZE);
+    for (let j = 0; j < rows; j++) {
+      for (let i = 0; i < cols; i++) {
+        const tile = this.tiles[(Math.imul(i + 1, 0x9e3779b1) ^ Math.imul(j + 1, 0x85ebca6b)) >>> 29 & (GRAIN_TILE_COUNT - 1)];
+        if (tile) field.ctx.drawImage(tile.canvas, i * GRAIN_TILE_SIZE, j * GRAIN_TILE_SIZE);
+      }
+    }
+    this.field = field;
+    this.w = w;
+    this.h = h;
   }
 
   private bake(): void {
@@ -503,8 +553,6 @@ class FilmGrainPass extends TimedPass {
       }
       surface.ctx.putImageData(image, 0, 0);
       this.tiles.push(surface);
-      const pattern = surface.ctx.createPattern(surface.canvas, 'repeat');
-      if (pattern) this.patterns.push(pattern);
     }
   }
 }
@@ -513,7 +561,7 @@ class FilmGrainPass extends TimedPass {
 // CRT curvature (labelled substitute)
 // ---------------------------------------------------------------------------------------------
 
-export interface CrtCurvatureOptions {
+export interface CrtCurvatureOptions extends FactoryOption {
   readonly amount?: number;
 }
 
@@ -532,19 +580,19 @@ class CrtCurvaturePass extends TimedPass {
   readonly declaredCost = 0.1;
   override readonly approximation = 'CRT corners drawn as a mask, not a true barrel warp';
   private readonly amount: number;
-  private gradient: CanvasGradient | null = null;
+  private readonly factory: CanvasFactory | undefined;
+  private overlay: Surface | null = null;
   private w = 0;
   private h = 0;
 
   constructor(opts: CrtCurvatureOptions) {
     super();
     this.amount = clamp(opts.amount ?? 0.08, 0, 0.5);
+    this.factory = opts.canvasFactory;
   }
 
   override resize(widthPx: number, heightPx: number, _dpr: number): void {
-    this.w = widthPx | 0;
-    this.h = heightPx | 0;
-    this.gradient = null;
+    this.bake(widthPx | 0, heightPx | 0);
   }
 
   protected renderTimed(ctx: EffectCtx): void {
@@ -552,41 +600,48 @@ class CrtCurvaturePass extends TimedPass {
     if (ctx.quality <= 1) return;
     const w = ctx.viewport.widthPx | 0;
     const h = ctx.viewport.heightPx | 0;
-    if (!this.gradient || this.w !== w || this.h !== h) this.bake(ctx.target, w, h);
-    const gradient = this.gradient;
-    if (!gradient) return;
-    const target = ctx.target;
-    withState(target, 'multiply', () => {
-      target.fillStyle = gradient;
-      target.fillRect(0, 0, w, h);
+    if (!this.overlay || this.w !== w || this.h !== h) this.bake(w, h);
+    const overlay = this.overlay;
+    if (!overlay) return;
+    withState(ctx.target, 'multiply', () => {
+      ctx.target.drawImage(overlay.canvas, 0, 0);
     });
-    if (typeof target.roundRect === 'function') {
-      const radius = Math.min(w, h) * this.amount;
-      withState(target, 'source-over', () => {
-        target.fillStyle = '#000000';
-        target.beginPath();
-        target.rect(0, 0, w, h);
-        target.roundRect(0, 0, w, h, radius);
-        target.fill('evenodd');
-      });
-    }
   }
 
   protected override onDispose(): void {
-    this.gradient = null;
+    releaseSurface(this.overlay);
+    this.overlay = null;
   }
 
-  private bake(target: Canvas2DContext, w: number, h: number): void {
+  /**
+   * Falloff and corner mask painted once into one full-frame canvas (white = untouched, black =
+   * corners), then multiplied in per frame: black multiplies to black, exactly what the old
+   * `source-over` black corners did, for one blit instead of a gradient fill plus a path fill.
+   */
+  private bake(w: number, h: number): void {
+    releaseSurface(this.overlay);
+    const overlay = createSurface(this.factory, Math.max(1, w), Math.max(1, h));
+    const ctx = overlay.ctx;
     const cx = (w - 1) * 0.5;
     const cy = (h - 1) * 0.5;
     const maxR = Math.hypot(cx, cy) || 1;
     const k = clamp(this.amount * 6, 0, 0.6);
-    const g = target.createRadialGradient(cx, cy, 0, cx, cy, maxR);
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR);
     for (const t of [0, 0.4, 0.6, 0.75, 0.9, 1]) {
       const v = Math.round(255 * (1 - k * t ** 4));
       g.addColorStop(t, `rgb(${v},${v},${v})`);
     }
-    this.gradient = g;
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+    if (typeof ctx.roundRect === 'function') {
+      const radius = Math.min(w, h) * this.amount;
+      ctx.fillStyle = '#000000';
+      ctx.beginPath();
+      ctx.rect(0, 0, w, h);
+      ctx.roundRect(0, 0, w, h, radius);
+      ctx.fill('evenodd');
+    }
+    this.overlay = overlay;
     this.w = w;
     this.h = h;
   }
