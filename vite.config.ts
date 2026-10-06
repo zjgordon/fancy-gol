@@ -3,6 +3,11 @@ import { defineConfig } from 'vite';
 
 const alias = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
+/** Rolldown names a dynamic-entry chunk after its entry module (`src/client/theme-bundles/<id>.ts`). */
+const THEME_CHUNK_NAMES = /^(chiba-city|flatline|sids-place|void-walker|synthwave)$/;
+/** Modules only the themes use: the effect-pass implementations and their pass-stack factories. */
+const THEME_SHARED_MODULES = /\/src\/render\/effects\/(post-passes|background-passes|effects-passes|library|timed-pass|surface|software-surface|pixel-hash)\.ts$/;
+
 export default defineConfig({
   root: 'src/client',
   resolve: {
@@ -22,6 +27,29 @@ export default defineConfig({
   build: {
     outDir: alias('./dist/client'),
     emptyOutDir: true,
+    rolldownOptions: {
+      output: {
+        // P3-E-7: the lazily loaded theme chunks are named `theme-*`. That is a contract, not
+        // cosmetics: `tests/bench/bundle.bench.ts` excludes exactly these from `client-js-gzip`
+        // (the floor is "excl. themes", planning/README.md §3.6, D4) and gates the largest of them
+        // as `theme-chunk-gzip-max`.
+        //
+        // The split itself is the bundler's natural one: each theme is a dynamic `import()` of a
+        // bundle module (`src/client/theme-bundles/*`), and what several themes share (the effect
+        // passes, via `library`) becomes one common chunk that is fetched once. Forcing that layout
+        // with `codeSplitting` / `manualChunks` groups made it worse: the shared passes collapsed
+        // into the first theme's chunk, so loading Flatline fetched all of Chiba-City too. Only the
+        // names are configured here.
+        chunkFileNames: (chunk: { name: string; isDynamicEntry: boolean; moduleIds: readonly string[] }) => {
+          if (chunk.isDynamicEntry && THEME_CHUNK_NAMES.test(chunk.name)) return 'assets/theme-[name]-[hash].js';
+          // The common chunk the themes share: effect passes only themes use, and nothing else.
+          if (chunk.moduleIds.length > 0 && chunk.moduleIds.every((id) => THEME_SHARED_MODULES.test(id))) {
+            return 'assets/theme-effects-[hash].js';
+          }
+          return 'assets/[name]-[hash].js';
+        },
+      },
+    },
   },
   server: {
     port: 5173,

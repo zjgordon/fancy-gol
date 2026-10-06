@@ -92,6 +92,12 @@ test.describe('Phase 1 keybindings', () => {
 
     await page.keyboard.press('Space');
 
+    // A command is logged when it *completes*. `theme.cycle` completes only after the next theme's
+    // chunk has loaded (P3-E-7), so wait for it rather than reading the log the instant the last
+    // key goes down. Every other binding here is synchronous.
+    await page.waitForFunction(() => window.__fancyGol?.lastCommands.includes('theme.cycle') === true, null, {
+      timeout: 10_000,
+    });
     const commands = await lastCommands(page);
     const fired = new Set(commands);
     for (const entry of PHASE_1_BINDINGS) {

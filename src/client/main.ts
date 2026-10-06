@@ -7,13 +7,6 @@ import { CONWAY, getBuiltin } from '@engine/rules/builtin';
 import { RuleValidationError } from '@engine/rules/errors';
 import { validateRuleSet } from '@engine/rules/validate';
 import { Compositor } from '@render/compositor';
-import {
-  createChibaCityPassStack,
-  createFlatlinePassStack,
-  createSidsPlacePassStack,
-  createSynthwavePassStack,
-  createVoidWalkerPassStack,
-} from '@render/effects/library';
 import type { Viewport as RenderViewport } from '@render/types';
 import { decode as decodeRle } from '@shared/rle';
 import { CHUNK_AREA, type PaintOp, type RuleSet } from '@shared/types';
@@ -51,11 +44,6 @@ import type { SelectTool } from '@ui/tools/select';
 import type { StampTool } from '@ui/tools/stamp';
 import { ThemeRegistry, compileTheme } from '@themes/registry';
 import { DEFAULT_DARK_THEME, DEFAULT_THEME } from '@themes/default/theme';
-import { CHIBA_CITY_THEME } from '@themes/chiba-city/theme';
-import { FLATLINE_THEME } from '@themes/flatline/theme';
-import { SIDS_PLACE_THEME } from '@themes/sids-place/theme';
-import { VOID_WALKER_THEME } from '@themes/void-walker/theme';
-import { SYNTHWAVE_THEME } from '@themes/synthwave/theme';
 import type { ThemeModule } from '@themes/types';
 import { chartTokensFromSet } from '@ui/charts/chart';
 import { createStatisticsPanel } from '@ui/panels/statistics/panel';
@@ -90,6 +78,7 @@ import {
 import { builtinRulesetSummaries, userRulesetSummary } from './ruleset-summaries';
 import { RulesetThumbnailLoop } from './ruleset-thumbnails';
 import { ThemePreviewLoop } from './theme-previews';
+import { ThemeBundles } from './theme-bundles';
 import { crossfadeThemeSwitch } from './theme-switch';
 import {
   attachDegradeGovernor,
@@ -209,12 +198,19 @@ function main(): void {
   }
 
   const themeRegistry = new ThemeRegistry();
+  // P3-E-7: Default is eager (the performance and accessibility reference, and the fallback for a
+  // failed load); every other theme is a lazy chunk, listed from its manifest and fetched on demand.
+  const themeBundles = new ThemeBundles();
   themeRegistry.register(DEFAULT_THEME);
-  themeRegistry.register(CHIBA_CITY_THEME);
-  themeRegistry.register(FLATLINE_THEME);
-  themeRegistry.register(SIDS_PLACE_THEME);
-  themeRegistry.register(VOID_WALKER_THEME);
-  themeRegistry.register(SYNTHWAVE_THEME);
+  for (const registration of themeBundles.registrations()) themeRegistry.register(registration);
+  /** Start fetching a theme's chunk so a later switch does not wait on the network. Never throws. */
+  function prefetchTheme(id: string): void {
+    if (themeRegistry.isLoaded(id)) return;
+    themeRegistry.load(id).catch(() => {
+      // Silent on purpose: a prefetch that fails costs nothing; the switch that needs the theme
+      // retries and shows a legible message if it fails again.
+    });
+  }
 
   function applyThemeVisuals(theme: ThemeModule): void {
     const dataId = theme.id.startsWith('default') ? 'default' : theme.id;
@@ -225,34 +221,11 @@ function main(): void {
     // (P3-D-4. Pinned in `?test=1`, where the ceiling is already pinned and this is a no-op.)
     quality.setMaxQuality(theme.quality?.max ?? 3);
     degradeNotifier.reset();
-    if (theme.id === 'chiba-city') {
-      renderer.setEffectPasses(createChibaCityPassStack());
-      renderer.setBackgroundMode('parallax');
-      void client.send({ cmd: 'setAgeBuffer', enabled: true });
-      return;
-    }
-    if (theme.id === 'flatline') {
-      renderer.setEffectPasses(createFlatlinePassStack());
-      renderer.setBackgroundMode('static');
-      void client.send({ cmd: 'setAgeBuffer', enabled: true });
-      return;
-    }
-    if (theme.id === 'sids-place') {
-      renderer.setEffectPasses(createSidsPlacePassStack());
-      renderer.setBackgroundMode('static');
-      void client.send({ cmd: 'setAgeBuffer', enabled: true });
-      return;
-    }
-    if (theme.id === 'void-walker') {
-      renderer.setEffectPasses(createVoidWalkerPassStack());
-      renderer.setBackgroundMode('parallax');
-      void client.send({ cmd: 'setAgeBuffer', enabled: true });
-      return;
-    }
-    if (theme.id === 'synthwave') {
-      renderer.setEffectPasses(createSynthwavePassStack());
-      renderer.setBackgroundMode('parallax');
-      void client.send({ cmd: 'setAgeBuffer', enabled: true });
+    const bundle = themeBundles.get(theme.id);
+    if (bundle) {
+      renderer.setEffectPasses(bundle.createPasses());
+      renderer.setBackgroundMode(bundle.background);
+      void client.send({ cmd: 'setAgeBuffer', enabled: bundle.ageBuffer });
       return;
     }
     renderer.setEffectPasses([]);
@@ -490,6 +463,7 @@ function main(): void {
   });
 
   let themesPanel: ReturnType<typeof createThemesPanel> | null = null;
+  let themesPanelOpen = false;
 
   const themeControl: ThemeControl = {
     get activeId() {
@@ -506,6 +480,19 @@ function main(): void {
       }
       themeSwitching = true;
       try {
+        // P3-E-7: a lazy theme's chunk loads *first*, while the current theme is still on screen, so
+        // the cross-fade fades between two real scenes and never to a blank one. A failed load
+        // leaves the current theme in place and says so; the next attempt retries the fetch.
+        try {
+          await themeRegistry.load(id);
+        } catch {
+          const name = themeRegistry.list().find((t) => t.id === id)?.name ?? id;
+          // Reload, not "try again": browsers cache a failed dynamic import() for the page's lifetime
+          // (verified in Chromium: the same URL fails again, a cache-busted one succeeds), so a
+          // second attempt in this session cannot work, and saying it could would be a lie.
+          toasts.show(`Couldn't load the ${name} theme — staying on the current one. Reload the page to try again.`);
+          return;
+        }
         await crossfadeThemeSwitch({
           target: appRoot,
           reducedMotion: motionReduced(),
@@ -532,6 +519,8 @@ function main(): void {
       if (ids.length === 0) return;
       const idx = Math.max(0, ids.indexOf(this.activeId));
       const next = ids[(idx + 1) % ids.length]!;
+      // The theme after this one is the likeliest next press of Mod+Shift+T: start fetching it now.
+      prefetchTheme(ids[(idx + 2) % ids.length]!);
       await this.activate(next);
     },
   };
@@ -543,8 +532,21 @@ function main(): void {
       void themeControl.activate(id);
     },
     onPreviewCreated: (id, canvas) => themePreviews.register(id, canvas),
-    onOpen: () => themePreviews.start(),
-    onClose: () => themePreviews.stop(),
+    onPrefetch: prefetchTheme,
+    onOpen: () => {
+      themesPanelOpen = true;
+      themePreviews.start();
+      // Every card shows a live preview, which needs its theme loaded: fetch them all, then
+      // restart the loop so the ones that just arrived join in. A failure just leaves that card
+      // blank; selecting it retries with a message.
+      void Promise.allSettled(themeRegistry.list().map((t) => themeRegistry.load(t.id))).then(() => {
+        if (themesPanelOpen) themePreviews.start();
+      });
+    },
+    onClose: () => {
+      themesPanelOpen = false;
+      themePreviews.stop();
+    },
   });
   panelHost.register(themesPanel.spec);
 
@@ -1086,9 +1088,15 @@ function main(): void {
     });
     const themeId = restored?.theme ?? themeRegistry.getPersistedId() ?? 'default';
     try {
+      // A restored or persisted non-Default theme is a lazy chunk: wait for it before first paint
+      // rather than painting Default and then switching.
+      await themeRegistry.load(themeId);
       themeRegistry.activate(themeId);
     } catch {
       themeRegistry.activate('default');
+      if (themeId !== 'default' && themeRegistry.list().some((t) => t.id === themeId)) {
+        toasts.show(`Couldn't load your saved theme — using Default. Reload the page to try again.`);
+      }
     }
     const active = themeRegistry.getActive();
     if (active) applyThemeVisuals(active);
