@@ -105,16 +105,23 @@ class BloomPass extends TimedPass {
       mip.ctx.drawImage(from, 0, 0, width, height);
       from = mip.canvas;
     }
-    // Fold the smaller levels into the ¼-size one so only one full-size blit is needed.
+    // Fold the smaller levels into the ¼-size one, so the glow is one image.
     for (let k = this.levels; k >= 2; k--) {
       const into = this.mips[k - 1]!;
       into.ctx.globalCompositeOperation = 'lighter';
       into.ctx.drawImage(this.mips[k]!.canvas, 0, 0, into.canvas.width, into.canvas.height);
     }
-    const glow = this.mips[1]!;
+    // Stretch it to ½ size with smoothing (the cheap step), then to full size *without* smoothing.
+    // A smoothed stretch to full size measured ~4.4 ms at 1080p on a software rasterizer; doubling
+    // an already-soft ½-size glow is invisible and measured ~1.9 ms (P3-E-9). `mips[0]` is free
+    // again here: it only fed the downsample chain.
+    const half = this.mips[0]!;
+    half.ctx.globalCompositeOperation = 'copy';
+    half.ctx.drawImage(this.mips[1]!.canvas, 0, 0, half.canvas.width, half.canvas.height);
     withState(ctx.target, 'lighter', () => {
       ctx.target.globalAlpha = this.strength / this.levels;
-      ctx.target.drawImage(glow.canvas, 0, 0, w, h);
+      ctx.target.imageSmoothingEnabled = false;
+      ctx.target.drawImage(half.canvas, 0, 0, w, h);
     });
   }
 
