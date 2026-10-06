@@ -27,7 +27,7 @@ function rig(opts: { silent?: boolean; canAmbient?: boolean; spec?: Partial<Arpe
     isFullySilent: () => state.silent,
     canPlayAmbient: () => state.canAmbient,
   } as unknown as AudioPolicy;
-  const spec = { notes: [110, 165, 220], notesPerSecAt60: 4, ...opts.spec } as ArpeggioSpec;
+  const spec: ArpeggioSpec = { notes: [110, 165, 220], notesPerSecAt60: 4, ...opts.spec };
   const bed = new ArpeggioBed({ context: ctx, scheduler, policy, spec, horizonSec: 1 });
   return { ctx, events, state, bed };
 }
