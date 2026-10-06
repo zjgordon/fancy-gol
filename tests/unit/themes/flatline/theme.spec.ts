@@ -3,7 +3,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { EventMapper } from '@audio/events';
 import { Mixer } from '@audio/mixer';
 import { AudioPolicy } from '@audio/policy';
@@ -22,6 +22,7 @@ import {
   declaredCostAtQuality,
 } from '@render/effects/library';
 import { asSoftware, createSoftwareCanvas } from '@render/effects/software-surface';
+import { RecordingCanvas, stubOffscreenCanvas } from '../../render/recording-canvas';
 import { EffectRegistry } from '@render/effects/registry';
 import type { CanvasLike } from '@render/layers';
 import { QualityGovernor } from '@render/quality-governor';
@@ -36,6 +37,10 @@ import { FLATLINE_THEME } from '@themes/flatline/theme';
 import { FLATLINE_TOKENS } from '@themes/flatline/tokens';
 import { defaultMotionSignature } from '@themes/motion/choreography';
 import { FakeAudioContext, ManualClock, MemoryStorage } from '../../audio/fakes';
+
+// Composited passes (ADR-012) bake canvases at activation; jsdom/node have no OffscreenCanvas.
+beforeAll(stubOffscreenCanvas);
+afterAll(() => vi.unstubAllGlobals());
 
 const BLACK: RGB = { r: 0, g: 0, b: 0 };
 
@@ -80,6 +85,7 @@ function effectCtx(
   return {
     target: target.getContext('2d') as unknown as CanvasRenderingContext2D,
     source: source as unknown as CanvasImageSource,
+    cells: source as unknown as CanvasImageSource,
     viewport: { ...VIEWPORT, widthPx: w, heightPx: h, ...(extra.viewport ?? {}) },
     tick: extra.tick ?? 0,
     frameTime: extra.frameTime ?? 0,
@@ -236,22 +242,28 @@ describe('Flatline sound pack', () => {
 });
 
 describe('Flatline CRT curvature is off at quality ≤ 1', () => {
-  it('copies the source through unchanged at quality 1', () => {
+  it('draws nothing at quality 1, and something at quality 3', () => {
     const w = 16;
     const h = 16;
-    const source = createSoftwareCanvas(w, h);
-    const sctx = source.getContext('2d');
-    sctx.fillStyle = '#102030';
-    sctx.fillRect(0, 0, w, h);
-    sctx.fillStyle = '#ffb000';
-    sctx.fillRect(4, 4, 8, 8);
-    const target = createSoftwareCanvas(w, h);
-    const pass = createCrtCurvaturePass({ amount: 0.2 });
-    pass.render(effectCtx(target, source, { quality: 1, viewport: { ...VIEWPORT, widthPx: w, heightPx: h } }));
-    const src = asSoftware(source)!.pixels;
-    const out = asSoftware(target)!.pixels;
-    expect(out).toEqual(src);
-    pass.dispose();
+    const draw = (quality: 0 | 1 | 2 | 3): number => {
+      const target = new RecordingCanvas(w, h);
+      const pass = createCrtCurvaturePass({ amount: 0.2 });
+      pass.render({
+        target: target.ctx as unknown as CanvasRenderingContext2D,
+        source: target as unknown as CanvasImageSource,
+        cells: target as unknown as CanvasImageSource,
+        viewport: { ...VIEWPORT, widthPx: w, heightPx: h },
+        tick: 0,
+        frameTime: 0,
+        changes: EMPTY_CHANGES,
+        quality,
+        reducedMotion: false,
+      });
+      pass.dispose();
+      return target.ctx.ops.length;
+    };
+    expect(draw(1)).toBe(0);
+    expect(draw(3)).toBeGreaterThan(0);
   });
 });
 

@@ -3,7 +3,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { EventMapper } from '@audio/events';
 import { Mixer } from '@audio/mixer';
 import { AudioPolicy } from '@audio/policy';
@@ -13,7 +13,6 @@ import { contrastRatio, resolveOpaqueColor, type RGB } from '@shared/color';
 import { Compositor } from '@render/compositor';
 import { EMPTY_CHANGES } from '@render/effects/ctx';
 import {
-  CHIBA_BLOOM_THRESHOLD,
   createBloomPass,
   createChibaCityPassStack,
   createScanlinesPass,
@@ -21,11 +20,10 @@ import {
   declaredCostAtQuality,
   scanlinePitch,
 } from '@render/effects/library';
-import { asSoftware, createSoftwareCanvas } from '@render/effects/software-surface';
+import { RecordingCanvas, recordingFactory, stubOffscreenCanvas } from '../../render/recording-canvas';
 import { EffectRegistry } from '@render/effects/registry';
 import type { CanvasLike } from '@render/layers';
 import { QualityGovernor } from '@render/quality-governor';
-import type { EffectCtx } from '@render/effects/ctx';
 import type { Viewport } from '@render/types';
 import { compileTheme, ThemeRegistry } from '@themes/registry';
 import { overlayPalette } from '@themes/chiba-city/overlay';
@@ -35,6 +33,10 @@ import { CHIBA_CITY_THEME } from '@themes/chiba-city/theme';
 import { CHIBA_CITY_TOKENS } from '@themes/chiba-city/tokens';
 import { defaultMotionSignature } from '@themes/motion/choreography';
 import { FakeAudioContext, ManualClock, MemoryStorage } from '../../audio/fakes';
+
+// Composited passes (ADR-012) bake canvases at activation; jsdom/node have no OffscreenCanvas.
+beforeAll(stubOffscreenCanvas);
+afterAll(() => vi.unstubAllGlobals());
 
 const BLACK: RGB = { r: 0, g: 0, b: 0 };
 
@@ -207,57 +209,56 @@ describe('Chiba-City sound pack', () => {
 });
 
 describe('Chiba-City scanlines do not moiré at dpr 1, 1.5, 2, 3', () => {
-  it.each([1, 1.5, 2, 3] as const)('dpr %s uses an integer device-pixel pitch', (dpr) => {
+  // Structure, not pixels (ADR-012 rule 3): the tile is an integer number of device pixels per
+  // half-period and is filled once across the viewport, so there is nothing to beat against.
+  // How it looks in a real canvas is proven by the browser-floor liveness spec and, once
+  // re-captured by P3-E-6, the per-theme baselines.
+  it.each([1, 1.5, 2, 3] as const)('dpr %s uses an integer device-pixel pitch and a 2·pitch tile', (dpr) => {
     const pitch = scanlinePitch(dpr);
     expect(Number.isInteger(pitch)).toBe(true);
     expect(pitch).toBeGreaterThanOrEqual(1);
-    const source = createSoftwareCanvas(24, 24);
-    source.getContext('2d').fillStyle = '#808080';
-    source.getContext('2d').fillRect(0, 0, 24, 24);
-    const target = createSoftwareCanvas(24, 24);
-    const pass = createScanlinesPass({ opacity: 0.2 });
-    const ctx: EffectCtx = {
-      target: target.getContext('2d') as unknown as CanvasRenderingContext2D,
-      source: source as unknown as CanvasImageSource,
+    const target = new RecordingCanvas(24, 24);
+    const baked = recordingFactory();
+    const pass = createScanlinesPass({ opacity: 0.2, canvasFactory: baked.factory });
+    pass.render({
+      target: target.ctx as unknown as CanvasRenderingContext2D,
+      source: target as unknown as CanvasImageSource,
+      cells: target as unknown as CanvasImageSource,
       viewport: { ...VIEWPORT, widthPx: 24, heightPx: 24, dpr },
       tick: 0,
       frameTime: 0,
       changes: EMPTY_CHANGES,
       quality: 3,
       reducedMotion: false,
-    };
-    pass.render(ctx);
-    const px = asSoftware(target)!.pixels;
-    const rowLuma: number[] = [];
-    for (let y = 0; y < 24; y++) {
-      let s = 0;
-      for (let x = 0; x < 24; x++) s += px[(y * 24 + x) * 4]!;
-      rowLuma.push(s);
-    }
-    const period = pitch * 2;
-    for (let y = 0; y + period < 24; y++) {
-      expect(rowLuma[y]).toBe(rowLuma[y + period]);
-    }
+    });
+    const tile = baked.canvases[0]!;
+    expect([tile.width, tile.height]).toEqual([1, pitch * 2]);
+    const fills = target.ctx.only('fillRect');
+    expect(fills).toHaveLength(1);
+    expect(fills[0]!.composite).toBe('multiply');
+    expect(fills[0]!.args).toEqual([0, 0, 24, 24]);
     pass.dispose();
   });
 });
 
 describe('Chiba-City bloom is confined to live cells', () => {
-  it('does not lift a below-threshold background texel', () => {
+  // Confinement is by construction: bloom samples the L1 cell layer, never the composite, so a
+  // background texel cannot glow. (The per-texel version needed a luma threshold to approximate
+  // this; the threshold is gone.) Once Chiba-City's cell layer is transparent (P3-E-3) the
+  // guarantee is exact; until then an opaque dark background contributes only its own colour.
+  it('reads the cell layer and adds a single additive blit', () => {
     const w = 16;
     const h = 16;
-    const source = createSoftwareCanvas(w, h);
-    const sctx = source.getContext('2d');
-    sctx.fillStyle = '#05090c';
-    sctx.fillRect(0, 0, w, h);
-    sctx.fillStyle = '#e7fff9';
-    sctx.fillRect(6, 6, 4, 4);
-    const target = createSoftwareCanvas(w, h);
-    const pass = createBloomPass({ threshold: CHIBA_BLOOM_THRESHOLD, strength: 0.38, radius: 2 });
+    const target = new RecordingCanvas(w, h);
+    const cells = new RecordingCanvas(w, h);
+    const composite = new RecordingCanvas(w, h);
+    const baked = recordingFactory();
+    const pass = createBloomPass({ strength: 0.38, radius: 2, canvasFactory: baked.factory });
     pass.resize?.(w, h, 1);
     pass.render({
-      target: target.getContext('2d') as unknown as CanvasRenderingContext2D,
-      source: source as unknown as CanvasImageSource,
+      target: target.ctx as unknown as CanvasRenderingContext2D,
+      source: composite as unknown as CanvasImageSource,
+      cells: cells as unknown as CanvasImageSource,
       viewport: { ...VIEWPORT, widthPx: w, heightPx: h },
       tick: 0,
       frameTime: 0,
@@ -265,15 +266,12 @@ describe('Chiba-City bloom is confined to live cells', () => {
       quality: 3,
       reducedMotion: false,
     });
-    const out = asSoftware(target)!.pixels;
-    const src = asSoftware(source)!.pixels;
-    const lumaAt = (buf: Uint8ClampedArray, x: number, y: number) => {
-      const i = (y * w + x) * 4;
-      return (buf[i]! + buf[i + 1]! + buf[i + 2]!) / 3;
-    };
-    expect(lumaAt(src, 1, 1)).toBeLessThan(CHIBA_BLOOM_THRESHOLD);
-    expect(Math.abs(lumaAt(out, 1, 1) - lumaAt(src, 1, 1))).toBeLessThan(3);
-    expect(lumaAt(src, 8, 8)).toBeGreaterThan(CHIBA_BLOOM_THRESHOLD);
+    const reads = baked.canvases.flatMap((c) => c.ctx.only('drawImage')).map((o) => o.detail);
+    expect(reads).toContain(cells.id);
+    expect(reads).not.toContain(composite.id);
+    const blits = target.ctx.only('drawImage');
+    expect(blits).toHaveLength(1);
+    expect(blits[0]!.composite).toBe('lighter');
     pass.dispose();
   });
 });

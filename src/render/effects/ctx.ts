@@ -35,6 +35,12 @@ export function stagesForQuality(quality: EffectQuality): readonly EffectStage[]
 export interface EffectCtx {
   readonly target: Canvas2DContext;
   readonly source: CanvasImageSource;
+  /**
+   * The L1 cell layer, read-only (P3-E-2, ADR-012). Bloom samples this rather than `source`, so a
+   * glow can only come from live cells — confined by construction once the layer is transparent —
+   * and never from a background or an earlier pass's output.
+   */
+  readonly cells: CanvasImageSource;
   readonly viewport: Viewport;
   readonly tick: number;
   /** Seconds since an arbitrary origin — for time-based animation, not wall-clock UI. */

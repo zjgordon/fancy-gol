@@ -3,7 +3,7 @@
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { EventMapper } from '@audio/events';
 import { Mixer } from '@audio/mixer';
 import { AudioPolicy } from '@audio/policy';
@@ -17,10 +17,8 @@ import { contrastRatio, resolveOpaqueColor, type RGB } from '@shared/color';
 import { Compositor } from '@render/compositor';
 import { EMPTY_CHANGES } from '@render/effects/ctx';
 import {
-  CHIBA_BLOOM_THRESHOLD,
   VOID_BLOOM_RADIUS,
   VOID_BLOOM_STRENGTH,
-  VOID_BLOOM_THRESHOLD,
   createBloomPass,
   createDeathParticlesPass,
   createStarfieldPass,
@@ -31,6 +29,7 @@ import {
   starScreenPosition,
 } from '@render/effects/library';
 import { asSoftware, createSoftwareCanvas } from '@render/effects/software-surface';
+import { RecordingCanvas, recordingFactory, stubOffscreenCanvas } from '../../render/recording-canvas';
 import { hashPixels } from '@render/effects/pixel-hash';
 import { EffectRegistry } from '@render/effects/registry';
 import { COMPOSITOR_LAYER_IDS, type CanvasLike } from '@render/layers';
@@ -45,6 +44,10 @@ import { VOID_WALKER_THEME } from '@themes/void-walker/theme';
 import { VOID_WALKER_TOKENS } from '@themes/void-walker/tokens';
 import { defaultMotionSignature } from '@themes/motion/choreography';
 import { FakeAudioContext, ManualClock, MemoryStorage } from '../../audio/fakes';
+
+// Composited passes (ADR-012) bake canvases at activation; jsdom/node have no OffscreenCanvas.
+beforeAll(stubOffscreenCanvas);
+afterAll(() => vi.unstubAllGlobals());
 
 const BLACK: RGB = { r: 0, g: 0, b: 0 };
 
@@ -85,6 +88,7 @@ function starfieldHash(vp: Viewport, seed = 42): string {
   const ctx: EffectCtx = {
     target: target.getContext('2d') as unknown as CanvasRenderingContext2D,
     source: target as unknown as CanvasImageSource,
+    cells: target as unknown as CanvasImageSource,
     viewport: vp,
     tick: 0,
     frameTime: 0,
@@ -287,30 +291,32 @@ describe('Void-Walker starfield parallax is stable', () => {
 });
 
 describe('Void-Walker bloom does not obscure L4', () => {
-  it('is the strongest bloom and leaves below-threshold texels alone', () => {
+  it('is the strongest bloom, reaches further than Chiba-City, and draws one additive blit', () => {
     expect(VOID_BLOOM_STRENGTH).toBeGreaterThan(0.38);
     expect(VOID_BLOOM_RADIUS).toBeGreaterThan(2);
-    expect(VOID_BLOOM_THRESHOLD).toBeLessThan(CHIBA_BLOOM_THRESHOLD);
     expect(COMPOSITOR_LAYER_IDS).not.toContain('overlay');
 
     const w = 16;
     const h = 16;
-    const source = createSoftwareCanvas(w, h);
-    const sctx = source.getContext('2d');
-    sctx.fillStyle = '#05010f';
-    sctx.fillRect(0, 0, w, h);
-    sctx.fillStyle = '#f4edff';
-    sctx.fillRect(6, 6, 4, 4);
-    const target = createSoftwareCanvas(w, h);
-    const pass = createBloomPass({
-      threshold: VOID_BLOOM_THRESHOLD,
-      strength: VOID_BLOOM_STRENGTH,
-      radius: VOID_BLOOM_RADIUS,
-    });
+    const chainFor = (radius: number): string[] => {
+      const baked = recordingFactory();
+      const pass = createBloomPass({ strength: VOID_BLOOM_STRENGTH, radius, canvasFactory: baked.factory });
+      pass.resize?.(w, h, 1);
+      pass.dispose();
+      return baked.canvases.map((c) => c.id);
+    };
+    // A larger radius folds more halvings into the glow: Void-Walker's chain is deeper than Chiba's.
+    expect(chainFor(VOID_BLOOM_RADIUS).length).toBeGreaterThan(chainFor(2).length);
+
+    const target = new RecordingCanvas(w, h);
+    const cells = new RecordingCanvas(w, h);
+    const baked = recordingFactory();
+    const pass = createBloomPass({ strength: VOID_BLOOM_STRENGTH, radius: VOID_BLOOM_RADIUS, canvasFactory: baked.factory });
     pass.resize?.(w, h, 1);
     pass.render({
-      target: target.getContext('2d') as unknown as CanvasRenderingContext2D,
-      source: source as unknown as CanvasImageSource,
+      target: target.ctx as unknown as CanvasRenderingContext2D,
+      source: target as unknown as CanvasImageSource,
+      cells: cells as unknown as CanvasImageSource,
       viewport: { ...VIEWPORT, widthPx: w, heightPx: h },
       tick: 0,
       frameTime: 0,
@@ -318,15 +324,11 @@ describe('Void-Walker bloom does not obscure L4', () => {
       quality: 3,
       reducedMotion: false,
     });
-    const out = asSoftware(target)!.pixels;
-    const src = asSoftware(source)!.pixels;
-    const lumaAt = (buf: Uint8ClampedArray, x: number, y: number) => {
-      const i = (y * w + x) * 4;
-      return (buf[i]! + buf[i + 1]! + buf[i + 2]!) / 3;
-    };
-    expect(lumaAt(src, 1, 1)).toBeLessThan(VOID_BLOOM_THRESHOLD);
-    expect(Math.abs(lumaAt(out, 1, 1) - lumaAt(src, 1, 1))).toBeLessThan(3);
-    expect(lumaAt(src, 8, 8)).toBeGreaterThan(VOID_BLOOM_THRESHOLD);
+    // Glow is added to the stack below L4 and never replaces it: the only draw onto the target is
+    // an additive blit, and L4 is drawn after the compositor (see the layer-id assertion above).
+    const blits = target.ctx.only('drawImage');
+    expect(blits).toHaveLength(1);
+    expect(blits[0]!.composite).toBe('lighter');
     pass.dispose();
   });
 });
@@ -339,6 +341,7 @@ describe('Void-Walker death particles', () => {
     const ctx: EffectCtx = {
       target: target.getContext('2d') as unknown as CanvasRenderingContext2D,
       source: target as unknown as CanvasImageSource,
+      cells: target as unknown as CanvasImageSource,
       viewport: VIEWPORT,
       tick: 0,
       frameTime: 0,

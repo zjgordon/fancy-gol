@@ -120,15 +120,12 @@ export function createThemePassStack(theme: ThemeId): EffectPass[] {
   return EFFECT_LIBRARY.filter((e) => e.themes.includes(theme)).map((e) => e.create());
 }
 
-/** Bloom threshold: Chiba live-cell luma sits above this; haze/bg sit below. */
-export const CHIBA_BLOOM_THRESHOLD = 72;
-
 /** Chiba-City's tuned stack (ADR-009: lives in render/, not themes/). */
 export function createChibaCityPassStack(): EffectPass[] {
   return [
     createHazeGridPass({ bg: '#05090c', line: '#2ee6d6' }),
     createBirthFlashPass({ color: '#ffffff' }),
-    createBloomPass({ threshold: CHIBA_BLOOM_THRESHOLD, strength: 0.38, radius: 2 }),
+    createBloomPass({ strength: 0.38, radius: 2 }),
     createScanlinesPass({ opacity: 0.11 }),
     createChromaticAberrationPass({ amount: 2, edgeBias: 0.78 }),
     createFilmGrainPass({ seed: 1, amount: 9 }),
@@ -162,7 +159,6 @@ export function createSidsPlacePassStack(): EffectPass[] {
 }
 
 /** Void-Walker bloom — strongest of the six (higher strength/radius than Chiba). */
-export const VOID_BLOOM_THRESHOLD = 58;
 export const VOID_BLOOM_STRENGTH = 0.72;
 export const VOID_BLOOM_RADIUS = 3;
 
@@ -172,17 +168,12 @@ export function createVoidWalkerPassStack(): EffectPass[] {
     createStarfieldPass({ seed: 42, layers: 3, starsPerLayer: 80 }),
     createDeathParticlesPass({ seed: 9, cap: 256 }),
     createTrailFadePass({ fade: 0.88 }),
-    createBloomPass({
-      threshold: VOID_BLOOM_THRESHOLD,
-      strength: VOID_BLOOM_STRENGTH,
-      radius: VOID_BLOOM_RADIUS,
-    }),
+    createBloomPass({ strength: VOID_BLOOM_STRENGTH, radius: VOID_BLOOM_RADIUS }),
     createVignettePass({ strength: 0.62 }),
   ];
 }
 
 /** Synthwave bloom — bright neon, below Void-Walker's strength so the grid stays readable. */
-export const SYNTH_BLOOM_THRESHOLD = 55;
 export const SYNTH_BLOOM_STRENGTH = 0.48;
 export const SYNTH_BLOOM_RADIUS = 2;
 export const SYNTH_SUN_Y = 0.55;
@@ -203,11 +194,7 @@ export function createSynthwavePassStack(): EffectPass[] {
       maxAlpha: 0.26,
     }),
     createHueShiftByAgePass({ degrees: 120 }),
-    createBloomPass({
-      threshold: SYNTH_BLOOM_THRESHOLD,
-      strength: SYNTH_BLOOM_STRENGTH,
-      radius: SYNTH_BLOOM_RADIUS,
-    }),
+    createBloomPass({ strength: SYNTH_BLOOM_STRENGTH, radius: SYNTH_BLOOM_RADIUS }),
     createChromaticAberrationPass({ amount: 2.5, edgeBias: 0.55 }),
     createScanlinesPass({ opacity: 0.07 }),
   ];

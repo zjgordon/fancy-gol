@@ -58,6 +58,9 @@ export interface CompositorOptions {
 
 type DisplayCanvas = HTMLCanvasElement | OffscreenCanvas;
 
+/** `drawImage` calls that fill L3 with L0+L1+L2 before the post passes run. */
+const POST_STACK_COPIES = 3;
+
 function isStyleable(canvas: DisplayCanvas): canvas is HTMLCanvasElement {
   return 'style' in canvas;
 }
@@ -93,6 +96,8 @@ export class Compositor implements Renderer {
   private readonly stats = { frameMs: 0, drawCalls: 0, tilesRepainted: 0 };
   private compositeDrawCalls = 0;
   private readonly stageMs: StageTimings = { background: 0, effects: 0, post: 0 };
+  /** True when L3 holds the whole L0+L1+L2 stack, so the display needs only L3 (P3-E-2). */
+  private postCoversStack = false;
 
   constructor(options: CompositorOptions = {}) {
     this.layers = new LayerStack(options.canvasFactory ?? defaultCanvasFactory);
@@ -340,6 +345,7 @@ export class Compositor implements Renderer {
       this.effects.renderStage('background', {
         target: ctx,
         source: canvas,
+        cells: this.layers.get('cells').canvas,
         viewport,
         tick,
         frameTime,
@@ -362,6 +368,7 @@ export class Compositor implements Renderer {
     this.effects.renderStage('effects', {
       target: effects.ctx,
       source: cells.canvas,
+      cells: cells.canvas,
       viewport,
       tick,
       frameTime,
@@ -383,9 +390,11 @@ export class Compositor implements Renderer {
       post.ctx.drawImage(cells.canvas, 0, 0);
       post.ctx.drawImage(effects.canvas, 0, 0);
     }
+    this.postCoversStack = postLive;
     this.effects.renderStage('post', {
       target: post.ctx,
       source: postLive ? post.canvas : effects.canvas,
+      cells: cells.canvas,
       viewport,
       tick,
       frameTime,
@@ -399,6 +408,15 @@ export class Compositor implements Renderer {
     const h = this.layers.height;
     displayCtx.setTransform(1, 0, 0, 1, 0, 0);
     displayCtx.clearRect(0, 0, w, h);
+
+    // With a live post stage, L3 already holds L0+L1+L2 (copied in `runEffectStages` so the post
+    // passes can sample the stack). Blitting those three layers to the display again would repeat
+    // three full-frame operations every frame for pixels L3 is about to cover. The three L3 copies
+    // are counted here so draw-call accounting stays honest.
+    if (this.effectsEnabled && this.postCoversStack) {
+      displayCtx.drawImage(this.layers.get('post').canvas, 0, 0);
+      return 1 + POST_STACK_COPIES;
+    }
 
     let calls = 0;
     displayCtx.drawImage(this.layers.get('background').canvas, 0, 0);

@@ -201,6 +201,7 @@ describe('Sids-Place parchment texture', () => {
     a.render({
       target: va.getContext('2d') as unknown as CanvasRenderingContext2D,
       source: va as unknown as CanvasImageSource,
+      cells: va as unknown as CanvasImageSource,
       viewport: vp,
       tick: 0,
       frameTime: 0,
@@ -211,6 +212,7 @@ describe('Sids-Place parchment texture', () => {
     b.render({
       target: vb.getContext('2d') as unknown as CanvasRenderingContext2D,
       source: vb as unknown as CanvasImageSource,
+      cells: vb as unknown as CanvasImageSource,
       viewport: vp,
       tick: 0,
       frameTime: 0,
@@ -226,6 +228,7 @@ describe('Sids-Place parchment texture', () => {
     other.render({
       target: vo.getContext('2d') as unknown as CanvasRenderingContext2D,
       source: vo as unknown as CanvasImageSource,
+      cells: vo as unknown as CanvasImageSource,
       viewport: vp,
       tick: 0,
       frameTime: 0,

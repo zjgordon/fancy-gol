@@ -3,7 +3,7 @@
  * nor dispose-tracked WebAudio-shaped nodes. Complements the abstract leaky-pass
  * test in effects.spec.ts with the real six-theme stacks.
  */
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Compositor } from '@render/compositor';
 import {
   THEME_IDS,
@@ -18,28 +18,14 @@ import { FLATLINE_THEME } from '@themes/flatline/theme';
 import { SIDS_PLACE_THEME } from '@themes/sids-place/theme';
 import { VOID_WALKER_THEME } from '@themes/void-walker/theme';
 import { SYNTHWAVE_THEME } from '@themes/synthwave/theme';
+import { RecordingCanvas, stubOffscreenCanvas } from '../render/recording-canvas';
+
+// Composited passes (ADR-012) bake canvases at activation; jsdom/node have no OffscreenCanvas.
+beforeAll(stubOffscreenCanvas);
+afterAll(() => vi.unstubAllGlobals());
 
 function fakeCanvas(width: number, height: number): CanvasLike {
-  const canvas = {
-    width,
-    height,
-    style: {} as { width?: string; height?: string },
-    getContext: (kind: string) =>
-      kind === '2d'
-        ? {
-            fillStyle: '#000',
-            clearRect(): void {},
-            fillRect(): void {},
-            setTransform(): void {},
-            drawImage(): void {},
-            createImageData(w: number, h: number) {
-              return { width: w, height: h, data: new Uint8ClampedArray(w * h * 4) };
-            },
-            putImageData(): void {},
-          }
-        : null,
-  };
-  return canvas as unknown as CanvasLike;
+  return new RecordingCanvas(width, height) as unknown as CanvasLike;
 }
 
 const VIEWPORT: Viewport = {
@@ -84,6 +70,11 @@ describe('100 theme switches leak no resources', () => {
 
     const layersAtStart = compositor.layerAllocationCount;
     const ids = THEME_IDS;
+    // Composited passes bake offscreen canvases (noise tiles, scanline pattern, bloom mips). Count
+    // the ones still holding a backing store: it must stay bounded by one stack's worth, and a
+    // swap that forgot to release the old stack's bakes would grow it every time.
+    const baked = stubOffscreenCanvas();
+    let peakLive = 0;
 
     for (let i = 0; i < 100; i++) {
       const id = ids[i % ids.length]!;
@@ -91,9 +82,13 @@ describe('100 theme switches leak no resources', () => {
       compositor.setEffectPasses(passes);
       compositor.setTheme({ ...THEME, id: `${id}-${i}` });
       compositor.draw(emptyFrame(i));
+      peakLive = Math.max(peakLive, baked.live());
     }
 
     expect(compositor.layerAllocationCount).toBe(layersAtStart);
+    expect(peakLive).toBeLessThanOrEqual(24); // the heaviest stack bakes 8 grain tiles + mips + bands
+    compositor.setEffectPasses([]);
+    expect(baked.live()).toBe(0);
     compositor.dispose();
   });
 

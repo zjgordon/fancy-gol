@@ -3,7 +3,7 @@
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { arpeggioIntervalSec, ArpeggioBed } from '@audio/arpeggio';
 import { EventMapper } from '@audio/events';
 import { Mixer } from '@audio/mixer';
@@ -37,6 +37,11 @@ import { SYNTHWAVE_TOKENS } from '@themes/synthwave/tokens';
 import { defaultMotionSignature } from '@themes/motion/choreography';
 import { FakeAudioContext, ManualClock, MemoryStorage } from '../../audio/fakes';
 import type { FakeOscillator } from '../../audio/fakes';
+import { stubOffscreenCanvas } from '../../render/recording-canvas';
+
+// Composited passes (ADR-012) bake canvases at activation; jsdom/node have no OffscreenCanvas.
+beforeAll(stubOffscreenCanvas);
+afterAll(() => vi.unstubAllGlobals());
 
 const BLACK: RGB = { r: 0, g: 0, b: 0 };
 
@@ -321,6 +326,7 @@ describe('Synthwave horizon grid vanishing point', () => {
     const makeCtx = (target: ReturnType<typeof createSoftwareCanvas>, vp: Viewport): EffectCtx => ({
       target: target.getContext('2d') as unknown as CanvasRenderingContext2D,
       source: target as unknown as CanvasImageSource,
+      cells: target as unknown as CanvasImageSource,
       viewport: vp,
       tick: 0,
       frameTime: 0,

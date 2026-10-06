@@ -51,10 +51,6 @@ const WARMUP_MS = 1_500;
 const KNOWN_BROKEN: Readonly<Record<string, string>> = {
   // Post stage: per-texel passes read an all-zero buffer on a real OffscreenCanvas and paint
   // transparent black (ADR-011 amendment). Rebuilt as composited passes by P3-E-2.
-  'liveness:chiba-city:post': 'P3-E-2',
-  'liveness:flatline:post': 'P3-E-2',
-  'liveness:void-walker:post': 'P3-E-2',
-  'liveness:synthwave:post': 'P3-E-2',
 
   // Effects stage. Four distinct causes, all fixed by P3-E-3:
   //  - chiba-city: `birthFlash` never fires — nothing in client/ calls `setChangeSummary`, so
@@ -75,16 +71,12 @@ const KNOWN_BROKEN: Readonly<Record<string, string>> = {
   'liveness:chiba-city:background': 'P3-E-3',
   'liveness:flatline:background': 'P3-E-3',
 
-  // Allocation and frame ratio: every theme with per-texel passes. The marker comes off with the
-  // last of the owning tasks, since both stages allocate in flatline, void-walker and synthwave.
-  'heap:chiba-city': 'P3-E-2',
+  // Allocation: the effects-stage per-texel passes still allocate per frame in flatline,
+  // void-walker and synthwave (P3-E-2 fixed the post stage, which was the bulk of it; the frame
+  // ratio now passes for all of them, so those markers are gone).
   'heap:flatline': 'P3-E-3 (after P3-E-2)',
   'heap:void-walker': 'P3-E-3 (after P3-E-2)',
   'heap:synthwave': 'P3-E-3 (after P3-E-2)',
-  'ratio:chiba-city': 'P3-E-2',
-  'ratio:flatline': 'P3-E-3 (after P3-E-2)',
-  'ratio:void-walker': 'P3-E-3 (after P3-E-2)',
-  'ratio:synthwave': 'P3-E-3 (after P3-E-2)',
 };
 
 function broken(key: string): string | undefined {

@@ -146,6 +146,7 @@ describe('EffectRegistry', () => {
     registry.renderStage('effects', {
       target: fakeCanvas(1, 1).getContext('2d') as CanvasRenderingContext2D,
       source: fakeCanvas(1, 1),
+      cells: fakeCanvas(1, 1),
       viewport: VIEWPORT,
       tick: 0,
       frameTime: 0,
