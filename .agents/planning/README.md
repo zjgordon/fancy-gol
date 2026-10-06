@@ -213,15 +213,37 @@ calibrator makes a faster runner look like a regression — observed 2026-09-14 
 7.22 ms). Those cases still use the noise-aware wall-clock band, on `1/median`; they still have
 to meet their absolute budgets (5% and 1.5). This is not a `baselineGate: false` opt-out.
 
-**Costs are measured, never declared (P3-D-4 / ADR-011):** a case whose subject is a theme's effect
-stack measures `EffectRegistry.totalDeclaredCost()` — the EWMA the degrade governor itself feeds on —
-rather than summing `EffectPass.cost` declarations. The declarations turned out to be optimistic by
-5–70×, and a gate built on them certified nothing.
+**Costs are measured, never declared (P3-D-4 / ADR-011):** the EWMA the degrade governor feeds on,
+never an `EffectPass.cost` declaration, is what a gate may cite. The declarations turned out to be
+optimistic by 5–70×, and a gate built on them certified nothing.
 
-**Budgets may not be lowered to go green.** `theme-*-q3-stack-cost` and `theme-*-q0-throttled-frame`
-carry their acceptance budgets. They failed on the per-texel effect path; Phase 3 Workstream E
-(ADR-012) rebuilds the passes so they pass, and P3-E-8 removes the CI `bench` job's
-`continue-on-error` once they do (amended 2026-10-06 — previously "fail them until Phase 5"). `scripts/bench.mjs` also refuses to write a
+**Theme costs are not a Node bench case (moved by P3-E-8, 2026-10-06 — a gate moved, not dropped).**
+`theme-*-q3-stack-cost`, `theme-heaviest-stack-cost` and `theme-*-q0-throttled-frame` are deleted
+(`tests/bench/themes.bench.ts`). Under ADR-012 the passes are composited: on a Node recording surface
+a pass costs only call *dispatch*, which prices nothing, and a software raster overstates the GPU-side
+blits by ~6× — so neither Node harness could ever give a number that means "frame time". Their subject
+now lives where it can be measured:
+
+| Was (Node bench) | Now (real Chromium) | Tier |
+|---|---|---|
+| `theme-*-q3-stack-cost`, `theme-heaviest-stack-cost` | `browser-floor`: per-stage `renderStats().stageMs`, heap-span allocation check, same-runner ratio ≤ 2.5× Default | blocking CI (P3-E-1) |
+| `theme-*-q3-stack-cost` ≤ 18.18 ms, absolute | `browser-bench`: ≥ 55 fps at q3, 1080p, ~100k cells | reference certificate (D6) |
+| `theme-*-q0-throttled-frame` | `browser-bench`: ≥ 60 fps at q0 under a CDP 4× throttle | reference certificate (D6) |
+
+**Budgets may not be lowered to go green** — they moved, with their numbers intact. The CI `bench` job
+stays `continue-on-error` until `client-js-gzip` (135.7 kB against the 120 kB floor) is fixed by P3-E-7;
+that, not theme cost, is now the only reason it is non-blocking.
+
+**Wall-clock budgets in unit tests are calibrated (P3-E-8).** A unit test may not assert a raw
+millisecond figure: on a CI runner ~3× slower than the machine that set the budget it measures the
+runner, not the product (`theme-previews` read 7–10 ms against 3 ms on every CI run for six weeks). Use
+`tests/support/timing.ts`: `calibratedBudget(base)` is `base × max(1, speedFactor())`, where
+`speedFactor` is a same-process calibration workload against a recorded reference — so the budget is
+exactly the number in the test on a reference-speed machine and scales up, never down, elsewhere (the
+bench harness's calibration ratio, applied to unit tests). Declare such a test with `timingIt` and
+`[timing]` in its name: it is skipped under `npm run coverage` (V8 instrumentation inflates `src/`
+2–10×, which no test-side calibration can cancel) and run uncovered by `npm run test:timing`, a
+blocking step of the `verify` job. The behavioural half of the check stays in a plain `it`. `scripts/bench.mjs` also refuses to write a
 `bench-baseline.json` row for any case that missed its budget — so a red row's number lives in the
 phase document and in the run output, never in a file that looks like an approval.
 

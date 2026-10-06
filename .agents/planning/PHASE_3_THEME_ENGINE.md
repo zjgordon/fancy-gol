@@ -566,11 +566,18 @@ With no browser available, the task is `- [!]`, never `- [x]`.
 #### - [~] P3-E-8 · CI de-flake & bench re-enable — @claude, started 2026-10-06
 **Depends on:** P3-E-1 · **Files:** the test files in §4's pre-existing-failure table, `tests/unit/server/live-route.spec.ts`, `tests/bench/themes.bench.ts`, `.github/workflows/ci.yml`, `.agents/planning/README.md` §3.6
 **Implementation notes** "CI passes" has to mean the blocking `verify` job is green on every run, not on a quiet one. Move wall-clock assertions out of unit tests into the bench class they belong to, or onto a same-process ratio. Never loosen a threshold. The Node `theme-*-q3-stack-cost` / `theme-*-q0-throttled-frame` cases measure `SoftwareSurface`, which cannot price composited passes (a software raster overstates them about 6×). Their subject moves to P3-E-1's `browser-floor` tier. Record the replacement in §3.6 so the gate is moved, not dropped.
+**Delivered 2026-10-06 (@claude).** Dispositions for every row are in the §4 table above. Beyond the table:
+- *CI has been red at `verify` for the whole phase.* The first thing this task found, from `gh run view`, not from any local run: the `theme-previews` budget failed on every run since P3-D-1 (7–10 ms vs 3 ms), which skipped `visual`, `a11y`, `e2e`, `browser-floor`, `bench` and `docker` throughout. Earlier "gates green" statements on this branch rested on local runs.
+- *A masked gate.* Coverage thresholds are not evaluated when a test fails, so `src/worker/**` and `src/audio/**` branch coverage sat at 89.17% / 88.18% against 90% unseen. Confirmed identical at `f5a062d` (before any edit here). Fixed with tests; the thresholds are untouched.
+- *The Node theme-cost bench cases are deleted, not softened* (`tests/bench/themes.bench.ts`, two baseline rows). Under ADR-012 a Node surface prices only call dispatch, and the q0 cases measured the CPU cell raster. `planning/README.md` §3.6 now carries a table of where each one's subject lives (`browser-floor`, `browser-bench`) — a gate moved, not dropped.
+- *The CI `bench` job stays `continue-on-error`, for one remaining reason:* `client-js-gzip` is 135.7 kB against the 120 kB floor until P3-E-7. Removing the line now would make CI red for a reason this task does not own.
+- *Evidence still needed from CI:* none of the new behaviour has run on a GitHub runner yet (push pending). The calibration reference was measured on a fast machine; the first CI run is the real test of whether `speedFactor` scales the budgets enough.
+
 **Acceptance criteria**
-- [ ] Every row of §4's pre-existing-failure table is either moved to a bench class / ratio or fixed at its cause, with no threshold loosened.
-- [ ] `live-route.spec.ts` waits on a condition, not a fixed duration.
-- [ ] `npm run coverage` is green on 10 consecutive CI runs (dispatch samples recorded).
-- [ ] The Node theme-cost cases are replaced by the `browser-floor` tier (recorded in §3.6), and the CI `bench` job's `continue-on-error` is removed.
+- [x] Every row of §4's pre-existing-failure table is either moved to a bench class / ratio or fixed at its cause, with no threshold loosened. — see the disposition table; thresholds are identical, and the calibration factor is clamped at 1 so a reference-speed machine sees the original number.
+- [x] `live-route.spec.ts` waits on a condition, not a fixed duration. — passed on four consecutive local coverage and plain runs.
+- [ ] `npm run coverage` is green on 10 consecutive CI runs (dispatch samples recorded). — **Interim:** green twice locally with all thresholds met; zero CI runs yet (no run on this branch has ever passed `verify`). CI has no manual dispatch, so the streak accrues from pushes.
+- [ ] The Node theme-cost cases are replaced by the `browser-floor` tier (recorded in §3.6), and the CI `bench` job's `continue-on-error` is removed. — **Half done:** the cases are deleted and the replacement is recorded in §3.6. `continue-on-error` stays until P3-E-7 fixes `client-js-gzip`; remove it there.
 
 #### - [ ] P3-E-9 · Re-certify Phase 3 and release `v0.4.0`
 **Depends on:** P3-E-1 … P3-E-8 · **Files:** this document, `CHANGELOG.md`, `.agents/dashboard.html`, `docs/demo/phase-3.*`, `docs/gate-history/`
@@ -606,25 +613,40 @@ With no browser available, the task is `- [!]`, never `- [x]`.
 | Client JS bundle (gzip, excl. themes) | ≤ 120 kB (§3.6 absolute floor) | ❌ **135.7 kB, but measured including themes**, while the floor is defined excluding them (D4). Owned by P3-E-7: theme code-splitting, `client-js-gzip` measured as defined, plus a new `theme-chunk-gzip-max` gate. |
 | Blocking CI stability | `verify` green on every run | ⚠️ Wall-clock unit assertions flake on shared runners (table below). Owned by P3-E-8. |
 
-### Pre-existing failures on this machine (not P3-D-4's, recorded so nobody re-diagnoses them)
+### Wall-clock and coverage failures — what became of each (P3-E-8, 2026-10-06)
 
-`npm run test` fails 2–4 assertions per run here and **the set rotates** — this is a loaded shared
-sandbox, and the assertions are wall-clock or scheduling assertions. Verified with this task's
-changes stashed: the same class of failure, e.g. `canvas-bridge` heap-delta at 795 088 against a
-500 000 budget and `client-js-gzip` at 135.7 kB. Every one of these is machine noise, not a
-regression, and none was "fixed" by loosening a threshold:
+This table used to be headed "pre-existing failures on this machine … machine noise, not a
+regression". Two things were wrong with that. CI showed it was not noise: `theme-previews` read
+7–10 ms against 3 ms on **every** CI run since P3-D-1, so `verify` was red for the whole phase and
+every downstream job (visual, a11y, e2e, `browser-floor`) was skipped. And a failing test hides the
+coverage-threshold check, so `src/worker/**` (89.17%) and `src/audio/**` (88.18%) **branch** coverage
+had been under their 90% bar all along, unseen. Each row now has a disposition; no threshold was
+loosened.
 
-| Test | Symptom |
-|---|---|
-| `tests/integration/canvas-bridge.spec.ts` "zero allocations attributable to the render path" | 515 k–1 094 k measured against a 500 k budget; heap-delta measurement across 100 draws with a worker running concurrently. Passes on a quiet run. |
-| `tests/unit/render/effect-library.spec.ts` "every pass declares a cost and updates a measured EWMA" | first-sample EWMA 58.9 ms against a 50 ms ceiling on a 48×32 canvas — JIT/first-touch, not pass cost. |
-| `tests/unit/ui/charts/chart.spec.ts` "six charts together cost < 2 ms/frame" | 2.41 ms against 2 ms. |
-| `tests/unit/ui/components/statusbar.spec.ts` "update() costs well under the 0.3 ms/frame budget" | 0.53 ms against 0.3 ms under v8 coverage instrumentation. |
-| `tests/unit/themes/sids-place/theme.spec.ts` "bakes parchment at construction" | 61.2 ms against the 40 ms bake budget **under coverage only**; 12 ms without. |
-| `tests/unit/ui/components/ruleset-picker.spec.ts` "4 thumbnails step under 2 ms/frame" | 2.26 ms against 2 ms. |
-| `tests/unit/ui/panels/ruleset-studio/panel.spec.ts` "2 000-line ruleset without input lag" | 19.96 ms against 18.18 ms. |
-| `tests/unit/themes/motion.spec.ts` "reduced motion snaps to the final keyframe" | 34.6 ms against 30 ms. |
-| `tests/unit/server/live-route.spec.ts` "100 clients stay in sync" | tick 5 against > 5 — scheduling. |
+| Test | Was | Disposition |
+|---|---|---|
+| `canvas-bridge` "zero allocations attributable to the render path" | heap-delta *sum* 515 k–1 094 k vs 500 k | **Fixed at cause.** GC landing inside one `draw()` dominated the sum. Now the *median* per-call delta against the same 5 KB/call; the deterministic signal (`bufferAllocations === 0`) is unchanged. |
+| `effect-library` "every pass declares a cost and updates a measured EWMA" | first sample 58.9 ms vs 50 ms | **Fixed at cause.** The first sample is JIT and first-touch; the pass is warmed up and the same 50 ms ceiling applies to steady state. |
+| `live-route` "100 clients stay in sync" | tick 5 vs > 5 | **Fixed at cause.** Asserted an instant's snapshot; now waits on the conditions (every client past tick 5; spread converges to ≤ 1) and checks each client's sequence strictly grows. |
+| `compositor` "within 5% of a bare Canvas2DRenderer" | 1.055 vs 1.05 | **Fixed at cause.** One window per path charged all drift to the second; now interleaved trials, medians. Threshold unchanged. |
+| `theme-previews` "combined tick under 3 ms" | 7–10 ms, every CI run | **Calibrated** `[timing]` (below). |
+| Flatline `textRain` "< 1.5 ms at 1080p" | 1.53–1.56 ms on CI | **Calibrated** `[timing]`. |
+| `statusbar` `update()` < 0.3 ms | 0.53 ms under coverage | **Calibrated** `[timing]`. |
+| `chart` "six charts < 2 ms" | 2.41 ms | **Calibrated** `[timing]`. |
+| `ruleset-picker` "4 thumbnails < 2 ms" | 2.26 ms | **Calibrated** `[timing]`. |
+| Sids-Place parchment bake < 40 ms | 61 ms under coverage, 12 without | **Calibrated**, and skipped under coverage. |
+| `ruleset-studio` "2 000-line ruleset" < 18.18 ms | 19.96 ms | **Calibrated**, skipped under coverage. |
+| `motion` "reduced motion snaps" < 30 ms | 34.6 ms | **Calibrated**, skipped under coverage. |
+| `src/worker/**` and `src/audio/**` branch coverage | 89.17% / 88.18% vs 90% | **Tests added** (not a threshold change): a dedicated `ArpeggioBed` spec (11 tests) and the frame-view mirror's per-chunk branches. `npm run coverage` now exits 0, twice in a row. |
+
+**What "calibrated" means** (`tests/support/timing.ts`, `planning/README.md` §3.6): the budget is the
+number in the test multiplied by `max(1, speedFactor())`, where `speedFactor` is a same-process
+workload against a recorded reference (6.27 ms on the machine the budgets were set on). On a machine
+that fast the budget is exactly the original; on a slower runner it scales *up*, never down. These
+tests are skipped under `npm run coverage` and run uncovered in the `verify` job by `npm run
+test:timing`, so they gate CI for the first time (statusbar, chart and picker were already skipped
+under coverage, so they never ran there at all).
+
 | Reduced motion | every theme fully functional and silent |
 
 ---
