@@ -14,9 +14,9 @@ export interface SynthQualityLevelSpec {
 export const SYNTH_QUALITY_LEVELS: Readonly<Record<SynthQualityLevel, SynthQualityLevelSpec>> = {
   0: { passes: [], note: 'tokens + palette' },
   1: { passes: ['sunGradient'], note: 'horizon sun only' },
-  2: { passes: ['sunGradient', 'gridGlow', 'hueShiftByAge'], note: 'sun + perspective grid + age hue' },
+  2: { passes: ['sunGradient', 'gridGlow'], note: 'sun + perspective grid (age hue is in the palette)' },
   3: {
-    passes: ['sunGradient', 'gridGlow', 'hueShiftByAge', 'bloom', 'chromaticAberration', 'scanlines'],
+    passes: ['sunGradient', 'gridGlow', 'bloom', 'chromaticAberration', 'scanlines'],
     note: 'full stack: bloom, edge aberration, subtle scanlines',
   },
 };

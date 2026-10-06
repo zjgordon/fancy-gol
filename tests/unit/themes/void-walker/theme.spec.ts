@@ -337,9 +337,9 @@ describe('Void-Walker death particles', () => {
   it('are pooled, hard-capped, allocation-free, and clear on reset', () => {
     const pass = createDeathParticlesPass({ cap: 64, seed: 9 });
     expect(pass.bufferAllocations).toBe(1);
-    const target = createSoftwareCanvas(VIEWPORT.widthPx, VIEWPORT.heightPx);
+    const target = new RecordingCanvas(VIEWPORT.widthPx, VIEWPORT.heightPx);
     const ctx: EffectCtx = {
-      target: target.getContext('2d') as unknown as CanvasRenderingContext2D,
+      target: target.ctx as unknown as CanvasRenderingContext2D,
       source: target as unknown as CanvasImageSource,
       cells: target as unknown as CanvasImageSource,
       viewport: VIEWPORT,

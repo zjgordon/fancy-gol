@@ -21,12 +21,9 @@ import {
   SYNTH_SUN_Y,
   vanishingPointX,
 } from '@render/effects/library';
-import { asSoftware, createSoftwareCanvas } from '@render/effects/software-surface';
-import { hashPixels } from '@render/effects/pixel-hash';
 import { EffectRegistry } from '@render/effects/registry';
 import type { CanvasLike } from '@render/layers';
 import { QualityGovernor } from '@render/quality-governor';
-import type { EffectCtx } from '@render/effects/ctx';
 import type { Viewport } from '@render/types';
 import { compileTheme, ThemeRegistry } from '@themes/registry';
 import { overlayPalette } from '@themes/synthwave/overlay';
@@ -37,7 +34,7 @@ import { SYNTHWAVE_TOKENS } from '@themes/synthwave/tokens';
 import { defaultMotionSignature } from '@themes/motion/choreography';
 import { FakeAudioContext, ManualClock, MemoryStorage } from '../../audio/fakes';
 import type { FakeOscillator } from '../../audio/fakes';
-import { stubOffscreenCanvas } from '../../render/recording-canvas';
+import { RecordingCanvas, recordingFactory, stubOffscreenCanvas } from '../../render/recording-canvas';
 
 // Composited passes (ADR-012) bake canvases at activation; jsdom/node have no OffscreenCanvas.
 beforeAll(stubOffscreenCanvas);
@@ -132,7 +129,6 @@ describe('Synthwave quality ladder', () => {
     expect(SYNTH_QUALITY_LEVELS[3].passes).toEqual([
       'sunGradient',
       'gridGlow',
-      'hueShiftByAge',
       'bloom',
       'chromaticAberration',
       'scanlines',
@@ -142,8 +138,7 @@ describe('Synthwave quality ladder', () => {
       expect.arrayContaining([
         'sunGradient',
         'gridGlow',
-        'hueShiftByAge',
-        'bloom',
+          'bloom',
         'chromaticAberration',
         'scanlines',
       ]),
@@ -317,32 +312,30 @@ describe('Synthwave horizon grid vanishing point', () => {
     expect(extreme).toBeLessThanOrEqual(w * 0.5 + w * 0.35 + 1e-9);
     expect(SYNTH_SUN_Y).toBe(0.55);
 
-    const a = createGridGlowPass({ horizonY: SYNTH_SUN_Y, maxAlpha: 0.26 });
-    const b = createGridGlowPass({ horizonY: SYNTH_SUN_Y, maxAlpha: 0.26 });
-    const ta = createSoftwareCanvas(48, 32);
-    const tb = createSoftwareCanvas(48, 32);
-    const vpHome: Viewport = { ...VIEWPORT, originX: 0 };
-    const vpAway: Viewport = { ...VIEWPORT, originX: 30 };
-    const makeCtx = (target: ReturnType<typeof createSoftwareCanvas>, vp: Viewport): EffectCtx => ({
-      target: target.getContext('2d') as unknown as CanvasRenderingContext2D,
-      source: target as unknown as CanvasImageSource,
-      cells: target as unknown as CanvasImageSource,
-      viewport: vp,
-      tick: 0,
-      frameTime: 0,
-      changes: EMPTY_CHANGES,
-      quality: 3,
-      reducedMotion: true,
-    });
-    a.render(makeCtx(ta, vpHome));
-    b.render(makeCtx(tb, vpAway));
-    expect(hashPixels(asSoftware(ta)!.pixels)).not.toBe(hashPixels(asSoftware(tb)!.pixels));
-    // Pan away and back restores the identical field.
-    const tc = createSoftwareCanvas(48, 32);
-    b.render(makeCtx(tc, vpHome));
-    expect(hashPixels(asSoftware(tc)!.pixels)).toBe(hashPixels(asSoftware(ta)!.pixels));
-    a.dispose();
-    b.dispose();
+    // Structure, not pixels (ADR-012 rule 3): the same pan always draws the same field, a different
+    // pan draws a different one, and panning away and back lands on the identical sequence.
+    const draw = (originX: number): string => {
+      const baked = recordingFactory();
+      const target = new RecordingCanvas(48, 32);
+      const pass = createGridGlowPass({ horizonY: SYNTH_SUN_Y, maxAlpha: 0.26, canvasFactory: baked.factory });
+      pass.render({
+        target: target.ctx as unknown as CanvasRenderingContext2D,
+        source: target as unknown as CanvasImageSource,
+        cells: target as unknown as CanvasImageSource,
+        viewport: { ...VIEWPORT, originX },
+        tick: 0,
+        frameTime: 0,
+        changes: EMPTY_CHANGES,
+        quality: 3,
+        reducedMotion: true,
+      });
+      const cache = baked.canvases[0]!;
+      pass.dispose();
+      return JSON.stringify(cache.ctx.ops);
+    };
+    expect(draw(0)).toBe(draw(0));
+    expect(draw(0)).not.toBe(draw(30));
+    expect(draw(30)).not.toBe(draw(0));
   });
 });
 
@@ -395,7 +388,6 @@ describe('Synthwave pass stack', () => {
     expect(stack.map((p) => p.id)).toEqual([
       'sunGradient',
       'gridGlow',
-      'hueShiftByAge',
       'bloom',
       'chromaticAberration',
       'scanlines',

@@ -117,7 +117,6 @@ describe('effect library (P3-A-5)', () => {
         'filmGrain',
         'gridGlow',
         'hazeGrid',
-        'hueShiftByAge',
         'parchmentTexture',
         'phosphorDecay',
         'scanlines',
@@ -185,7 +184,7 @@ describe('effect library (P3-A-5)', () => {
   it('deathParticles stay hard-capped and allocation-free in steady state', () => {
     const pass = createDeathParticlesPass({ cap: 64, seed: 1 });
     expect(pass.bufferAllocations).toBe(1);
-    const { ctx } = makeCtx(pass, 1, { births: 0, deaths: 500, transitions: 500 });
+    const { ctx } = makeRecordingCtx(1);
     for (let i = 0; i < 40; i++) {
       pass.render({
         ...ctx,
@@ -201,7 +200,7 @@ describe('effect library (P3-A-5)', () => {
   it('birthFlash stays hard-capped and allocation-free in steady state', () => {
     const pass = createBirthFlashPass({ cap: 32 });
     expect(pass.bufferAllocations).toBe(1);
-    const { ctx } = makeCtx(pass, 1, { births: 100, deaths: 0, transitions: 100 });
+    const { ctx } = makeRecordingCtx(1);
     for (let i = 0; i < 40; i++) {
       pass.render({
         ...ctx,

@@ -16,7 +16,6 @@ import {
   createBirthFlashPass,
   createDeathParticlesPass,
   createGridGlowPass,
-  createHueShiftByAgePass,
   createPhosphorDecayPass,
   createTrailFadePass,
 } from './effects-passes';
@@ -59,7 +58,6 @@ export {
   createBirthFlashPass,
   createDeathParticlesPass,
   createTrailFadePass,
-  createHueShiftByAgePass,
   vanishingPointX,
 } from './effects-passes';
 
@@ -101,7 +99,6 @@ export const EFFECT_LIBRARY: readonly LibraryEntry[] = [
   { id: 'birthFlash', themes: ['chiba-city'], create: () => createBirthFlashPass() },
   { id: 'deathParticles', themes: ['void-walker'], create: () => createDeathParticlesPass({ seed: 9 }) },
   { id: 'trailFade', themes: ['void-walker'], create: () => createTrailFadePass() },
-  { id: 'hueShiftByAge', themes: ['synthwave'], create: () => createHueShiftByAgePass() },
   { id: 'sunGradient', themes: ['synthwave'], create: () => createSunGradientPass() },
   { id: 'textRain', themes: ['flatline'], create: () => createTextRainPass({ seed: 3 }) },
 ];
@@ -142,7 +139,7 @@ export function createFlatlinePassStack(
   const hex = `#${phosphor.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
   return [
     createTextRainPass({ seed: 3, opacity: 0.055, color: hex, columns: 48 }),
-    createPhosphorDecayPass({ color: phosphor, fade: 0.9 }),
+    createPhosphorDecayPass({ fade: 0.9 }),
     createScanlinesPass({ opacity: 0.14 }),
     createCrtCurvaturePass({ amount: 0.06 }),
   ];
@@ -193,7 +190,6 @@ export function createSynthwavePassStack(): EffectPass[] {
       parallax: 0.08,
       maxAlpha: 0.26,
     }),
-    createHueShiftByAgePass({ degrees: 120 }),
     createBloomPass({ strength: SYNTH_BLOOM_STRENGTH, radius: SYNTH_BLOOM_RADIUS }),
     createChromaticAberrationPass({ amount: 2.5, edgeBias: 0.55 }),
     createScanlinesPass({ opacity: 0.07 }),

@@ -17,6 +17,9 @@ export interface DrawOp {
     | 'clearRect'
     | 'putImageData'
     | 'fill'
+    | 'stroke'
+    | 'moveTo'
+    | 'lineTo'
     | 'translate'
     | 'save'
     | 'restore';
@@ -137,9 +140,22 @@ export class RecordingContext {
     return this.gradient('radial', c);
   }
 
+  strokeStyle: string | FakeGradient | FakePattern = '#000000';
+  lineWidth = 1;
   beginPath(): void {}
+  moveTo(x: number, y: number): void {
+    this.push({ kind: 'moveTo', args: [x, y] });
+  }
+
+  lineTo(x: number, y: number): void {
+    this.push({ kind: 'lineTo', args: [x, y] });
+  }
   rect(): void {}
   roundRect(): void {}
+
+  stroke(): void {
+    this.push({ kind: 'stroke' });
+  }
 
   fill(): void {
     this.push({ kind: 'fill' });

@@ -21,8 +21,8 @@ import {
   createThemePassStack,
   declaredCostAtQuality,
 } from '@render/effects/library';
-import { asSoftware, createSoftwareCanvas } from '@render/effects/software-surface';
-import { RecordingCanvas, stubOffscreenCanvas } from '../../render/recording-canvas';
+import { createSoftwareCanvas } from '@render/effects/software-surface';
+import { RecordingCanvas, recordingFactory, stubOffscreenCanvas } from '../../render/recording-canvas';
 import { EffectRegistry } from '@render/effects/registry';
 import type { CanvasLike } from '@render/layers';
 import { QualityGovernor } from '@render/quality-governor';
@@ -269,31 +269,26 @@ describe('Flatline CRT curvature is off at quality ≤ 1', () => {
 });
 
 describe('Flatline phosphor ghosts clear on grid clear', () => {
-  it('reset() wipes burn-in so a dead frame is empty', () => {
-    const w = 16;
-    const h = 16;
-    const live = createSoftwareCanvas(w, h);
-    live.getContext('2d').fillStyle = '#ffb000';
-    live.getContext('2d').fillRect(0, 0, w, h);
-    const dead = createSoftwareCanvas(w, h);
-    dead.getContext('2d').fillStyle = '#000000';
-    dead.getContext('2d').fillRect(0, 0, w, h);
-
-    const pass = createPhosphorDecayPass({ color: [255, 176, 0], fade: 0.9 });
-    const first = createSoftwareCanvas(w, h);
-    pass.render(effectCtx(first, live, { viewport: { ...VIEWPORT, widthPx: w, heightPx: h } }));
-    const ghosted = createSoftwareCanvas(w, h);
-    pass.render(effectCtx(ghosted, dead, { viewport: { ...VIEWPORT, widthPx: w, heightPx: h } }));
-    const ghostPx = asSoftware(ghosted)!.pixels;
-    expect(ghostPx[3]).toBeGreaterThan(0);
-
-    pass.reset();
-    const cleared = createSoftwareCanvas(w, h);
-    pass.render(effectCtx(cleared, dead, { viewport: { ...VIEWPORT, widthPx: w, heightPx: h } }));
-    const clearedPx = asSoftware(cleared)!.pixels;
-    let maxA = 0;
-    for (let i = 3; i < clearedPx.length; i += 4) maxA = Math.max(maxA, clearedPx[i]!);
-    expect(maxA).toBe(0);
+  it('reset() empties the ghost canvas, so a cleared grid leaves no trail behind', () => {
+    const baked = recordingFactory();
+    const target = new RecordingCanvas(64, 32);
+    const pass = createPhosphorDecayPass({ fade: 0.9, canvasFactory: baked.factory });
+    pass.render({
+      target: target.ctx as unknown as CanvasRenderingContext2D,
+      source: target as unknown as CanvasImageSource,
+      cells: target as unknown as CanvasImageSource,
+      viewport: { ...VIEWPORT, widthPx: 64, heightPx: 32 },
+      tick: 0,
+      frameTime: 0,
+      changes: EMPTY_CHANGES,
+      quality: 3,
+      reducedMotion: false,
+    });
+    const ghost = baked.canvases.find((c) => c.width === 32)!; // the half-resolution ghost
+    ghost.ctx.ops.length = 0;
+    pass.reset?.();
+    expect(ghost.ctx.only('clearRect')).toHaveLength(1);
+    expect(ghost.ctx.only('clearRect')[0]!.args).toEqual([0, 0, 32, 16]);
     pass.dispose();
   });
 
