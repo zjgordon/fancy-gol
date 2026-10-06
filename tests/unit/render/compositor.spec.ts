@@ -363,15 +363,24 @@ describe('Compositor', () => {
       compositor.draw(frame);
     }
 
-    const tDirect0 = performance.now();
-    for (let i = 0; i < ITER; i++) direct.draw(frame);
-    const directMs = performance.now() - tDirect0;
+    // Interleaved trials, medians (P3-E-8). Timing one 40-draw window per path, one after the
+    // other, charges every drift in machine speed to whichever path ran second: it read 1.055
+    // against the 1.05 ceiling on a loaded box with the compositor genuinely free. Alternating
+    // the paths trial by trial puts both under the same conditions; the threshold is unchanged.
+    const median = (xs: number[]): number => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]!;
+    const time = (draw: () => void): number => {
+      const t0 = performance.now();
+      for (let i = 0; i < ITER; i++) draw();
+      return performance.now() - t0;
+    };
+    const directTrials: number[] = [];
+    const compositorTrials: number[] = [];
+    for (let trial = 0; trial < 9; trial++) {
+      directTrials.push(time(() => direct.draw(frame)));
+      compositorTrials.push(time(() => compositor.draw(frame)));
+    }
 
-    const tComp0 = performance.now();
-    for (let i = 0; i < ITER; i++) compositor.draw(frame);
-    const compositorMs = performance.now() - tComp0;
-
-    const ratio = compositorMs / Math.max(directMs, 1e-6);
+    const ratio = median(compositorTrials) / Math.max(median(directTrials), 1e-6);
     expect(ratio).toBeLessThanOrEqual(1.05);
   });
 });

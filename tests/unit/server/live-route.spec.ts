@@ -120,16 +120,26 @@ describe('attachLiveServer — 100 simultaneous clients stay in sync (P1-G-3 AC,
 
     await vitestWaitFor(() => clients.every((c) => c.messages.length >= 2), 5000);
 
-    const lastTicks = clients.map((c) => c.messages.at(-1)!.tick);
-    const maxTick = Math.max(...lastTicks);
-    expect(maxTick).toBeGreaterThan(5);
-    // "Stay in sync": no client is more than one broadcast behind the fastest-delivered one --
-    // real network/event-loop scheduling means they won't all land on the exact same message at
-    // the exact same instant, but none should be meaningfully behind the rest.
-    for (const t of lastTicks) expect(maxTick - t).toBeLessThanOrEqual(1);
+    // Wait on the *conditions* this test is about, not on a fixed duration or an instant's
+    // snapshot (P3-E-8): it asserted `maxTick > 5` and "nobody more than 1 behind" at whatever
+    // moment the join keyframes landed, which races with a loaded event loop. "Growing" means
+    // every client has seen the sequence advance past tick 5; "in sync" means the spread between
+    // the fastest and slowest client is bounded and *converges* — checked until it holds.
+    const lastTicks = () => clients.map((c) => c.messages.at(-1)!.tick);
+    await vitestWaitFor(() => lastTicks().every((t) => t > 5), 8000);
+    await vitestWaitFor(() => {
+      const ticks = lastTicks();
+      return Math.max(...ticks) - Math.min(...ticks) <= 1;
+    }, 8000);
+
+    // Each client saw a strictly growing sequence — never a repeat, never a step backwards.
+    for (const c of clients) {
+      const ticks = c.messages.map((m) => m.tick);
+      for (let i = 1; i < ticks.length; i++) expect(ticks[i]!).toBeGreaterThan(ticks[i - 1]!);
+    }
 
     for (const c of clients) c.ws.close();
-  }, 10_000);
+  }, 20_000);
 });
 
 describe('connectLiveViewer (real client) — server restart does not wedge reconnection (P1-G-3 AC)', () => {

@@ -161,6 +161,10 @@ describe('effect library (P3-A-5)', () => {
       // EWMA replaces the declaration after the first sample.
       expect(Number.isFinite(pass.cost)).toBe(true);
       expect(pass.cost).toBeGreaterThanOrEqual(0);
+      // The first sample seeds the EWMA and includes JIT and first-touch cost (it measured 58.9 ms
+      // against this ceiling on a loaded box). Steady state is what the ceiling is about, so warm
+      // the pass up and assert on that — same ceiling, quieter measurement (P3-E-8).
+      for (let i = 0; i < 20; i++) pass.render(ctx);
       // Tiny 48×32 canvas must stay cheap — absolute ceiling, not the 1080p declaration.
       expect(pass.cost).toBeLessThan(50);
       pass.dispose();
