@@ -22,11 +22,12 @@ import {
 } from './filter';
 import { createThumbDirector, type ThumbTarget } from './thumbs';
 import { attachVirtualList } from './virtual-list';
+import { LIBRARY_DRAG_TYPE, LIBRARY_PANEL_META } from '@ui/panels/meta';
 
-export const LIBRARY_PANEL_ID = 'library';
-export const LIBRARY_PANEL_MIN_WIDTH = 320;
+export const LIBRARY_PANEL_ID = LIBRARY_PANEL_META.id;
+export const LIBRARY_PANEL_MIN_WIDTH = LIBRARY_PANEL_META.minWidthPx;
 export const LIBRARY_CARD_HEIGHT = 80;
-export const LIBRARY_DRAG_TYPE = 'application/x-fancy-gol-pattern';
+export { LIBRARY_DRAG_TYPE };
 
 export type LibraryCatalogSource = 'api' | 'bundled';
 
@@ -438,7 +439,7 @@ export function createLibraryPanel(opts: LibraryPanelOptions = {}): LibraryPanel
 
   const spec: PanelSpec = {
     id: LIBRARY_PANEL_ID,
-    title: 'Library',
+    title: LIBRARY_PANEL_META.title,
     minWidthPx: LIBRARY_PANEL_MIN_WIDTH,
     mount(body) {
       body.appendChild(root);

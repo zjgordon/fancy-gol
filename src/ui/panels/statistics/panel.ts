@@ -21,9 +21,10 @@ import {
   formatHash,
   formatSigned,
 } from './copy';
+import { STATS_PANEL_META } from '@ui/panels/meta';
 
-export const STATS_PANEL_ID = 'stats';
-export const STATS_PANEL_MIN_WIDTH = 280;
+export const STATS_PANEL_ID = STATS_PANEL_META.id;
+export const STATS_PANEL_MIN_WIDTH = STATS_PANEL_META.minWidthPx;
 
 export type StatsPanelMode = 'simple' | 'advanced';
 
@@ -426,7 +427,7 @@ export function createStatisticsPanel(opts: StatisticsPanelOptions): StatisticsP
 
   const spec: PanelSpec = {
     id: STATS_PANEL_ID,
-    title: 'Statistics',
+    title: STATS_PANEL_META.title,
     minWidthPx: STATS_PANEL_MIN_WIDTH,
     mount(body) {
       body.appendChild(root);

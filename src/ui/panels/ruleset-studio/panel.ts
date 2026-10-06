@@ -24,9 +24,11 @@ import {
   type StudioDocument,
 } from './model';
 import type { LocatedStudioIssue, StudioIssue, StudioValidate } from './types';
+import { STUDIO_PANEL_META } from '@ui/panels/meta';
+import { prettyRuleset } from './format';
 
-export const STUDIO_PANEL_ID = 'studio';
-export const STUDIO_PANEL_MIN_WIDTH = 400;
+export const STUDIO_PANEL_ID = STUDIO_PANEL_META.id;
+export const STUDIO_PANEL_MIN_WIDTH = STUDIO_PANEL_META.minWidthPx;
 
 export { STUDIO_VALIDATE_DELAY_MS };
 
@@ -64,9 +66,7 @@ export interface RulesetStudioPanel {
   dispose(): void;
 }
 
-export function prettyRuleset(value: unknown): string {
-  return `${JSON.stringify(value, null, 2)}\n`;
-}
+export { prettyRuleset };
 
 /** Live B/S badge from the parsed transition — the engine reads these arrays, not a label. */
 export function lifeNotationFrom(value: unknown): string | null {
@@ -303,7 +303,7 @@ export function createRulesetStudioPanel(opts: RulesetStudioOptions): RulesetStu
 
   const spec: PanelSpec = {
     id: STUDIO_PANEL_ID,
-    title: 'Ruleset Studio',
+    title: STUDIO_PANEL_META.title,
     minWidthPx: STUDIO_PANEL_MIN_WIDTH,
     mount(body) {
       body.appendChild(root);
