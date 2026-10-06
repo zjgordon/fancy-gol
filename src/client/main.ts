@@ -227,8 +227,11 @@ function main(): void {
     renderer.setTheme(compileTheme(theme));
     // A new theme is a new pass stack with its own ceiling: hand the governor that ceiling and
     // let it re-measure from the top, rather than inheriting the previous theme's verdict.
-    // (P3-D-4. Pinned in `?test=1`, where the ceiling is already pinned and this is a no-op.)
-    quality.setMaxQuality(theme.quality?.max ?? 3);
+    // A pin does not survive the switch (P3-E-8 found e2e `quality.spec` red on this); `?test=1`
+    // re-pins at the new ceiling so captures stay deterministic.
+    const ceiling = theme.quality?.max ?? 3;
+    quality.switchTheme(ceiling);
+    if (testMode) quality.pin(ceiling);
     degradeNotifier.reset();
     const bundle = themeBundles.get(theme.id);
     if (bundle) {

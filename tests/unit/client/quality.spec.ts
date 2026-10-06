@@ -191,3 +191,18 @@ describe('a theme change hands the governor a new ceiling', () => {
     expect(pinned.isPinned()).toBe(true);
   });
 });
+
+describe('a theme switch releases a pin and restarts from the new ceiling (P3-E-8 finding)', () => {
+  it('lifts a pin of 0 to the new theme ceiling and unpins', () => {
+    const registry = new EffectRegistry({ quality: 3 });
+    const governor = attachDegradeGovernor(host().host, { registry });
+    governor.pin(0);
+    expect(governor.getQuality()).toBe(0);
+    governor.switchTheme(3);
+    expect(governor.getQuality()).toBe(3);
+    expect(governor.isPinned()).toBe(false);
+    governor.switchTheme(2);
+    expect(governor.getQuality()).toBe(2);
+    expect(governor.getMaxQuality()).toBe(2);
+  });
+});

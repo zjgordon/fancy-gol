@@ -180,6 +180,20 @@ export class QualityGovernor {
     this.fastStreak = 0;
   }
 
+  /**
+   * A theme switch: a new pass stack with its own ceiling. Release any pin (a pin chosen against
+   * the old theme says nothing about this one), start from the new ceiling and re-measure from the
+   * top. Distinct from {@link setMaxQuality}, which only moves the ceiling under the current verdict.
+   */
+  switchTheme(max: EffectQuality): void {
+    this.maxQuality = max;
+    this.clearCostMemory();
+    this.pinned = null;
+    this.slowStreak = 0;
+    this.fastStreak = 0;
+    this.applyQuality(max, { kind: 'unpin', quality: max });
+  }
+
   /** The probe interval in frames — exposed so tests can see the back-off. */
   getProbeIntervalFrames(): number {
     return this.probeInterval;
