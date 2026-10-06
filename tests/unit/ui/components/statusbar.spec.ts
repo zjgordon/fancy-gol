@@ -3,8 +3,8 @@ import { CONWAY } from '@engine/rules/builtin';
 import { Simulation } from '@engine/simulation';
 import { DEAD, type GridView } from '@engine/types';
 import { createStatusBar, STATUS_THROTTLE_MS, zoomPercent, type StatusBarState } from '@ui/components/statusbar';
+import { calibratedBudget, timingIt } from '../../../support/timing';
 
-const UNDER_COVERAGE = process.env['VITEST_COVERAGE'] === '1';
 
 function baseState(overrides: Partial<StatusBarState> = {}): StatusBarState {
   return {
@@ -151,7 +151,7 @@ describe('createStatusBar', () => {
   });
 
   describe('performance', () => {
-    it.skipIf(UNDER_COVERAGE)('update() costs well under the 0.3 ms/frame budget', () => {
+    timingIt('[timing] update() costs well under the 0.3 ms/frame budget, calibrated to this machine', () => {
       // CPU dispatch, not real browser paint/composite — the same honest scope P0-H-2's and
       // P1-A-3's own frame-time budgets already use. Skipped under coverage instrumentation,
       // which skews timing, matching this codebase's established convention
@@ -175,7 +175,7 @@ describe('createStatusBar', () => {
       const start = performance.now();
       for (let i = 0; i < iterations; i++) bar.update(state);
       const elapsed = performance.now() - start;
-      expect(elapsed / iterations).toBeLessThan(0.3);
+      expect(elapsed / iterations).toBeLessThan(calibratedBudget(0.3));
     });
   });
 });

@@ -9,8 +9,8 @@ import {
   type ChartSeriesDef,
   type ChartWindow,
 } from '@ui/charts/chart';
+import { calibratedBudget, timingIt } from '../../../support/timing';
 
-const UNDER_COVERAGE = process.env['VITEST_COVERAGE'] === '1';
 
 class FakeCtx {
   lineWidth = 1;
@@ -347,7 +347,7 @@ describe('ChartLoop', () => {
 });
 
 describe('six live charts budget', () => {
-  it.skipIf(UNDER_COVERAGE)('six charts together cost < 2 ms/frame', () => {
+  timingIt('[timing] six charts together cost < 2 ms/frame, calibrated to this machine', () => {
     class SilentCtx {
       lineWidth = 1;
       strokeStyle = '';
@@ -398,7 +398,7 @@ describe('six live charts budget', () => {
     }
     samples.sort((a, b) => a - b);
     const median = samples[Math.floor(samples.length / 2)]!;
-    expect(median, `${median.toFixed(3)} ms median for six charts`).toBeLessThan(2);
+    expect(median, `${median.toFixed(3)} ms median for six charts`).toBeLessThan(calibratedBudget(2));
     for (const c of charts) c.dispose();
   });
 });

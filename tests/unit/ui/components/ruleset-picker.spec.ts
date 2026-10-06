@@ -7,6 +7,7 @@ import {
 } from '@ui/components/ruleset-picker';
 import type { StateDef, StateId } from '@shared/types';
 import { resetMotionRuntime, setReducedMotionQuery } from '@themes/motion/runtime';
+import { calibratedBudget, timingIt } from '../../../support/timing';
 
 const CONWAY_STATES: readonly StateDef[] = [
   { id: 0, name: 'dead', kind: 'dead', countsAsAlive: false },
@@ -449,8 +450,8 @@ describe('thumbnail performance (client/main.ts\'s per-frame cost, P1-D-4 AC1)',
    * imported from a test. */
   const THUMBNAIL_BATCH_SIZE = 4;
 
-  it.skipIf(process.env['VITEST_COVERAGE'] === '1')(
-    `stepping a batch of ${THUMBNAIL_BATCH_SIZE} 32x32 Simulations costs well under the 2 ms/frame combined budget`,
+  timingIt(
+    `[timing] stepping a batch of ${THUMBNAIL_BATCH_SIZE} 32x32 Simulations costs well under the 2 ms/frame combined budget, calibrated to this machine`,
     async () => {
       // Deliberately the catalogue's four structurally *heaviest* transition kinds, not an
       // arbitrary slice — WireWorld's 262,144-entry state table and Highlands' weighted-threshold
@@ -484,7 +485,7 @@ describe('thumbnail performance (client/main.ts\'s per-frame cost, P1-D-4 AC1)',
         samples.push((performance.now() - start) / iterations);
       }
       samples.sort((a, b) => a - b);
-      expect(samples[3]!).toBeLessThan(2);
+      expect(samples[3]!).toBeLessThan(calibratedBudget(2));
     },
   );
 });

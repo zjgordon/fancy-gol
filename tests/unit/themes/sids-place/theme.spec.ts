@@ -33,6 +33,7 @@ import { sidsTileShape } from '@themes/sids-place/tiles';
 import { SIDS_PLACE_TOKENS } from '@themes/sids-place/tokens';
 import { defaultMotionSignature } from '@themes/motion/choreography';
 import { FakeAudioContext, ManualClock, MemoryStorage } from '../../audio/fakes';
+import { UNDER_COVERAGE, calibratedBudget } from '../../../support/timing';
 
 const BLACK: RGB = { r: 0, g: 0, b: 0 };
 
@@ -190,7 +191,8 @@ describe('Sids-Place parchment texture', () => {
     a.generate();
     b.generate();
     expect(a.generated).toBe(true);
-    expect(a.generationMs).toBeLessThan(SIDS_PARCHMENT_BUDGET_MS);
+    // Calibrated, and not under coverage (P3-E-8): 61 ms against 40 ms under V8 instrumentation, 12 without.
+    if (!UNDER_COVERAGE) expect(a.generationMs).toBeLessThan(calibratedBudget(SIDS_PARCHMENT_BUDGET_MS));
     const ms = a.generationMs;
     a.generate();
     expect(a.generationMs).toBe(ms);
@@ -247,7 +249,7 @@ describe('Sids-Place parchment texture', () => {
     expect(stack.map((p) => p.id)).toEqual(['parchmentTexture']);
     const baked = stack[0] as ReturnType<typeof createParchmentTexturePass>;
     expect(baked.generated).toBe(true);
-    expect(baked.generationMs).toBeLessThan(SIDS_PARCHMENT_BUDGET_MS);
+    if (!UNDER_COVERAGE) expect(baked.generationMs).toBeLessThan(calibratedBudget(SIDS_PARCHMENT_BUDGET_MS));
     for (const p of stack) p.dispose();
   });
 });

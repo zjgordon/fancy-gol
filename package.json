@@ -15,6 +15,7 @@
     "start": "node dist/server/index.js",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:timing": "vitest run -t \"\\[timing\\]\"",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "e2e": "playwright test",

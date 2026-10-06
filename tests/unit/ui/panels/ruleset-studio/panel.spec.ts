@@ -16,6 +16,7 @@ import {
   STUDIO_PANEL_MIN_WIDTH,
 } from '@ui/panels/ruleset-studio/panel';
 import { attachPanelHost } from '@ui/shell/panel-host';
+import { calibratedBudget } from '../../../../support/timing';
 
 const UNDER_COVERAGE = process.env['VITEST_COVERAGE'] === '1';
 
@@ -137,7 +138,7 @@ describe('createRulesetStudioPanel', () => {
     const elapsed = performance.now() - t0;
     const painted = panel.root.querySelectorAll('.studio-gutter-line').length;
     expect(painted).toBeLessThan(40);
-    if (!UNDER_COVERAGE) expect(elapsed).toBeLessThan(1000 / 55);
+    if (!UNDER_COVERAGE) expect(elapsed).toBeLessThan(calibratedBudget(1000 / 55));
     panel.dispose();
     host.dispose();
   });

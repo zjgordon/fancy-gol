@@ -6,6 +6,7 @@ import {
   ThemePreviewLoop,
 } from '@client/theme-previews';
 import { THUMBNAIL_STEP_EVERY_N_FRAMES } from '@client/thumbnail-batch';
+import { calibratedBudget, timingIt } from '../../support/timing';
 
 const rendererSpies = vi.hoisted(() => ({
   draws: 0,
@@ -85,7 +86,7 @@ describe('ThemePreviewLoop', () => {
     expect(rendererSpies.draws).toBe(drawsAfterStop);
   });
 
-  it('keeps a combined tick under the 3 ms budget', () => {
+  it('charges a stepping tick to lastTickCostMs from its injected clock', () => {
     let clock = 0;
     const loop = new ThemePreviewLoop({
       themeFor: () => THEME,
@@ -108,7 +109,14 @@ describe('ThemePreviewLoop', () => {
     clock = 10;
     loop.tick();
     expect(loop.lastTickCostMs).toBeGreaterThanOrEqual(0);
-    // With a real now() the budget gate is what production cares about:
+    expect(Number.isFinite(loop.lastTickCostMs)).toBe(true);
+    loop.stop();
+  });
+
+  // The absolute budget (P3-D-1: previews cost < 3 ms/frame combined) is a claim about speed, so it
+  // is calibrated to the machine and run uncovered (P3-E-8). It failed at 7–10 ms against 3 ms on
+  // every CI run for a runner ~3× slower than the machine the budget was set on.
+  timingIt('[timing] keeps a combined tick under the 3 ms budget, calibrated to this machine', () => {
     const real = new ThemePreviewLoop({
       themeFor: () => THEME,
       scheduler: {
@@ -120,9 +128,15 @@ describe('ThemePreviewLoop', () => {
       real.register(id, {} as HTMLCanvasElement);
     }
     real.start();
-    for (let i = 0; i < THUMBNAIL_STEP_EVERY_N_FRAMES; i++) real.tick();
-    expect(real.lastTickCostMs).toBeLessThan(THEME_PREVIEW_BUDGET_MS);
+    // Warm first: steady-state cost, not first-call compilation.
+    for (let i = 0; i < THUMBNAIL_STEP_EVERY_N_FRAMES * 3; i++) real.tick();
+    const costs: number[] = [];
+    for (let i = 0; i < THUMBNAIL_STEP_EVERY_N_FRAMES * 7; i++) {
+      real.tick();
+      if (i % THUMBNAIL_STEP_EVERY_N_FRAMES === THUMBNAIL_STEP_EVERY_N_FRAMES - 1) costs.push(real.lastTickCostMs);
+    }
+    costs.sort((a, b) => a - b);
+    expect(costs[Math.floor(costs.length / 2)]!).toBeLessThan(calibratedBudget(THEME_PREVIEW_BUDGET_MS));
     real.stop();
-    loop.stop();
   });
 });
