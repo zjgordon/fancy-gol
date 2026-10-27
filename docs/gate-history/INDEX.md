@@ -1,6 +1,6 @@
 # Gate history
 
-Generated 2026-10-26 by `scripts/gate-history.mjs`. Do not hand-edit.
+Generated 2026-10-27 by `scripts/gate-history.mjs`. Do not hand-edit.
 Source of truth: [`records.jsonl`](./records.jsonl). Policy: `planning/README.md` §3.10.
 
 A task cites this file instead of pretending to run N CI jobs in-process:
@@ -16,13 +16,15 @@ Phase-branch dispatch samples prove the mechanism; they do not count toward the 
 
 | record-id | official (main) | all-branches | last official |
 |---|---:|---:|---|
-| `e2e-nonflake` | 42 | 43 | green 2026-10-26 |
-| `visual-nonflake` | 42 | 43 | green 2026-10-26 |
+| `e2e-nonflake` | 43 | 44 | green 2026-10-27 |
+| `visual-nonflake` | 43 | 44 | green 2026-10-27 |
 
 ## Log (newest first)
 
 | at | id | ok | branch | event | run |
 |---|---|---|---|---|---|
+| 2026-10-27T11:23:19.383Z | `visual-nonflake` | green | `main` | schedule | [40489901538](https://github.com/zjgordon/fancy-gol/actions/runs/40489901538) |
+| 2026-10-27T11:23:11.808Z | `e2e-nonflake` | green | `main` | schedule | [40489901538](https://github.com/zjgordon/fancy-gol/actions/runs/40489901538) |
 | 2026-10-26T11:10:44.152Z | `visual-nonflake` | green | `main` | schedule | [40312906234](https://github.com/zjgordon/fancy-gol/actions/runs/40312906234) |
 | 2026-10-26T11:10:37.971Z | `e2e-nonflake` | green | `main` | schedule | [40312906234](https://github.com/zjgordon/fancy-gol/actions/runs/40312906234) |
 | 2026-10-25T09:51:28.504Z | `visual-nonflake` | green | `main` | schedule | [40182264615](https://github.com/zjgordon/fancy-gol/actions/runs/40182264615) |
@@ -71,5 +73,3 @@ Phase-branch dispatch samples prove the mechanism; they do not count toward the 
 | 2026-10-04T11:09:42.411Z | `e2e-nonflake` | green | `main` | schedule | [37197684040](https://github.com/zjgordon/fancy-gol/actions/runs/37197684040) |
 | 2026-10-03T10:27:40.830Z | `visual-nonflake` | green | `main` | schedule | [37116393478](https://github.com/zjgordon/fancy-gol/actions/runs/37116393478) |
 | 2026-10-03T10:27:32.804Z | `e2e-nonflake` | green | `main` | schedule | [37116393478](https://github.com/zjgordon/fancy-gol/actions/runs/37116393478) |
-| 2026-10-02T11:08:55.858Z | `visual-nonflake` | green | `main` | schedule | [36999269265](https://github.com/zjgordon/fancy-gol/actions/runs/36999269265) |
-| 2026-10-02T11:08:50.272Z | `e2e-nonflake` | green | `main` | schedule | [36999269265](https://github.com/zjgordon/fancy-gol/actions/runs/36999269265) |
